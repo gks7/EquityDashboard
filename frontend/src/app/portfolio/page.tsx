@@ -433,7 +433,7 @@ export default function PortfolioPage() {
                                                 <td className={`px-4 py-3 text-right font-bold ${item.unrealized_pl_pct >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                                                     {item.average_cost > 0 ? `${item.unrealized_pl_pct > 0 ? '+' : ''}${item.unrealized_pl_pct.toFixed(1)}%` : '-'}
                                                 </td>
-                                                <td className="px-4 py-3 text-right font-bold text-amber-700 dark:text-amber-400 bg-amber-50/10 dark:bg-amber-900/5">{item.yield_to_worst ? `${item.yield_to_worst.toFixed(2)}%` : '-'}</td>
+                                                <td className="px-4 py-3 text-right font-bold text-amber-700 dark:text-amber-400 bg-amber-50/10 dark:bg-amber-900/5">{item.yield_to_worst ? `${(item.yield_to_worst * 100).toFixed(2)}%` : '-'}</td>
                                                 <td className="px-4 py-3 text-right font-medium text-amber-700 dark:text-amber-400 bg-amber-50/10 dark:bg-amber-900/5">{item.duration ? item.duration.toFixed(2) : '-'}</td>
                                                 <td className="px-2 py-3 text-right">
                                                     <button onClick={() => handleDeleteItem(item.id)} className="text-slate-400 hover:text-rose-500">
