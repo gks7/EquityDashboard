@@ -13,8 +13,10 @@ import {
   ArrowUpRight,
   ArrowDownRight,
 } from "lucide-react";
+import { CleanSummary } from "./components/CleanSummary";
+import { AllocationPieChart } from "./components/AllocationPieChart";
 
-interface PortfolioHolding {
+export interface PortfolioHolding {
   id: number;
   quantity: number;
   average_cost: number;
@@ -136,26 +138,9 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
             {/* Hero Left: Total Value */}
-            <div className="lg:col-span-1 rounded-2xl border border-slate-200 dark:border-slate-800 p-8 flex flex-col justify-center bg-white dark:bg-[#111827] shadow-sm">
-              <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Total Value</h2>
-              <div className="text-4xl sm:text-5xl font-bold tracking-tight text-slate-900 dark:text-white mb-4">
-                ${formatNumber(totalValue)}
-              </div>
-
-              <div className="flex items-center gap-4">
-                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold ${totalDailyPL >= 0 ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400" : "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400"}`}>
-                  {totalDailyPL >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                  {totalDailyPL >= 0 ? "+" : ""}${formatNumber(totalDailyPL)}
-                  <span className="opacity-70 font-medium ml-1">({totalDailyPL >= 0 ? "+" : ""}{totalDailyPLPct.toFixed(2)}%)</span>
-                </div>
-                <span className="text-sm font-medium text-slate-400">Past 24h</span>
-              </div>
-            </div>
-
+            <CleanSummary totalValue={totalValue} totalDailyPL={totalDailyPL} totalDailyPLPct={totalDailyPLPct} />
             {/* Hero Right: Allocation Breakdown */}
-            <div className="lg:col-span-2 rounded-2xl border border-slate-200 dark:border-slate-800 p-8 flex flex-col sm:flex-row gap-8 items-center bg-white dark:bg-[#111827] shadow-sm">
-              <PortfolioAllocationPieChart holdings={holdings} totalValue={totalValue} />
-            </div>
+            <AllocationPieChart holdings={holdings} totalValue={totalValue} />
 
           </div>
 
