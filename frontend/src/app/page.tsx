@@ -333,8 +333,8 @@ export default function DashboardPage() {
             <div className="flex items-center gap-2">
               <span
                 className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-sm font-bold ${totalDailyPL >= 0
-                    ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400"
-                    : "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400"
+                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400"
+                  : "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400"
                   }`}
               >
                 {totalDailyPL >= 0 ? (
@@ -386,8 +386,8 @@ export default function DashboardPage() {
             key={t}
             onClick={() => setActiveTab(t)}
             className={`px-5 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === t
-                ? "bg-white dark:bg-[#111827] text-slate-900 dark:text-white shadow-sm"
-                : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+              ? "bg-white dark:bg-[#111827] text-slate-900 dark:text-white shadow-sm"
+              : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
               }`}
           >
             {t === "equities" ? `Equities (${equities.length})` : `Fixed Income (${fixedIncome.length})`}
@@ -495,8 +495,8 @@ export default function DashboardPage() {
                         </td>
                         <td
                           className={`px-4 py-3 text-right font-bold bg-violet-50/10 ${irr >= 15
-                              ? "text-emerald-600"
-                              : "text-slate-900 dark:text-white"
+                            ? "text-emerald-600"
+                            : "text-slate-900 dark:text-white"
                             }`}
                         >
                           {irr > 0 ? `${irr.toFixed(1)}%` : "—"}
@@ -546,10 +546,10 @@ export default function DashboardPage() {
                     </div>
                     <span
                       className={`text-xs font-bold w-16 text-right shrink-0 ${d.diff > 0.5
-                          ? "text-emerald-600 dark:text-emerald-400"
-                          : d.diff < -0.5
-                            ? "text-rose-600 dark:text-rose-400"
-                            : "text-slate-500"
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : d.diff < -0.5
+                          ? "text-rose-600 dark:text-rose-400"
+                          : "text-slate-500"
                         }`}
                     >
                       {d.diff > 0 ? "+" : ""}
@@ -564,227 +564,267 @@ export default function DashboardPage() {
       )}
 
       {/* ─── FIXED INCOME TAB ─────────────────────────────────── */}
-      {activeTab === "fi" && (
-        <div className="space-y-6">
-          {/* Yield × Duration Scatter */}
-          <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-6 bg-white dark:bg-[#111827] shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                Yield to Worst × Duration
-              </h2>
-              {/* Legend */}
-              <div className="flex items-center gap-4 text-xs font-medium text-slate-500">
-                {[
-                  ["Corporate", "#14b8a6"],
-                  ["Index / ETF", "#8b5cf6"],
-                  ["EM Sovereign", "#f97316"],
-                  ["Treasury", "#f43f5e"],
-                  ["Other", "#64748b"],
-                ].map(([l, c]) => (
-                  <span key={l} className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: c }} />
-                    {l}
+      {activeTab === "fi" && (() => {
+        const wAvgYtw = fiValue > 0
+          ? fixedIncome.reduce((s, h) => s + (h.yield_to_worst || 0) * h.current_value, 0) / fiValue * 100
+          : 0;
+        const wAvgDur = fiValue > 0
+          ? fixedIncome.reduce((s, h) => s + (h.duration || 0) * h.current_value, 0) / fiValue
+          : 0;
+        const fiDailyPL = fixedIncome.reduce((s, h) => s + (h.pnl_1d || 0), 0);
+        return (
+          <div className="space-y-6">
+            {/* FI Key Stats */}
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm p-6">
+              <div className="flex flex-wrap items-center gap-x-10 gap-y-4">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">FI Market Value</p>
+                  <p className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">${fmt(fiValue)}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">1D P&L</p>
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-sm font-bold ${fiDailyPL >= 0
+                    ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400"
+                    : "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400"}`}>
+                    {fiDailyPL >= 0 ? "+" : ""}${fmt(fiDailyPL)}
                   </span>
-                ))}
+                </div>
+                <div className="hidden sm:block h-10 w-px bg-slate-200 dark:bg-slate-700" />
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">Wtd Avg YTW</p>
+                  <p className="text-xl font-bold text-amber-600 dark:text-amber-400">{wAvgYtw.toFixed(2)}%</p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">Wtd Avg Duration</p>
+                  <p className="text-xl font-bold text-amber-600 dark:text-amber-400">{wAvgDur.toFixed(2)}y</p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">Positions</p>
+                  <p className="text-xl font-bold text-slate-900 dark:text-white">{fixedIncome.length}</p>
+                </div>
               </div>
             </div>
-            <p className="text-xs text-slate-400 mb-4">
-              Bubble size = market value. Hover for details.
-            </p>
 
-            {fiWithData.length === 0 ? (
-              <p className="text-center text-slate-400 py-10">No FI positions with yield & duration data.</p>
-            ) : (
-              <div className="relative">
-                <svg
-                  viewBox="0 0 600 350"
-                  className="w-full"
-                  style={{ maxHeight: 400 }}
-                >
-                  {/* Grid lines */}
-                  {[0, 0.25, 0.5, 0.75, 1].map((f) => (
-                    <g key={`g-${f}`}>
-                      {/* Horizontal */}
-                      <line
-                        x1={60}
-                        y1={20 + f * 280}
-                        x2={580}
-                        y2={20 + f * 280}
-                        stroke="currentColor"
-                        className="text-slate-200 dark:text-slate-700"
-                        strokeWidth={0.5}
-                      />
-                      {/* Y label */}
-                      <text
-                        x={55}
-                        y={20 + f * 280 + 4}
-                        textAnchor="end"
-                        className="fill-slate-400 text-[10px]"
-                      >
-                        {(maxYtw * (1 - f)).toFixed(1)}%
-                      </text>
-                      {/* Vertical */}
-                      <line
-                        x1={60 + f * 520}
-                        y1={20}
-                        x2={60 + f * 520}
-                        y2={300}
-                        stroke="currentColor"
-                        className="text-slate-200 dark:text-slate-700"
-                        strokeWidth={0.5}
-                      />
-                      {/* X label */}
-                      <text
-                        x={60 + f * 520}
-                        y={318}
-                        textAnchor="middle"
-                        className="fill-slate-400 text-[10px]"
-                      >
-                        {(maxDur * f).toFixed(1)}y
-                      </text>
-                    </g>
+            {/* Yield × Duration Scatter */}
+            <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-6 bg-white dark:bg-[#111827] shadow-sm">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                  Yield to Worst × Duration
+                </h2>
+                {/* Legend */}
+                <div className="flex items-center gap-4 text-xs font-medium text-slate-500">
+                  {[
+                    ["Corporate", "#14b8a6"],
+                    ["Index / ETF", "#8b5cf6"],
+                    ["EM Sovereign", "#f97316"],
+                    ["Treasury", "#f43f5e"],
+                    ["Other", "#64748b"],
+                  ].map(([l, c]) => (
+                    <span key={l} className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full" style={{ background: c }} />
+                      {l}
+                    </span>
                   ))}
+                </div>
+              </div>
+              <p className="text-xs text-slate-400 mb-4">
+                Bubble size = market value. Hover for details.
+              </p>
 
-                  {/* Axis labels */}
-                  <text x={320} y={340} textAnchor="middle" className="fill-slate-500 text-[11px] font-semibold">
-                    Duration (years)
-                  </text>
-                  <text
-                    x={12}
-                    y={160}
-                    textAnchor="middle"
-                    className="fill-slate-500 text-[11px] font-semibold"
-                    transform="rotate(-90, 12, 160)"
+              {fiWithData.length === 0 ? (
+                <p className="text-center text-slate-400 py-10">No FI positions with yield & duration data.</p>
+              ) : (
+                <div className="relative">
+                  <svg
+                    viewBox="0 0 600 350"
+                    className="w-full"
+                    style={{ maxHeight: 400 }}
                   >
-                    YTW (%)
-                  </text>
-
-                  {/* Data dots */}
-                  {fiWithData.map((h) => {
-                    const cx = 60 + ((h.duration || 0) / maxDur) * 520;
-                    const cy = 300 - (((h.yield_to_worst || 0) * 100) / maxYtw) * 280;
-                    const r = Math.max(6, Math.min(30, Math.sqrt(h.current_value / maxVal) * 30));
-                    const color = fiColor(h);
-                    return (
-                      <circle
-                        key={h.id}
-                        cx={cx}
-                        cy={cy}
-                        r={r}
-                        fill={color}
-                        fillOpacity={hoveredDot?.id === h.id ? 0.9 : 0.55}
-                        stroke={color}
-                        strokeWidth={hoveredDot?.id === h.id ? 2 : 1}
-                        className="transition-all duration-150 cursor-pointer"
-                        onMouseEnter={() => setHoveredDot(h)}
-                        onMouseLeave={() => setHoveredDot(null)}
-                      />
-                    );
-                  })}
-                </svg>
-
-                {/* Tooltip */}
-                {hoveredDot && (
-                  <div className="absolute top-4 right-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg px-4 py-3 text-sm pointer-events-none z-20">
-                    <p className="font-bold text-slate-900 dark:text-white mb-1">
-                      {hoveredDot.ticker || hoveredDot.isin || "Unknown"}
-                    </p>
-                    <p className="text-slate-500 text-xs mb-2">{hoveredDot.specific_type}</p>
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                      <span className="text-slate-400">YTW</span>
-                      <span className="font-semibold text-slate-900 dark:text-white">
-                        {((hoveredDot.yield_to_worst || 0) * 100).toFixed(2)}%
-                      </span>
-                      <span className="text-slate-400">Duration</span>
-                      <span className="font-semibold text-slate-900 dark:text-white">
-                        {hoveredDot.duration?.toFixed(2)}y
-                      </span>
-                      <span className="text-slate-400">Mkt Value</span>
-                      <span className="font-semibold text-slate-900 dark:text-white">
-                        ${fmt(hoveredDot.current_value)}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* FI Summary Table */}
-          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead>
-                  <tr className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                    {[
-                      ["ticker", "Identifier"],
-                      ["current_value", "Mkt Value"],
-                      ["chg_1d", "1D %"],
-                      ["pnl_1d", "1D PnL"],
-                      ["total_pnl", "Total PnL %"],
-                      ["ytw", "YTW"],
-                      ["duration", "Duration"],
-                    ].map(([k, label]) => (
-                      <th
-                        key={k}
-                        onClick={() => toggleSort(k)}
-                        className={`px-4 py-3 cursor-pointer group ${k !== "ticker" ? "text-right" : ""} ${["ytw", "duration"].includes(k) ? "bg-amber-50/30 dark:bg-amber-900/10" : ""
-                          }`}
-                      >
-                        <span className="inline-flex items-center">
-                          {label}
-                          <SortIcon k={k} />
-                        </span>
-                      </th>
+                    {/* Grid lines */}
+                    {[0, 0.25, 0.5, 0.75, 1].map((f) => (
+                      <g key={`g-${f}`}>
+                        {/* Horizontal */}
+                        <line
+                          x1={60}
+                          y1={20 + f * 280}
+                          x2={580}
+                          y2={20 + f * 280}
+                          stroke="currentColor"
+                          className="text-slate-200 dark:text-slate-700"
+                          strokeWidth={0.5}
+                        />
+                        {/* Y label */}
+                        <text
+                          x={55}
+                          y={20 + f * 280 + 4}
+                          textAnchor="end"
+                          className="fill-slate-400 text-[10px]"
+                        >
+                          {(maxYtw * (1 - f)).toFixed(1)}%
+                        </text>
+                        {/* Vertical */}
+                        <line
+                          x1={60 + f * 520}
+                          y1={20}
+                          x2={60 + f * 520}
+                          y2={300}
+                          stroke="currentColor"
+                          className="text-slate-200 dark:text-slate-700"
+                          strokeWidth={0.5}
+                        />
+                        {/* X label */}
+                        <text
+                          x={60 + f * 520}
+                          y={318}
+                          textAnchor="middle"
+                          className="fill-slate-400 text-[10px]"
+                        >
+                          {(maxDur * f).toFixed(1)}y
+                        </text>
+                      </g>
                     ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {sorted(fixedIncome).map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                      <td className="px-4 py-3 font-semibold text-slate-900 dark:text-white max-w-[220px] truncate">
-                        {item.ticker ? item.ticker.replace("Corp", "").replace("@", " ") : item.isin}
-                        <div className="text-xs text-slate-500 font-normal">{item.specific_type}</div>
-                      </td>
-                      <td className="px-4 py-3 text-right font-bold text-slate-900 dark:text-white">
-                        ${item.current_value.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                      </td>
-                      <td
-                        className={`px-4 py-3 text-right font-medium ${(item.chg_pct_1d || 0) >= 0 ? "text-emerald-600" : "text-rose-600"
-                          }`}
-                      >
-                        {(item.chg_pct_1d || 0) > 0 ? "+" : ""}
-                        {(item.chg_pct_1d || 0).toFixed(2)}%
-                      </td>
-                      <td
-                        className={`px-4 py-3 text-right font-medium ${(item.pnl_1d || 0) >= 0 ? "text-emerald-600" : "text-rose-600"
-                          }`}
-                      >
-                        {(item.pnl_1d || 0) > 0 ? "+" : ""}
-                        {Math.round(item.pnl_1d || 0).toLocaleString()}
-                      </td>
-                      <td
-                        className={`px-4 py-3 text-right font-bold ${item.unrealized_pl_pct >= 0 ? "text-emerald-600" : "text-rose-600"
-                          }`}
-                      >
-                        {item.average_cost > 0
-                          ? `${item.unrealized_pl_pct > 0 ? "+" : ""}${item.unrealized_pl_pct.toFixed(1)}%`
-                          : "—"}
-                      </td>
-                      <td className="px-4 py-3 text-right font-bold text-amber-700 dark:text-amber-400 bg-amber-50/10">
-                        {item.yield_to_worst ? `${(item.yield_to_worst * 100).toFixed(2)}%` : "—"}
-                      </td>
-                      <td className="px-4 py-3 text-right font-medium text-amber-700 dark:text-amber-400 bg-amber-50/10">
-                        {item.duration ? `${item.duration.toFixed(2)}y` : "—"}
-                      </td>
+
+                    {/* Axis labels */}
+                    <text x={320} y={340} textAnchor="middle" className="fill-slate-500 text-[11px] font-semibold">
+                      Duration (years)
+                    </text>
+                    <text
+                      x={12}
+                      y={160}
+                      textAnchor="middle"
+                      className="fill-slate-500 text-[11px] font-semibold"
+                      transform="rotate(-90, 12, 160)"
+                    >
+                      YTW (%)
+                    </text>
+
+                    {/* Data dots */}
+                    {fiWithData.map((h) => {
+                      const cx = 60 + ((h.duration || 0) / maxDur) * 520;
+                      const cy = 300 - (((h.yield_to_worst || 0) * 100) / maxYtw) * 280;
+                      const r = Math.max(6, Math.min(30, Math.sqrt(h.current_value / maxVal) * 30));
+                      const color = fiColor(h);
+                      return (
+                        <circle
+                          key={h.id}
+                          cx={cx}
+                          cy={cy}
+                          r={r}
+                          fill={color}
+                          fillOpacity={hoveredDot?.id === h.id ? 0.9 : 0.55}
+                          stroke={color}
+                          strokeWidth={hoveredDot?.id === h.id ? 2 : 1}
+                          className="transition-all duration-150 cursor-pointer"
+                          onMouseEnter={() => setHoveredDot(h)}
+                          onMouseLeave={() => setHoveredDot(null)}
+                        />
+                      );
+                    })}
+                  </svg>
+
+                  {/* Tooltip */}
+                  {hoveredDot && (
+                    <div className="absolute top-4 right-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg px-4 py-3 text-sm pointer-events-none z-20">
+                      <p className="font-bold text-slate-900 dark:text-white mb-1">
+                        {hoveredDot.ticker || hoveredDot.isin || "Unknown"}
+                      </p>
+                      <p className="text-slate-500 text-xs mb-2">{hoveredDot.specific_type}</p>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                        <span className="text-slate-400">YTW</span>
+                        <span className="font-semibold text-slate-900 dark:text-white">
+                          {((hoveredDot.yield_to_worst || 0) * 100).toFixed(2)}%
+                        </span>
+                        <span className="text-slate-400">Duration</span>
+                        <span className="font-semibold text-slate-900 dark:text-white">
+                          {hoveredDot.duration?.toFixed(2)}y
+                        </span>
+                        <span className="text-slate-400">Mkt Value</span>
+                        <span className="font-semibold text-slate-900 dark:text-white">
+                          ${fmt(hoveredDot.current_value)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* FI Summary Table */}
+            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead>
+                    <tr className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                      {[
+                        ["ticker", "Identifier"],
+                        ["current_value", "Mkt Value"],
+                        ["chg_1d", "1D %"],
+                        ["pnl_1d", "1D PnL"],
+                        ["total_pnl", "Total PnL %"],
+                        ["ytw", "YTW"],
+                        ["duration", "Duration"],
+                      ].map(([k, label]) => (
+                        <th
+                          key={k}
+                          onClick={() => toggleSort(k)}
+                          className={`px-4 py-3 cursor-pointer group ${k !== "ticker" ? "text-right" : ""} ${["ytw", "duration"].includes(k) ? "bg-amber-50/30 dark:bg-amber-900/10" : ""
+                            }`}
+                        >
+                          <span className="inline-flex items-center">
+                            {label}
+                            <SortIcon k={k} />
+                          </span>
+                        </th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {sorted(fixedIncome).map((item) => (
+                      <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                        <td className="px-4 py-3 font-semibold text-slate-900 dark:text-white max-w-[220px] truncate">
+                          {item.ticker ? item.ticker.replace("Corp", "").replace("@", " ") : item.isin}
+                          <div className="text-xs text-slate-500 font-normal">{item.specific_type}</div>
+                        </td>
+                        <td className="px-4 py-3 text-right font-bold text-slate-900 dark:text-white">
+                          ${item.current_value.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </td>
+                        <td
+                          className={`px-4 py-3 text-right font-medium ${(item.chg_pct_1d || 0) >= 0 ? "text-emerald-600" : "text-rose-600"
+                            }`}
+                        >
+                          {(item.chg_pct_1d || 0) > 0 ? "+" : ""}
+                          {(item.chg_pct_1d || 0).toFixed(2)}%
+                        </td>
+                        <td
+                          className={`px-4 py-3 text-right font-medium ${(item.pnl_1d || 0) >= 0 ? "text-emerald-600" : "text-rose-600"
+                            }`}
+                        >
+                          {(item.pnl_1d || 0) > 0 ? "+" : ""}
+                          {Math.round(item.pnl_1d || 0).toLocaleString()}
+                        </td>
+                        <td
+                          className={`px-4 py-3 text-right font-bold ${item.unrealized_pl_pct >= 0 ? "text-emerald-600" : "text-rose-600"
+                            }`}
+                        >
+                          {item.average_cost > 0
+                            ? `${item.unrealized_pl_pct > 0 ? "+" : ""}${item.unrealized_pl_pct.toFixed(1)}%`
+                            : "—"}
+                        </td>
+                        <td className="px-4 py-3 text-right font-bold text-amber-700 dark:text-amber-400 bg-amber-50/10">
+                          {item.yield_to_worst ? `${(item.yield_to_worst * 100).toFixed(2)}%` : "—"}
+                        </td>
+                        <td className="px-4 py-3 text-right font-medium text-amber-700 dark:text-amber-400 bg-amber-50/10">
+                          {item.duration ? `${item.duration.toFixed(2)}y` : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
