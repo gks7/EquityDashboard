@@ -134,8 +134,10 @@ class PortfolioSnapshotViewSet(viewsets.ModelViewSet):
                 def get_float(col):
                     if col in df.columns and pd.notna(row[col]):
                         try:
-                            # Bloomberg percentages are often like "1.35%" or "0.0135" depending on sheet
-                            val = str(row[col]).replace('%', '').replace(',', '')
+                            val = str(row[col]).strip().upper()
+                            if val in ['#N/A', '#N/A N/A', '-', '']:
+                                return 0.0
+                            val = val.replace('%', '').replace(',', '')
                             return float(val)
                         except:
                             return 0.0
@@ -148,8 +150,8 @@ class PortfolioSnapshotViewSet(viewsets.ModelViewSet):
                 currency = get_val('Currency')
                 
                 quantity = get_float('Quantity')
-                if quantity <= 0:
-                    continue
+                if quantity == 0 and not raw_ticker and not isin:
+                    continue # only skip if it's completely blank
                     
                 price = get_float('PX_LAST') or get_float('PX_dirty_MID')
                 cross_usd = get_float('Cross USD') or 1.0
