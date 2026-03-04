@@ -101,7 +101,12 @@ class PortfolioSnapshotViewSet(viewsets.ModelViewSet):
             return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
         
         try:
-            df = pd.read_excel(file)
+            import traceback
+            try:
+                df = pd.read_excel(file)
+            except Exception as e:
+                # Fallback: VBA might send it with a weird mimetype or encoding
+                return Response({"error": f"Failed to read file as Excel. {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
             
             # Remove any empty rows
             df = df.dropna(how='all')
@@ -197,7 +202,9 @@ class PortfolioSnapshotViewSet(viewsets.ModelViewSet):
             return Response({"message": "Portfolio uploaded successfully", "snapshot_id": snapshot.id}, status=status.HTTP_201_CREATED)
             
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            error_details = traceback.format_exc()
+            print("EXCEL UPLOAD ERROR:", error_details)
+            return Response({"error": str(e), "traceback": error_details}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class PortfolioItemViewSet(viewsets.ModelViewSet):
     serializer_class = PortfolioItemSerializer
