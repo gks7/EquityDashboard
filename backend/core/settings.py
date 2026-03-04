@@ -61,6 +61,7 @@ MIDDLEWARE = [
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [
     "https://exciting-wholeness-production.up.railway.app",
+    "https://equitydashboard-production-6f9d.up.railway.app",
     "http://localhost:3000",
 ]
 
