@@ -1,30 +1,13 @@
 @import "tailwindcss";
 
-:root {
-  --background: #0a0e1a;
-  --foreground: #e2e8f0;
-  --sidebar-bg: #0d1117;
-  --card-bg: #111827;
-  --card-border: #1e293b;
-  --accent: #3b82f6;
-  --accent-glow: rgba(59, 130, 246, 0.15);
-}
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-/* Force dark mode */
-html {
-  color-scheme: dark;
-}
-
 body {
-  background: var(--background);
-  color: var(--foreground);
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
 }
 
@@ -32,58 +15,35 @@ body {
 ::-webkit-scrollbar {
   width: 6px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
   background: #1e293b;
   border-radius: 999px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: #334155;
-}
-
-/* Subtle card glow on hover */
-.card-hover {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.card-hover:hover {
-  border-color: rgba(59, 130, 246, 0.3);
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.05), 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-/* Summary card gradient borders */
-.gradient-border {
-  position: relative;
-}
-.gradient-border::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.1), transparent);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
 }
 
 /* Smooth page transitions */
 main {
   animation: fadeIn 0.3s ease-out;
 }
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
-}
 
-/* Table row hover glow */
-tr.row-hover {
-  transition: all 0.2s ease;
-}
-tr.row-hover:hover {
-  background: rgba(30, 41, 59, 0.5) !important;
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Sidebar active indicator */
