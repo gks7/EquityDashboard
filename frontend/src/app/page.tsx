@@ -103,27 +103,26 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex items-end justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
             Portfolio Dashboard
           </h1>
           <p className="text-sm text-slate-500 mt-1">
             Real-time overview of your current holdings.
           </p>
         </div>
-        <p className="text-xs text-slate-600 font-medium">Last updated: just now</p>
+        <p className="text-xs text-slate-500 font-medium">Last updated: just now</p>
       </div>
 
       {emptyState ? (
-        <div className="rounded-2xl border border-slate-800 p-12 text-center" style={{ background: 'linear-gradient(135deg, #111827, #0f172a)' }}>
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-5" style={{ background: 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(139,92,246,0.1))' }}>
-            <Briefcase className="w-8 h-8 text-blue-400" />
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 p-12 text-center bg-white dark:bg-[#111827] shadow-sm">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-5 bg-blue-50 dark:bg-blue-500/10">
+            <Briefcase className="w-8 h-8 text-blue-600 dark:text-blue-400" />
           </div>
-          <h2 className="text-lg font-semibold text-white mb-2">No holdings yet</h2>
-          <p className="text-sm text-slate-400 mb-6">Add stocks to your portfolio to see your dashboard.</p>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No holdings yet</h2>
+          <p className="text-sm text-slate-500 mb-6">Add stocks to your portfolio to see your dashboard.</p>
           <Link
             href="/portfolio"
-            className="inline-flex items-center gap-2 text-white font-semibold py-2.5 px-6 rounded-lg shadow-lg transition-all hover:shadow-blue-500/20"
-            style={{ background: 'linear-gradient(135deg, #3b82f6, #6366f1)' }}
+            className="inline-flex items-center gap-2 text-white font-semibold py-2.5 px-6 rounded-lg shadow-sm transition-all hover:opacity-90 bg-slate-900 dark:bg-blue-600"
           >
             <Briefcase className="w-4 h-4" />
             Go to Portfolio
@@ -163,9 +162,9 @@ export default function DashboardPage() {
           {/* Top 3 / Bottom 3 */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Top 3 */}
-            <div className="rounded-xl border border-slate-800 p-6 card-hover" style={{ background: '#111827' }}>
-              <h2 className="text-base font-bold text-white mb-4 flex items-center gap-2">
-                <ArrowUpRight className="w-5 h-5 text-emerald-400" />
+            <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-6 bg-white dark:bg-[#111827] shadow-sm transition-all">
+              <h2 className="text-base font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                <ArrowUpRight className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                 Top Performers
               </h2>
               <div className="space-y-3">
@@ -188,9 +187,9 @@ export default function DashboardPage() {
             </div>
 
             {/* Bottom 3 */}
-            <div className="rounded-xl border border-slate-800 p-6 card-hover" style={{ background: '#111827' }}>
-              <h2 className="text-base font-bold text-white mb-4 flex items-center gap-2">
-                <ArrowDownRight className="w-5 h-5 text-rose-400" />
+            <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-6 bg-white dark:bg-[#111827] shadow-sm transition-all">
+              <h2 className="text-base font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                <ArrowDownRight className="w-5 h-5 text-rose-600 dark:text-rose-400" />
                 Bottom Performers
               </h2>
               <div className="space-y-3">
@@ -217,13 +216,13 @@ export default function DashboardPage() {
           <SectorExposureChart holdings={holdings} totalValue={totalValue} />
 
           {/* Full Holdings Table */}
-          <div className="rounded-xl border border-slate-800 overflow-hidden card-hover" style={{ background: '#111827' }}>
-            <div className="px-6 py-4 border-b border-slate-800">
-              <h2 className="text-base font-bold text-white">All Holdings</h2>
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden bg-white dark:bg-[#111827] shadow-sm transition-all">
+            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800">
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">All Holdings</h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
-                <thead className="text-slate-500 font-medium" style={{ background: 'rgba(15,23,42,0.5)' }}>
+                <thead className="text-slate-500 font-medium bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800">
                   <tr>
                     <th className="px-6 py-3">Company</th>
                     <th className="px-6 py-3 text-right">Qty</th>
@@ -233,22 +232,20 @@ export default function DashboardPage() {
                     <th className="px-6 py-3 text-right">P&L</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                   {sortedByTotal.map((h) => (
                     <tr
                       key={h.id}
                       onClick={() => h.stock_details?.ticker ? router.push(`/stock/${h.stock_details.ticker}`) : undefined}
-                      className={`transition-colors ${h.stock_details?.ticker ? 'hover:bg-white/[0.02] cursor-pointer' : ''}`}
+                      className={`transition-colors ${h.stock_details?.ticker ? 'hover:bg-slate-50 dark:hover:bg-white/[0.02] cursor-pointer' : ''}`}
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-blue-400 text-xs uppercase shrink-0"
-                            style={{ background: 'rgba(59,130,246,0.1)' }}
-                          >
+                          <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-blue-600 dark:text-blue-400 text-xs uppercase shrink-0 bg-blue-50 dark:bg-blue-500/10">
                             {(h.stock_details?.ticker || "FI").slice(0, 2)}
                           </div>
                           <div>
-                            <div className="font-semibold text-white">
+                            <div className="font-semibold text-slate-900 dark:text-white">
                               {h.stock_details?.ticker || "Fixed Income Asset"}
                             </div>
                             <div className="text-xs text-slate-500 truncate max-w-[140px]">
@@ -257,20 +254,20 @@ export default function DashboardPage() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-right text-slate-400 font-medium">
+                      <td className="px-6 py-4 text-right text-slate-600 dark:text-slate-400 font-medium">
                         {h.quantity.toLocaleString()}
                       </td>
-                      <td className="px-6 py-4 text-right text-slate-400">
+                      <td className="px-6 py-4 text-right text-slate-600 dark:text-slate-400">
                         ${h.average_cost.toFixed(2)}
                       </td>
-                      <td className="px-6 py-4 text-right font-medium text-white">
+                      <td className="px-6 py-4 text-right font-medium text-slate-900 dark:text-white">
                         ${h.stock_details?.current_price?.toFixed(2) || "—"}
                       </td>
-                      <td className="px-6 py-4 text-right font-medium text-white">
+                      <td className="px-6 py-4 text-right font-medium text-slate-900 dark:text-white">
                         ${formatNumber(h.current_value)}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <div className={`flex flex-col items-end ${h.unrealized_pl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                        <div className={`flex flex-col items-end ${h.unrealized_pl >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
                           <span className="font-semibold">
                             {h.unrealized_pl >= 0 ? "+" : ""}${formatNumber(h.unrealized_pl)}
                           </span>
@@ -306,29 +303,25 @@ function SummaryCard({
   icon: React.ReactNode;
   color: "blue" | "slate" | "emerald" | "rose" | "violet";
 }) {
-  const iconBgStyle: Record<string, React.CSSProperties> = {
-    blue: { background: 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(59,130,246,0.05))' },
-    slate: { background: 'rgba(30,41,59,0.5)' },
-    emerald: { background: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.05))' },
-    rose: { background: 'linear-gradient(135deg, rgba(244,63,94,0.15), rgba(244,63,94,0.05))' },
-    violet: { background: 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(139,92,246,0.05))' },
-  };
   const iconColorMap = {
-    blue: "text-blue-400", slate: "text-slate-400", emerald: "text-emerald-400",
-    rose: "text-rose-400", violet: "text-violet-400",
+    blue: "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10",
+    slate: "text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800",
+    emerald: "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10",
+    rose: "text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/10",
+    violet: "text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-500/10",
   };
 
   return (
-    <div className="rounded-xl border border-slate-800 p-5 card-hover gradient-border" style={{ background: '#111827' }}>
+    <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-5 bg-white dark:bg-[#111827] shadow-sm transition-all">
       <div className="flex items-center justify-between mb-3">
         <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
           {label}
         </span>
-        <div className={`p-2 rounded-lg ${iconColorMap[color]}`} style={iconBgStyle[color]}>{icon}</div>
+        <div className={`p-2 rounded-lg ${iconColorMap[color]}`}>{icon}</div>
       </div>
-      <div className="text-2xl font-bold text-white">{value}</div>
+      <div className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{value}</div>
       {subtitle && (
-        <span className={`text-sm font-semibold ${color === "emerald" ? "text-emerald-400" : color === "rose" ? "text-rose-400" : "text-slate-500"}`}>
+        <span className={`text-sm font-semibold mt-1 block ${color === "emerald" ? "text-emerald-600 dark:text-emerald-400" : color === "rose" ? "text-rose-600 dark:text-rose-400" : "text-slate-500"}`}>
           {subtitle}
         </span>
       )}
@@ -356,27 +349,26 @@ function PerformerRow({
   return (
     <div
       onClick={onClick}
-      className="flex items-center justify-between p-3 rounded-lg hover:bg-white/[0.03] cursor-pointer transition-all duration-200"
-      style={{ background: 'rgba(15,23,42,0.4)' }}
+      className="flex items-center justify-between p-3 rounded-lg border border-slate-100 dark:border-slate-800/60 bg-slate-50 dark:bg-slate-800/30 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer group"
     >
       <div className="flex items-center gap-3">
-        <span className="text-xs font-bold text-slate-600 w-5 text-center">{rank}</span>
-        <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-blue-400 text-xs uppercase"
-          style={{ background: 'rgba(59,130,246,0.1)' }}
-        >
+        <div className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-700 group-hover:border-slate-300 dark:group-hover:border-slate-600 transition-colors">
+          {rank}
+        </div>
+        <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-blue-600 dark:text-blue-400 text-xs uppercase bg-blue-50 dark:bg-blue-500/10">
           {ticker[0]}
         </div>
         <div>
-          <div className="font-semibold text-sm text-white">{ticker}</div>
+          <div className="font-semibold text-sm text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{ticker}</div>
           <div className="text-xs text-slate-500 truncate max-w-[120px]">{name}</div>
         </div>
       </div>
-      <div className={`text-right ${isPositive ? "text-emerald-400" : "text-rose-400"}`}>
+      <div className={`text-right ${isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
         <div className="font-bold text-sm">
           {plPct >= 0 ? "+" : ""}{plPct.toFixed(2)}%
         </div>
-        <div className="text-xs opacity-70">
-          {pl >= 0 ? "+" : ""}${formatNumber(pl)}
+        <div className="text-xs font-medium opacity-80 mt-0.5">
+          {pl >= 0 ? "+" : ""}${formatNumber(Math.abs(pl))}
         </div>
       </div>
     </div>
@@ -432,9 +424,9 @@ function SectorExposureChart({
   const maxAbsDiff = Math.max(...sectorData.map((d) => Math.abs(d.diff)), 1);
 
   return (
-    <div className="rounded-xl border border-slate-800 p-6 card-hover" style={{ background: '#111827' }}>
+    <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-6 bg-white dark:bg-[#111827] shadow-sm transition-all">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-base font-bold text-white">
+        <h2 className="text-base font-bold text-slate-900 dark:text-white">
           Sector Exposure vs. S&P 500
         </h2>
         <div className="flex items-center gap-4 text-[11px] font-bold text-slate-500">
@@ -456,14 +448,14 @@ function SectorExposureChart({
               </span>
 
               {/* Diverging Bar */}
-              <div className="flex-1 flex items-center h-6 relative">
+              <div className="flex-1 flex items-center h-6 relative bg-slate-50 dark:bg-slate-800/20 rounded-sm">
                 {/* Center line */}
-                <div className="absolute left-1/2 top-0 bottom-0 w-px bg-slate-700 z-10" />
+                <div className="absolute left-1/2 top-0 bottom-0 w-px bg-slate-200 dark:bg-slate-700 z-10" />
 
                 {/* Underweight (left) */}
                 {!isOver && (
                   <div
-                    className="absolute right-1/2 h-5 rounded-l-sm bg-rose-500/60 transition-all duration-500"
+                    className="absolute right-1/2 h-5 rounded-l-sm bg-rose-500 transition-all duration-500"
                     style={{ width: `${barWidth}%` }}
                   />
                 )}
@@ -471,7 +463,7 @@ function SectorExposureChart({
                 {/* Overweight (right) */}
                 {isOver && (
                   <div
-                    className="absolute left-1/2 h-5 rounded-r-sm bg-emerald-500/60 transition-all duration-500"
+                    className="absolute left-1/2 h-5 rounded-r-sm bg-emerald-500 transition-all duration-500"
                     style={{ width: `${barWidth}%` }}
                   />
                 )}
@@ -483,7 +475,7 @@ function SectorExposureChart({
                   ? "text-emerald-600 dark:text-emerald-400"
                   : d.diff < -0.5
                     ? "text-rose-600 dark:text-rose-400"
-                    : "text-slate-400"
+                    : "text-slate-500"
                   }`}
               >
                 {d.diff > 0 ? "+" : ""}
