@@ -58,7 +58,11 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOWED_ORIGINS = [
+    "https://exciting-wholeness-production.up.railway.app",
+    "http://localhost:3000",
+]
 
 
 ROOT_URLCONF = "core.urls"
