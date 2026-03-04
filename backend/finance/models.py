@@ -73,6 +73,9 @@ class PortfolioItem(models.Model):
     chg_pct_1d = models.FloatField(blank=True, null=True)
     pnl_1d = models.FloatField(blank=True, null=True)
     
+    # Valuation
+    pe_next_12_months = models.FloatField(blank=True, null=True)
+    
     # Fixed Income
     yield_to_worst = models.FloatField(blank=True, null=True)
     duration = models.FloatField(blank=True, null=True)
