@@ -22,7 +22,7 @@ interface PortfolioHolding {
   current_value: number;
   unrealized_pl: number;
   unrealized_pl_pct: number;
-  stock_details: {
+  stock_details?: {
     ticker: string;
     company_name: string;
     current_price: number;
@@ -59,8 +59,8 @@ export default function DashboardPage() {
 
   // Daily P&L calculations
   const getDailyChange = (h: PortfolioHolding) => {
-    const prevClose = h.stock_details.previous_close;
-    const curPrice = h.stock_details.current_price;
+    const prevClose = h.stock_details?.previous_close;
+    const curPrice = h.stock_details?.current_price;
     if (!prevClose || !curPrice) return { dailyPL: 0, dailyPLPct: 0 };
     const dailyPLPct = ((curPrice - prevClose) / prevClose) * 100;
     const dailyPL = (curPrice - prevClose) * h.quantity;
@@ -69,15 +69,16 @@ export default function DashboardPage() {
 
   const totalDailyPL = holdings.reduce((sum, h) => sum + getDailyChange(h).dailyPL, 0);
   const prevDayValue = holdings.reduce((sum, h) => {
-    const prev = h.stock_details.previous_close || h.stock_details.current_price;
+    const prev = h.stock_details?.previous_close || h.stock_details?.current_price;
+    if (!prev) return sum;
     return sum + (prev * h.quantity);
   }, 0);
   const totalDailyPLPct = prevDayValue > 0 ? (totalDailyPL / prevDayValue) * 100 : 0;
 
-  // Sorted by daily change % for top/bottom
-  const sortedByDaily = [...holdings].sort(
-    (a, b) => getDailyChange(b).dailyPLPct - getDailyChange(a).dailyPLPct
-  );
+  // Sorted by daily change % for top/bottom (only equites that have details)
+  const sortedByDaily = [...holdings]
+    .filter(h => h.stock_details !== null)
+    .sort((a, b) => getDailyChange(b).dailyPLPct - getDailyChange(a).dailyPLPct);
   const top3 = sortedByDaily.slice(0, 3);
   const bottom3 = sortedByDaily.slice(-3).reverse();
 
@@ -174,12 +175,12 @@ export default function DashboardPage() {
                     <PerformerRow
                       key={h.id}
                       rank={i + 1}
-                      ticker={h.stock_details.ticker}
-                      name={h.stock_details.company_name}
+                      ticker={h.stock_details?.ticker || ''}
+                      name={h.stock_details?.company_name || ''}
                       plPct={daily.dailyPLPct}
                       pl={daily.dailyPL}
                       isPositive={daily.dailyPLPct >= 0}
-                      onClick={() => router.push(`/stock/${h.stock_details.ticker}`)}
+                      onClick={() => router.push(`/stock/${h.stock_details?.ticker || ''}`)}
                     />
                   );
                 })}
@@ -198,13 +199,13 @@ export default function DashboardPage() {
                   return (
                     <PerformerRow
                       key={h.id}
-                      rank={holdings.length - i}
-                      ticker={h.stock_details.ticker}
-                      name={h.stock_details.company_name}
+                      rank={holdings.filter(h => h.stock_details).length - i}
+                      ticker={h.stock_details?.ticker || ''}
+                      name={h.stock_details?.company_name || ''}
                       plPct={daily.dailyPLPct}
                       pl={daily.dailyPL}
                       isPositive={daily.dailyPLPct >= 0}
-                      onClick={() => router.push(`/stock/${h.stock_details.ticker}`)}
+                      onClick={() => router.push(`/stock/${h.stock_details?.ticker || ''}`)}
                     />
                   );
                 })}
@@ -236,22 +237,22 @@ export default function DashboardPage() {
                   {sortedByTotal.map((h) => (
                     <tr
                       key={h.id}
-                      onClick={() => router.push(`/stock/${h.stock_details.ticker}`)}
-                      className="hover:bg-white/[0.02] transition-colors cursor-pointer"
+                      onClick={() => h.stock_details?.ticker ? router.push(`/stock/${h.stock_details.ticker}`) : undefined}
+                      className={`transition-colors ${h.stock_details?.ticker ? 'hover:bg-white/[0.02] cursor-pointer' : ''}`}
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-blue-400 text-xs uppercase shrink-0"
                             style={{ background: 'rgba(59,130,246,0.1)' }}
                           >
-                            {h.stock_details.ticker.slice(0, 2)}
+                            {(h.stock_details?.ticker || "FI").slice(0, 2)}
                           </div>
                           <div>
                             <div className="font-semibold text-white">
-                              {h.stock_details.ticker}
+                              {h.stock_details?.ticker || "Fixed Income Asset"}
                             </div>
                             <div className="text-xs text-slate-500 truncate max-w-[140px]">
-                              {h.stock_details.company_name}
+                              {h.stock_details?.company_name || "Bond Collection"}
                             </div>
                           </div>
                         </div>
@@ -263,7 +264,7 @@ export default function DashboardPage() {
                         ${h.average_cost.toFixed(2)}
                       </td>
                       <td className="px-6 py-4 text-right font-medium text-white">
-                        ${h.stock_details.current_price?.toFixed(2) || "—"}
+                        ${h.stock_details?.current_price?.toFixed(2) || "—"}
                       </td>
                       <td className="px-6 py-4 text-right font-medium text-white">
                         ${formatNumber(h.current_value)}
@@ -407,7 +408,7 @@ function SectorExposureChart({
   // Calculate portfolio sector weights
   const sectorValues: Record<string, number> = {};
   holdings.forEach((h) => {
-    const sector = h.stock_details.sector || "Unknown";
+    const sector = h.stock_details?.sector || "Fixed Income";
     sectorValues[sector] = (sectorValues[sector] || 0) + h.current_value;
   });
 
