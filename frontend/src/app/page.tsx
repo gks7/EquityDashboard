@@ -22,6 +22,8 @@ interface PortfolioHolding {
   current_value: number;
   unrealized_pl: number;
   unrealized_pl_pct: number;
+  asset_type: string | null;
+  specific_type: string | null;
   stock_details?: {
     ticker: string;
     company_name: string;
@@ -130,33 +132,31 @@ export default function DashboardPage() {
         </div>
       ) : (
         <>
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            <SummaryCard
-              label="Total Value"
-              value={`$${formatNumber(totalValue)}`}
-              icon={<DollarSign className="w-5 h-5" />}
-              color="blue"
-            />
-            <SummaryCard
-              label="Total Cost"
-              value={`$${formatNumber(totalCost)}`}
-              icon={<Briefcase className="w-5 h-5" />}
-              color="slate"
-            />
-            <SummaryCard
-              label="Daily P&L"
-              value={`${totalDailyPL >= 0 ? "+" : ""}$${formatNumber(totalDailyPL)}`}
-              subtitle={`${totalDailyPLPct >= 0 ? "+" : ""}${totalDailyPLPct.toFixed(2)}%`}
-              icon={totalDailyPL >= 0 ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
-              color={totalDailyPL >= 0 ? "emerald" : "rose"}
-            />
-            <SummaryCard
-              label="Holdings"
-              value={String(holdings.length)}
-              icon={<BarChart3 className="w-5 h-5" />}
-              color="violet"
-            />
+          {/* Total Value Hero & Asset Allocation Breakdown */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            {/* Hero Left: Total Value */}
+            <div className="lg:col-span-1 rounded-2xl border border-slate-200 dark:border-slate-800 p-8 flex flex-col justify-center bg-white dark:bg-[#111827] shadow-sm">
+              <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Total Value</h2>
+              <div className="text-4xl sm:text-5xl font-bold tracking-tight text-slate-900 dark:text-white mb-4">
+                ${formatNumber(totalValue)}
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold ${totalDailyPL >= 0 ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400" : "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400"}`}>
+                  {totalDailyPL >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                  {totalDailyPL >= 0 ? "+" : ""}${formatNumber(totalDailyPL)}
+                  <span className="opacity-70 font-medium ml-1">({totalDailyPL >= 0 ? "+" : ""}{totalDailyPLPct.toFixed(2)}%)</span>
+                </div>
+                <span className="text-sm font-medium text-slate-400">Past 24h</span>
+              </div>
+            </div>
+
+            {/* Hero Right: Allocation Breakdown */}
+            <div className="lg:col-span-2 rounded-2xl border border-slate-200 dark:border-slate-800 p-8 flex flex-col sm:flex-row gap-8 items-center bg-white dark:bg-[#111827] shadow-sm">
+              <PortfolioAllocationPieChart holdings={holdings} totalValue={totalValue} />
+            </div>
+
           </div>
 
           {/* Top 3 / Bottom 3 */}
@@ -289,6 +289,160 @@ export default function DashboardPage() {
 }
 
 // --- Helper Components ---
+
+function PortfolioAllocationPieChart({
+  holdings,
+  totalValue
+}: {
+  holdings: PortfolioHolding[];
+  totalValue: number;
+}) {
+  if (totalValue === 0) return null;
+
+  // 1. Bucket the Data
+  const buckets = {
+    eqSingle: 0,
+    eqIndex: 0,
+    fiCorp: 0,
+    fiIndex: 0,
+    fiEM: 0,
+    fiTreasury: 0,
+    other: 0,
+  };
+
+  holdings.forEach(h => {
+    // Default to 'Equity' if no specific asset_type but we have stock_details or an inferred equity symbol
+    const isEq = h.asset_type === 'Equity' || (!h.asset_type && h.stock_details !== null);
+    const specific = (h.specific_type || '').toLowerCase();
+
+    if (isEq) {
+      if (specific.includes('index') || specific.includes('etf')) buckets.eqIndex += h.current_value;
+      else buckets.eqSingle += h.current_value;
+    } else if (h.asset_type === 'Fixed Income' || h.asset_type === 'Treasury' || h.asset_type === 'EM Sovereign') {
+      if (specific.includes('corp')) buckets.fiCorp += h.current_value;
+      else if (specific.includes('index') || specific.includes('etf')) buckets.fiIndex += h.current_value;
+      else if (specific.includes('em') || h.asset_type === 'EM Sovereign') buckets.fiEM += h.current_value;
+      else if (specific.includes('treasury') || h.asset_type === 'Treasury') buckets.fiTreasury += h.current_value;
+      else buckets.other += h.current_value;
+    } else {
+      buckets.other += h.current_value;
+    }
+  });
+
+  const totalEq = buckets.eqSingle + buckets.eqIndex;
+  const totalFi = buckets.fiCorp + buckets.fiIndex + buckets.fiEM + buckets.fiTreasury + buckets.other;
+
+  // 2. Prepare SVG Pie Chart Segments
+  const segments = [
+    { label: "Equities (Single)", val: buckets.eqSingle, color: "#3b82f6" }, // Blue 500
+    { label: "Equities (Index)", val: buckets.eqIndex, color: "#94a3b8" }, // Slate 400
+    { label: "Corp Bonds", val: buckets.fiCorp, color: "#14b8a6" }, // Teal 500
+    { label: "FI Index", val: buckets.fiIndex, color: "#8b5cf6" }, // Violet 500
+    { label: "EM Sovereign", val: buckets.fiEM, color: "#f97316" }, // Orange 500
+    { label: "Treasury", val: buckets.fiTreasury, color: "#f43f5e" }, // Rose 500
+    { label: "Other", val: buckets.other, color: "#64748b" }, // Slate 500
+  ].filter(s => s.val > 0).sort((a, b) => b.val - a.val);
+
+  let cumulativePercent = 0;
+  const paths = segments.map(seg => {
+    const percent = seg.val / totalValue;
+    const startAngle = cumulativePercent * 360;
+    const endAngle = (cumulativePercent + percent) * 360;
+    cumulativePercent += percent;
+
+    // SVG coordinates for a donut chart
+    const x1 = Math.cos((startAngle - 90) * Math.PI / 180) * 100;
+    const y1 = Math.sin((startAngle - 90) * Math.PI / 180) * 100;
+    const x2 = Math.cos((endAngle - 90) * Math.PI / 180) * 100;
+    const y2 = Math.sin((endAngle - 90) * Math.PI / 180) * 100;
+    const largeArc = percent > 0.5 ? 1 : 0;
+
+    // Prevent rendering a full circle using arc if 100% (SVG arc requires < 360deg)
+    if (percent === 1) {
+      return (
+        <circle key={seg.label} cx="0" cy="0" r="100" fill="none" stroke={seg.color} strokeWidth="40" />
+      );
+    }
+
+    return (
+      <path
+        key={seg.label}
+        d={`M ${x1} ${y1} A 100 100 0 ${largeArc} 1 ${x2} ${y2}`}
+        fill="none"
+        stroke={seg.color}
+        strokeWidth="40"
+        className="transition-all duration-300 hover:stroke-[45] hover:opacity-90 cursor-pointer"
+      />
+    );
+  });
+
+  return (
+    <>
+      <div className="w-1/3 flex justify-center items-center relative min-w-[200px]">
+        {/* Responsive Pie Chart Container */}
+        <div className="w-48 h-48 relative">
+          <svg viewBox="-120 -120 240 240" className="w-full h-full -rotate-90 origin-center drop-shadow-sm">
+            {paths}
+          </svg>
+          {/* Center Text */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+            <span className="text-xl font-bold text-slate-900 dark:text-white">
+              {((totalEq / totalValue) * 100).toFixed(0)}%
+            </span>
+            <span className="text-xs font-semibold text-slate-500">Equities</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="w-2/3">
+        <div className="grid grid-cols-2 gap-x-8 gap-y-6">
+          {/* Equities Column */}
+          <div>
+            <div className="flex justify-between items-end mb-3 pb-2 border-b border-slate-200 dark:border-slate-800">
+              <span className="font-bold text-slate-900 dark:text-white">Equities</span>
+              <span className="font-bold text-slate-900 dark:text-white">{((totalEq / totalValue) * 100).toFixed(1)}%</span>
+            </div>
+            <div className="space-y-2">
+              {segments.filter(s => s.label.includes('Equities')).map(s => (
+                <div key={s.label} className="flex justify-between items-center text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.color }}></span>
+                    <span className="text-slate-600 dark:text-slate-400">{s.label.replace('Equities ', '')}</span>
+                  </div>
+                  <div className="text-slate-900 dark:text-white font-medium">
+                    ${formatNumber(s.val)} <span className="text-xs text-slate-400 ml-1">({((s.val / totalValue) * 100).toFixed(1)}%)</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Fixed Income Column */}
+          <div>
+            <div className="flex justify-between items-end mb-3 pb-2 border-b border-slate-200 dark:border-slate-800">
+              <span className="font-bold text-slate-900 dark:text-white">Fixed Income</span>
+              <span className="font-bold text-slate-900 dark:text-white">{((totalFi / totalValue) * 100).toFixed(1)}%</span>
+            </div>
+            <div className="space-y-2">
+              {segments.filter(s => !s.label.includes('Equities')).map(s => (
+                <div key={s.label} className="flex justify-between items-center text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.color }}></span>
+                    <span className="text-slate-600 dark:text-slate-400">{s.label}</span>
+                  </div>
+                  <div className="text-slate-900 dark:text-white font-medium">
+                    ${formatNumber(s.val)} <span className="text-xs text-slate-400 ml-1">({((s.val / totalValue) * 100).toFixed(1)}%)</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </>
+  );
+}
 
 function SummaryCard({
   label,
