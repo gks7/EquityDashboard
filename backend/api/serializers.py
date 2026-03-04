@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from finance.models import Stock, InvestmentThesis, Estimate5Y, PortfolioItem, ValuationModel
+from finance.models import Stock, InvestmentThesis, Estimate5Y, PortfolioItem, ValuationModel, PortfolioSnapshot
 from django.contrib.auth.models import User
 
 class UserSerializer(serializers.ModelSerializer):
@@ -45,10 +45,15 @@ class StockSerializer(serializers.ModelSerializer):
         model = Stock
         fields = '__all__'
 
+class PortfolioSnapshotSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PortfolioSnapshot
+        fields = '__all__'
+
 class PortfolioItemSerializer(serializers.ModelSerializer):
     stock_details = StockSerializer(source='stock', read_only=True)
     stock_id = serializers.PrimaryKeyRelatedField(
-        queryset=Stock.objects.all(), source='stock', write_only=True
+        queryset=Stock.objects.all(), source='stock', write_only=True, required=False, allow_null=True
     )
     total_cost = serializers.ReadOnlyField()
     current_value = serializers.ReadOnlyField()

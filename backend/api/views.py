@@ -1,9 +1,11 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from finance.models import Stock, InvestmentThesis, Estimate5Y, PortfolioItem, ValuationModel
-from .serializers import StockSerializer, InvestmentThesisSerializer, Estimate5YSerializer, PortfolioItemSerializer
+from finance.models import Stock, InvestmentThesis, Estimate5Y, PortfolioItem, ValuationModel, PortfolioSnapshot
+from .serializers import StockSerializer, InvestmentThesisSerializer, Estimate5YSerializer, PortfolioItemSerializer, PortfolioSnapshotSerializer
 from finance.services import update_stock_price
+import pandas as pd
+from datetime import datetime
 
 class StockViewSet(viewsets.ModelViewSet):
     queryset = Stock.objects.all()
@@ -88,33 +90,128 @@ class Estimate5YViewSet(viewsets.ModelViewSet):
     queryset = Estimate5Y.objects.all()
     serializer_class = Estimate5YSerializer
 
+class PortfolioSnapshotViewSet(viewsets.ModelViewSet):
+    queryset = PortfolioSnapshot.objects.all()
+    serializer_class = PortfolioSnapshotSerializer
+
+    @action(detail=False, methods=['post'], url_path='upload_excel')
+    def upload_excel(self, request):
+        file = request.FILES.get('file')
+        if not file:
+            return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            df = pd.read_excel(file)
+            
+            # Remove any empty rows
+            df = df.dropna(how='all')
+
+            snapshot = PortfolioSnapshot.objects.create(date=datetime.now().date())
+            
+            # Carry over average costs
+            prev_snapshot = PortfolioSnapshot.objects.exclude(id=snapshot.id).first()
+            prev_items = {}
+            if prev_snapshot:
+                for item in prev_snapshot.items.all():
+                    key = item.ticker or item.isin
+                    if key:
+                        prev_items[key] = item.average_cost
+            
+            items_to_create = []
+            
+            for index, row in df.iterrows():
+                def get_val(col):
+                    if col in df.columns and pd.notna(row[col]):
+                        # If the value is a string, strip it. Ohterwise return as string
+                        return str(row[col]).strip() if isinstance(row[col], str) else str(row[col])
+                    return None
+
+                def get_float(col):
+                    if col in df.columns and pd.notna(row[col]):
+                        try:
+                            # Bloomberg percentages are often like "1.35%" or "0.0135" depending on sheet
+                            val = str(row[col]).replace('%', '').replace(',', '')
+                            return float(val)
+                        except:
+                            return 0.0
+                    return 0.0
+
+                raw_ticker = get_val('Ticker') 
+                isin = get_val('ISIN')
+                asset_type = get_val('Type')
+                specific_type = get_val('Specific type')
+                currency = get_val('Currency')
+                
+                quantity = get_float('Quantity')
+                if quantity <= 0:
+                    continue
+                    
+                price = get_float('PX_LAST') or get_float('PX_dirty_MID')
+                cross_usd = get_float('Cross USD') or 1.0
+                market_value = get_float('Market Value')
+                
+                chg_pct_1d = get_float('CHG_PCT_1D')
+                # If chg_pct represents percentage as 0.01 = 1%, convert string like "0.59%" 
+                if chg_pct_1d and '%' not in str(row.get('CHG_PCT_1D', '')) and chg_pct_1d < 1:
+                    chg_pct_1d = chg_pct_1d * 100 # converting decimal to percent format for display
+                
+                pnl_1d = get_float('1 day PnL')
+                yield_to_worst = get_float('INDEX_YIELD_TO_WORST') or get_float('YIELD_TO_WORST') 
+                duration = get_float('DUR_ADJ_OAS_MID') or get_float('Duration')
+
+                stock = None
+                ticker = raw_ticker
+                
+                if asset_type == 'Equity' and raw_ticker:
+                    clean_ticker = raw_ticker.split(' ')[0]
+                    ticker = clean_ticker
+                    stock, _ = Stock.objects.get_or_create(ticker=clean_ticker, defaults={'company_name': clean_ticker})
+                    update_stock_price(clean_ticker)
+
+                # Carried over average cost
+                key = ticker or isin
+                avg_cost = prev_items.get(key, price)
+
+                item = PortfolioItem(
+                    snapshot=snapshot,
+                    stock=stock,
+                    ticker=ticker,
+                    isin=isin,
+                    asset_type=asset_type,
+                    specific_type=specific_type,
+                    quantity=quantity,
+                    average_cost=avg_cost,
+                    price=price,
+                    currency=currency,
+                    cross_usd=cross_usd,
+                    market_value=market_value,
+                    chg_pct_1d=chg_pct_1d,
+                    pnl_1d=pnl_1d,
+                    yield_to_worst=yield_to_worst,
+                    duration=duration
+                )
+                items_to_create.append(item)
+                
+            PortfolioItem.objects.bulk_create(items_to_create)
+            
+            return Response({"message": "Portfolio uploaded successfully", "snapshot_id": snapshot.id}, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 class PortfolioItemViewSet(viewsets.ModelViewSet):
-    queryset = PortfolioItem.objects.all().order_by('-added_at')
     serializer_class = PortfolioItemSerializer
 
+    def get_queryset(self):
+        snapshot_id = self.request.query_params.get('snapshot_id')
+        if snapshot_id:
+            return PortfolioItem.objects.filter(snapshot_id=snapshot_id).order_by('-market_value')
+        
+        latest_snapshot = PortfolioSnapshot.objects.first()
+        if latest_snapshot:
+            return PortfolioItem.objects.filter(snapshot=latest_snapshot).order_by('-market_value')
+            
+        return PortfolioItem.objects.none()
+
     def create(self, request, *args, **kwargs):
-        ticker = request.data.get('ticker')
-        quantity = request.data.get('quantity')
-        average_cost = request.data.get('average_cost')
-
-        if not all([ticker, quantity, average_cost]):
-            return Response({"error": "Ticker, quantity, and average_cost are required"}, 
-                            status=status.HTTP_400_BAD_REQUEST)
-
-        # Ensure stock exists and has latest data
-        stock = update_stock_price(ticker)
-        if not stock:
-             return Response({"error": f"Could not find or fetch data for {ticker}"}, 
-                            status=status.HTTP_400_BAD_REQUEST)
-
-        # Create or update portfolio item
-        portfolio_item, created = PortfolioItem.objects.update_or_create(
-            stock=stock,
-            defaults={
-                'quantity': float(quantity),
-                'average_cost': float(average_cost)
-            }
-        )
-
-        serializer = self.get_serializer(portfolio_item)
-        return Response(serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+        return Response({"error": "Manual creation is disabled; please upload a snapshot"}, status=status.HTTP_400_BAD_REQUEST)

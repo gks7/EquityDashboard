@@ -8,11 +8,13 @@ dj-database-url==3.0.1
 Django==4.2.28
 django-cors-headers==4.9.0
 djangorestframework==3.16.1
+et_xmlfile==2.0.0
 frozendict==2.4.7
 gunicorn==23.0.0
 idna==3.11
 multitasking==0.0.12
 numpy==2.0.2
+openpyxl==3.1.5
 packaging==26.0
 pandas==2.3.3
 peewee==4.0.1

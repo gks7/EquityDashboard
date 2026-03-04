@@ -42,10 +42,41 @@ class Stock(models.Model):
         estimates = [t.estimates_5y.accumulated_dividends_5y for t in theses if hasattr(t, 'estimates_5y')]
         return sum(estimates) / len(estimates) if estimates else 0.0
 
+class PortfolioSnapshot(models.Model):
+    date = models.DateField(db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-date', '-created_at']
+
+    def __str__(self):
+        return f"Snapshot {self.date}"
+
 class PortfolioItem(models.Model):
-    stock = models.ForeignKey(Stock, on_delete=models.CASCADE, related_name='portfolio_entries')
+    snapshot = models.ForeignKey(PortfolioSnapshot, on_delete=models.CASCADE, related_name='items', null=True, blank=True)
+    stock = models.ForeignKey(Stock, on_delete=models.SET_NULL, related_name='portfolio_entries', null=True, blank=True)
+    
+    # Bloomberg Source Data
+    ticker = models.CharField(max_length=100, blank=True, null=True)
+    isin = models.CharField(max_length=50, blank=True, null=True)
+    asset_type = models.CharField(max_length=50, blank=True, null=True)
+    specific_type = models.CharField(max_length=50, blank=True, null=True)
+    
     quantity = models.FloatField(validators=[MinValueValidator(0.0)])
-    average_cost = models.FloatField(validators=[MinValueValidator(0.0)])
+    average_cost = models.FloatField(validators=[MinValueValidator(0.0)], default=0.0)
+    
+    price = models.FloatField(blank=True, null=True)
+    currency = models.CharField(max_length=10, blank=True, null=True)
+    cross_usd = models.FloatField(blank=True, null=True, default=1.0)
+    
+    market_value = models.FloatField(blank=True, null=True)
+    chg_pct_1d = models.FloatField(blank=True, null=True)
+    pnl_1d = models.FloatField(blank=True, null=True)
+    
+    # Fixed Income
+    yield_to_worst = models.FloatField(blank=True, null=True)
+    duration = models.FloatField(blank=True, null=True)
+
     added_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -55,13 +86,19 @@ class PortfolioItem(models.Model):
 
     @property
     def current_value(self):
-        if self.stock.current_price:
+        if self.market_value is not None:
+            return self.market_value
+        if self.price is not None:
+            return self.quantity * self.price * self.cross_usd
+        if self.stock and self.stock.current_price:
             return self.quantity * self.stock.current_price
         return 0.0
 
     @property
     def unrealized_pl(self):
-        return self.current_value - self.total_cost
+        if self.average_cost and self.average_cost > 0:
+            return self.current_value - self.total_cost
+        return 0.0
 
     @property
     def unrealized_pl_pct(self):
@@ -70,7 +107,7 @@ class PortfolioItem(models.Model):
         return 0.0
 
     def __str__(self):
-        return f"{self.quantity} shares of {self.stock.ticker}"
+        return f"{self.quantity} of {self.ticker or self.stock}"
 
 class InvestmentThesis(models.Model):
     CONVICTION_CHOICES = [
