@@ -200,8 +200,12 @@ class PortfolioSnapshotViewSet(viewsets.ModelViewSet):
                 items_to_create.append(item)
                 
             PortfolioItem.objects.bulk_create(items_to_create)
-            
-            return Response({"message": "Portfolio uploaded successfully", "snapshot_id": snapshot.id}, status=status.HTTP_201_CREATED)
+            return Response({
+                "message": f"Portfolio uploaded successfully. {len(items_to_create)} items created.", 
+                "snapshot_id": snapshot.id,
+                "columns_detected": df.columns.tolist(),
+                "items_created": len(items_to_create)
+            }, status=status.HTTP_201_CREATED)
             
         except Exception as e:
             error_details = traceback.format_exc()
