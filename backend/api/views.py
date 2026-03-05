@@ -163,11 +163,11 @@ class PortfolioSnapshotViewSet(viewsets.ModelViewSet):
                     chg_pct_1d = chg_pct_1d * 100 # converting decimal to percent format for display
                 
                 pnl_1d = get_float('1 day PnL')
-                pe_next_12_months = get_float('P/E Next 12 Quarters')
+                pe_next_12_months = get_float('BEST_EST_PE_4QTRS') or get_float('P/E Next 12 Quarters')
                 yield_to_worst = get_float('INDEX_YIELD_TO_WORST') or get_float('YIELD_TO_WORST') 
                 duration = get_float('DUR_ADJ_OAS_MID') or get_float('Duration')
-                rating = get_val('BB_COMPOSITE')
-                best_eps = get_float('BEST_FE_4QTRS')
+                rating = get_val('BB_COMPSTE_RATING_IG_HY_INDCTR')
+                best_eps = get_float('BEST_EST_LONG_TERM_GROWTH')
                 eps_lt_growth = get_float('BEST_EST_LONG_TERM_GROWTH')
 
                 stock = None
