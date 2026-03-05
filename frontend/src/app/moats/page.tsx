@@ -137,12 +137,12 @@ const Scoring = ({ stocks, moatHistory, refreshAction }: any) => {
     const [saving, setSaving] = useState(false);
 
     const co = stocks.find((c: any) => c.ticker === sel) || stocks[0];
-    if (!co) return null;
 
     const latest = useMemo(() => {
+        if (!co) return null;
         const arr = (moatHistory[sel] || []).filter((e: any) => e.analyst_name === analyst);
         return arr.length > 0 ? arr[0] : null;
-    }, [moatHistory, sel, analyst]);
+    }, [moatHistory, sel, analyst, co]);
 
     const dk = `${sel}-${analyst}`;
     const gs = (cat: string) => draft[dk]?.[cat] ?? latest?.[cat] ?? 1;
@@ -153,6 +153,7 @@ const Scoring = ({ stocks, moatHistory, refreshAction }: any) => {
     };
 
     const save = async () => {
+        if (!co) return;
         setSaving(true);
         const scores = CATS.reduce((a: any, c) => { a[c.key === 'switch_costs' ? 'switchCosts' : c.key === 'physical_assets' ? 'physicalAssets' : c.key === 'network_effects' ? 'networkEffects' : c.key] = gs(c.key); return a; }, {});
         await fetch(`${API_BASE}/moats/scores/save_score/`, {
@@ -170,6 +171,8 @@ const Scoring = ({ stocks, moatHistory, refreshAction }: any) => {
     const ch = !!draft[dk];
     const cHist = moatHistory[sel] || [];
     const filtCo = stocks.filter((c: any) => c.company_name?.toLowerCase().includes(sFilter.toLowerCase()) || c.ticker.toLowerCase().includes(sFilter.toLowerCase()));
+
+    if (!co) return null;
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-6">
