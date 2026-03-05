@@ -638,7 +638,7 @@ export default function MoatsPage() {
             <div>
                 {tab === "roicmap" && <RoicMap stocks={stocks} metrics={mockedMetrics} moatData={latestMoats} />}
                 {tab === "scoring" && <Scoring stocks={stocks} moatHistory={scores} refreshAction={fetchData} />}
-                {tab === "ranking" && <Ranking stocks={stocks} rankingData={rankings} refreshAction={fetchData} />}
+                {tab === "ranking" && <Ranking stocks={stocks} rankingData={rankings} moatData={latestMoats} refreshAction={fetchData} />}
             </div>
         </div>
     );
