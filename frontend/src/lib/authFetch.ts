@@ -9,9 +9,22 @@ const API_BASE = typeof window !== "undefined"
 
 export async function authFetch(url: string, opts: RequestInit = {}): Promise<Response> {
     const doFetch = (token: string | null) => {
-        const headers = new Headers(opts.headers || {});
-        if (token) headers.set("Authorization", `Bearer ${token}`);
-        return fetch(url, { ...opts, headers });
+        // If opts.headers is already a Headers object, spreading it might lose data or boundaries.
+        // It's safer to clone the headers carefully or just inject auth.
+        const reqHeaders: Record<string, string> = {};
+
+        // Copy existing headers safely if they exist as a plain object
+        if (opts.headers && !(opts.headers instanceof Headers)) {
+            Object.assign(reqHeaders, opts.headers);
+        } else if (opts.headers instanceof Headers) {
+            opts.headers.forEach((val, key) => reqHeaders[key] = val);
+        }
+
+        if (token) {
+            reqHeaders["Authorization"] = `Bearer ${token}`;
+        }
+
+        return fetch(url, { ...opts, headers: reqHeaders });
     };
 
     let access = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
