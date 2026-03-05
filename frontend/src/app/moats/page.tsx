@@ -5,7 +5,8 @@ import {
     XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     ScatterChart, Scatter, Cell, LabelList
 } from "recharts";
-import { Search } from "lucide-react";
+import { Search, ExternalLink } from "lucide-react";
+import Link from "next/link";
 
 // --- API Endpoints ---
 const API_BASE = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api`;
@@ -187,14 +188,18 @@ const Scoring = ({ stocks, moatHistory, refreshAction }: any) => {
                 </div>
                 <div className="flex flex-col gap-1">
                     {filtCo.map((c: any) => (
-                        <button
-                            key={c.ticker}
-                            onClick={() => setSel(c.ticker)}
-                            className={`flex justify-between items-center w-full px-3 py-2 rounded-lg text-left text-sm transition-colors ${sel === c.ticker ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
-                        >
-                            <span className="truncate pr-2">{c.company_name || c.ticker}</span>
-                            <span className="text-xs font-mono text-slate-400">{c.ticker}</span>
-                        </button>
+                        <div key={c.ticker} className="flex items-center gap-1">
+                            <button
+                                onClick={() => setSel(c.ticker)}
+                                className={`flex-1 flex justify-between items-center px-3 py-2 rounded-lg text-left text-sm transition-colors ${sel === c.ticker ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                            >
+                                <span className="truncate pr-2">{c.company_name || c.ticker}</span>
+                                <span className="text-xs font-mono text-slate-400">{c.ticker}</span>
+                            </button>
+                            <Link href={`/stock/${c.ticker}`} title="View company" className="p-1 text-slate-300 hover:text-blue-500 transition-colors shrink-0">
+                                <ExternalLink size={12} />
+                            </Link>
+                        </div>
                     ))}
                 </div>
             </Card>
@@ -400,7 +405,7 @@ const Ranking = ({ stocks, rankingData, refreshAction }: any) => {
                             {idx + 1}
                         </div>
                         <div className="flex-1">
-                            <div className="font-bold text-sm text-slate-900 dark:text-white">{nameMap[ticker]}</div>
+                            <Link href={`/stock/${ticker}`} className="font-bold text-sm text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors">{nameMap[ticker]}</Link>
                             <div className="text-xs font-mono text-slate-500">{ticker}</div>
                         </div>
                         <div className="text-slate-400 cursor-grab px-2">≡</div>

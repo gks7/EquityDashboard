@@ -1,9 +1,13 @@
 "use client";
 
-import { useState, use, useEffect } from "react";
+import { useState, use, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { ArrowLeft, Save, TrendingUp, TrendingDown, RefreshCcw } from "lucide-react";
 import ModelingTab from "@/components/ModelingTab";
+import {
+    BarChart, Bar, LineChart, Line, ComposedChart, Area, ScatterChart, Scatter, Cell,
+    XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine, LabelList
+} from "recharts";
 
 export default function StockDetailPage({ params }: { params: Promise<{ ticker: string }> }) {
     const unwrappedParams = use(params);
@@ -14,6 +18,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
         current_price: number;
         company_name: string;
         sector?: string;
+        forward_pe?: number | null;
         financials?: {
             date: string;
             revenue: number;
@@ -289,231 +294,204 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
                     </div>
                 </>
             ) : (
-                <div className="space-y-8">
-                    {/* Financials Tab Content - Side by side charts */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        {/* Revenue Growth Chart */}
-                        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
-                            <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Revenue Growth ($B)</h2>
-                            <div className="h-48 relative mt-10 flex items-end justify-between pl-12 pr-2">
-                                {(() => {
-                                    const financials = stock.financials || [];
-                                    const maxRev = Math.max(...(financials.map(f => f.revenue) || [1])) / 1e9;
-                                    const chartMax = maxRev * 1.1;
-
-                                    return (
-                                        <>
-                                            {financials.map((fin) => {
-                                                const revB = fin.revenue / 1e9;
-                                                const height = `${Math.max((revB / chartMax) * 100, 5)}%`;
-                                                return (
-                                                    <div key={fin.date} className="h-full flex flex-col justify-end items-center group relative z-10" style={{ width: `${100 / (financials.length || 1)}%` }}>
-                                                        {/* Bar */}
-                                                        <div
-                                                            className="w-10 bg-emerald-500 dark:bg-emerald-600 rounded-t-sm relative transition-all duration-300 hover:bg-emerald-400 cursor-help"
-                                                            style={{ height }}
-                                                        >
-                                                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 dark:bg-slate-700 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl z-20">
-                                                                ${revB.toFixed(1)}B
-                                                            </div>
-                                                        </div>
-                                                        {/* Label */}
-                                                        <div className="absolute -bottom-7 text-[10px] font-bold text-slate-500 dark:text-slate-400">
-                                                            {fin.date.split('-')[0]}
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                            {/* Grid Lines */}
-                                            <div className="absolute inset-0 left-12 z-0 flex flex-col justify-between pointer-events-none pb-0">
-                                                {[1, 0.75, 0.5, 0.25, 0].map((val, i) => {
-                                                    const label = (chartMax * val).toFixed(0);
-                                                    return (
-                                                        <div key={i} className="w-full border-t border-slate-100 dark:border-slate-800 flex items-center relative">
-                                                            <span className="absolute -left-10 text-[8px] text-slate-400">{label}</span>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        </>
-                                    );
-                                })()}
-                            </div>
-                        </div>
-
-                        {/* Profitability Margins Line Chart */}
-                        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 relative">
-                            <div className="flex items-center justify-between mb-2">
-                                <h2 className="text-lg font-bold text-slate-900 dark:text-white">Profitability Margins (%)</h2>
-                                {/* Legend */}
-                                <div className="flex items-center gap-4 text-[11px] font-bold">
-                                    <div className="flex items-center gap-1.5">
-                                        <span className="w-3 h-1 bg-emerald-500 rounded-full"></span>
-                                        <span className="text-slate-600 dark:text-slate-400">Gross Margin</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5">
-                                        <span className="w-3 h-1 bg-blue-500 rounded-full"></span>
-                                        <span className="text-slate-600 dark:text-slate-400">Operating Margin</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="h-64 relative mt-4">
-                                {(() => {
-                                    const financials = stock.financials || [];
-                                    if (financials.length === 0) return null;
-
-                                    const marginData = financials.map(fin => {
-                                        const grossMargin = fin.revenue > 0 ? ((fin.revenue - fin.cost_of_revenue) / fin.revenue) * 100 : 0;
-                                        const opMargin = fin.revenue > 0 ? (fin.op_income / fin.revenue) * 100 : 0;
-                                        return { ...fin, grossMargin, opMargin };
-                                    });
-
-                                    // SVG Viewbox dimensions - taller than before
-                                    const width = 400;
-                                    const height = 150;
-                                    const padding = 15;
-                                    const chartWidth = width - (padding * 2);
-                                    const chartHeight = height - (padding * 2);
-
-                                    // Helper to get X/Y for line points
-                                    const getPoints = (isGross: boolean) => {
-                                        return marginData.map((d, i) => {
-                                            const x = padding + (i * (chartWidth / (marginData.length - 1 || 1)));
-                                            const val = isGross ? d.grossMargin : d.opMargin;
-                                            // Scale 0-100% to chartHeight
-                                            const y = (height - padding) - (val / 100) * chartHeight;
-                                            return `${x},${y}`;
-                                        }).join(' ');
-                                    };
-
-                                    return (
-                                        <div className="relative h-full w-full pl-12 pr-4">
-                                            <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible">
-                                                {/* Grid Lines */}
-                                                {[0, 25, 50, 75, 100].map(val => {
-                                                    const y = (height - padding) - (val / 100) * chartHeight;
-                                                    return (
-                                                        <g key={val}>
-                                                            <line x1={padding} y1={y} x2={width - padding} y2={y} stroke="currentColor" className="text-slate-100 dark:text-slate-800" strokeWidth="0.5" />
-                                                            <text x={padding - 5} y={y + 3} textAnchor="end" className="text-[9px] fill-slate-400 font-bold">{val}%</text>
-                                                        </g>
-                                                    );
-                                                })}
-
-                                                {/* Gross Margin Line */}
-                                                <polyline
-                                                    points={getPoints(true)}
-                                                    fill="none"
-                                                    stroke="#10b981" // emerald-500
-                                                    strokeWidth="2.5"
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                />
-                                                {/* Operating Margin Line */}
-                                                <polyline
-                                                    points={getPoints(false)}
-                                                    fill="none"
-                                                    stroke="#3b82f6" // blue-500
-                                                    strokeWidth="2.5"
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                />
-
-                                                {/* Points & Tooltips */}
-                                                {marginData.map((d, i) => {
-                                                    const x = padding + (i * (chartWidth / (marginData.length - 1 || 1)));
-                                                    const gy = (height - padding) - (d.grossMargin / 100) * chartHeight;
-                                                    const oy = (height - padding) - (d.opMargin / 100) * chartHeight;
-
-                                                    return (
-                                                        <g key={d.date} className="group/point">
-                                                            {/* Vertical Guide Line */}
-                                                            <line x1={x} y1={padding} x2={x} y2={height - padding} stroke="currentColor" className="text-transparent group-hover/point:text-slate-200 dark:group-hover/point:text-slate-700" strokeWidth="0.5" strokeDasharray="2,2" />
-
-                                                            {/* Point Markers */}
-                                                            <circle cx={x} cy={gy} r="2" className="fill-emerald-500 stroke-white dark:stroke-slate-900" strokeWidth="1" />
-                                                            <circle cx={x} cy={oy} r="2" className="fill-blue-500 stroke-white dark:stroke-slate-900" strokeWidth="1" />
-
-                                                            {/* Hidden hit area for hover */}
-                                                            <rect x={x - 10} y={0} width="20" height={height} className="fill-transparent cursor-help" />
-
-                                                            {/* X-axis Label */}
-                                                            <text x={x} y={height + 12} textAnchor="middle" className="text-[9px] fill-slate-500 font-bold">{d.date.split('-')[0]}</text>
-
-                                                            {/* Tooltip */}
-                                                            <foreignObject x={i === marginData.length - 1 ? x - 75 : x + 5} y={gy - 25} width="80" height="50" className="opacity-0 group-hover/point:opacity-100 transition-opacity pointer-events-none z-30">
-                                                                <div className="bg-slate-800 dark:bg-slate-700 text-white rounded p-2 shadow-xl text-[10px] leading-tight border border-slate-600">
-                                                                    <div className="font-bold border-b border-slate-600 mb-1 pb-1">{d.date.split('-')[0]}</div>
-                                                                    <div className="flex justify-between items-center gap-2 mb-0.5">
-                                                                        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>Gross:</span>
-                                                                        <span className="font-bold">{d.grossMargin.toFixed(1)}%</span>
-                                                                    </div>
-                                                                    <div className="flex justify-between items-center gap-2">
-                                                                        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>Op:</span>
-                                                                        <span className="font-bold">{d.opMargin.toFixed(1)}%</span>
-                                                                    </div>
-                                                                </div>
-                                                            </foreignObject>
-                                                        </g>
-                                                    );
-                                                })}
-                                            </svg>
-                                        </div>
-                                    );
-                                })()}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Detailed Data Table */}
-                    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-8">
-                        <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6">Historical Data Detail</h2>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 font-medium">
-                                    <tr>
-                                        <th className="px-6 py-4">Fiscal Year</th>
-                                        <th className="px-6 py-4 text-right">Revenue ($B)</th>
-                                        <th className="px-6 py-4 text-right">Operating Income ($B)</th>
-                                        <th className="px-6 py-4 text-right">Net Income ($B)</th>
-                                        <th className="px-6 py-4 text-right">Growth (%)</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                                    {stock.financials?.map((fin, idx) => {
-                                        const prevRev = idx > 0 ? stock.financials![idx - 1].revenue : null;
-                                        const growth = prevRev ? ((fin.revenue / prevRev) - 1) * 100 : null;
-                                        return (
-                                            <tr key={fin.date}>
-                                                <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">
-                                                    {fin.date.split('-')[0]}
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    {(fin.revenue / 1e9).toFixed(2)}
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    {(fin.op_income / 1e9).toFixed(2)}
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    {(fin.net_income / 1e9).toFixed(2)}
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    {growth !== null ? (
-                                                        <span className={growth >= 0 ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold'}>
-                                                            {growth >= 0 ? '+' : ''}{growth.toFixed(1)}%
-                                                        </span>
-                                                    ) : '-'}
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+                <FinancialsDeepDive financials={stock.financials || []} ticker={ticker} currentPrice={currentPrice} forwardPE={stock.forward_pe} />
             )}
+        </div>
+    );
+}
+
+/* ─── Financials Deep Dive Component ─────────────────────────────────── */
+function FinancialsDeepDive({ financials, ticker, currentPrice, forwardPE }: {
+    financials: { date: string; revenue: number; op_income: number; net_income: number; cost_of_revenue: number; op_expense: number }[];
+    ticker: string; currentPrice: number; forwardPE?: number | null;
+}) {
+    // Computed data
+    const revenueData = useMemo(() => financials.map((f, i) => {
+        const prevRev = i > 0 ? financials[i - 1].revenue : null;
+        const growth = prevRev && prevRev > 0 ? ((f.revenue / prevRev) - 1) * 100 : null;
+        return {
+            year: f.date.split('-')[0],
+            revenue: +(f.revenue / 1e9).toFixed(2),
+            netIncome: +(f.net_income / 1e9).toFixed(2),
+            opIncome: +(f.op_income / 1e9).toFixed(2),
+            growth,
+        };
+    }), [financials]);
+
+    const marginData = useMemo(() => financials.filter(f => f.revenue > 0).map(f => {
+        const grossMargin = +((f.revenue - f.cost_of_revenue) / f.revenue * 100).toFixed(1);
+        const opMargin = +(f.op_income / f.revenue * 100).toFixed(1);
+        const netMargin = +(f.net_income / f.revenue * 100).toFixed(1);
+        // Estimate NOPAT = Op Income * (1 - 21% tax)
+        const nopat = f.op_income * 0.79;
+        const nopatMargin = +(nopat / f.revenue * 100).toFixed(1);
+        // Rough invested capital = Total Assets proxy (revenue / capital turnover) — use revenue as proxy
+        const capitalTurnover = +(f.revenue / (f.revenue / (opMargin / 100 > 0 ? opMargin / 100 : 1) * 0.5 + f.cost_of_revenue) * 1).toFixed(2);
+        const roic = +(nopatMargin * capitalTurnover / 100 * 100).toFixed(1);
+        return {
+            year: f.date.split('-')[0],
+            grossMargin, opMargin, netMargin, nopatMargin, capitalTurnover, roic,
+        };
+    }), [financials]);
+
+    // Latest metrics
+    const latest = financials.length > 0 ? financials[financials.length - 1] : null;
+    const latestMargin = marginData.length > 0 ? marginData[marginData.length - 1] : null;
+    const latestRevGrowth = revenueData.length > 1 ? revenueData[revenueData.length - 1].growth : null;
+
+    const C = { sec: "#2563eb", acc: "#10b981", warn: "#f59e0b", dan: "#ef4444", mut: "#64748b" };
+
+    if (financials.length === 0) return (
+        <div className="text-center text-slate-500 py-20">No financial data available for this stock.</div>
+    );
+
+    return (
+        <div className="space-y-6">
+            {/* Key Metrics Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                {[
+                    ["Revenue", latest ? `$${(latest.revenue / 1e9).toFixed(1)}B` : "—", C.sec],
+                    ["Rev. Growth", latestRevGrowth != null ? `${latestRevGrowth >= 0 ? '+' : ''}${latestRevGrowth.toFixed(1)}%` : "—", latestRevGrowth && latestRevGrowth >= 0 ? C.acc : C.dan],
+                    ["Gross Margin", latestMargin ? `${latestMargin.grossMargin}%` : "—", C.acc],
+                    ["Op. Margin", latestMargin ? `${latestMargin.opMargin}%` : "—", C.sec],
+                    ["Fwd P/E", forwardPE ? `${forwardPE.toFixed(1)}x` : "—", C.mut],
+                ].map(([label, value, color]) => (
+                    <div key={label as string} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 text-center">
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">{label}</div>
+                        <div className="text-xl font-black" style={{ color: color as string }}>{value}</div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Charts Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Revenue & Net Income */}
+                <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">Revenue & Net Income</h3>
+                    <p className="text-xs text-slate-500 mb-4">Annual figures in $B</p>
+                    <ResponsiveContainer width="100%" height={260}>
+                        <BarChart data={revenueData} barGap={4}>
+                            <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-800" />
+                            <XAxis dataKey="year" tick={{ fontSize: 11 }} />
+                            <YAxis tick={{ fontSize: 11 }} />
+                            <Tooltip
+                                contentStyle={{ background: '#1e293b', border: 'none', borderRadius: 8, color: '#fff', fontSize: 12 }}
+                                formatter={(v: any, name: any) => [`$${Number(v).toFixed(1)}B`, name]}
+                            />
+                            <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
+                            <Bar dataKey="revenue" name="Revenue" fill={C.sec} radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="netIncome" name="Net Income" fill={C.acc} radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
+
+                {/* Margin Evolution */}
+                <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">Margin Evolution</h3>
+                    <p className="text-xs text-slate-500 mb-4">Gross, operating, and net margins over time</p>
+                    <ResponsiveContainer width="100%" height={260}>
+                        <LineChart data={marginData}>
+                            <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-800" />
+                            <XAxis dataKey="year" tick={{ fontSize: 11 }} />
+                            <YAxis tick={{ fontSize: 11 }} unit="%" />
+                            <Tooltip
+                                contentStyle={{ background: '#1e293b', border: 'none', borderRadius: 8, color: '#fff', fontSize: 12 }}
+                                formatter={(v: any, name: any) => [`${Number(v).toFixed(1)}%`, name]}
+                            />
+                            <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
+                            <Line type="monotone" dataKey="grossMargin" stroke={C.acc} strokeWidth={2.5} dot={{ r: 4 }} name="Gross Margin" connectNulls />
+                            <Line type="monotone" dataKey="opMargin" stroke={C.sec} strokeWidth={2.5} dot={{ r: 4 }} name="Op. Margin" connectNulls />
+                            <Line type="monotone" dataKey="netMargin" stroke={C.warn} strokeWidth={2} dot={{ r: 3 }} name="Net Margin" connectNulls />
+                        </LineChart>
+                    </ResponsiveContainer>
+                </div>
+
+                {/* Revenue Growth Trend */}
+                <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">Revenue Growth YoY</h3>
+                    <p className="text-xs text-slate-500 mb-4">Year-over-year revenue growth rate</p>
+                    <ResponsiveContainer width="100%" height={260}>
+                        <BarChart data={revenueData.filter(d => d.growth != null)}>
+                            <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-800" />
+                            <XAxis dataKey="year" tick={{ fontSize: 11 }} />
+                            <YAxis tick={{ fontSize: 11 }} unit="%" />
+                            <Tooltip
+                                contentStyle={{ background: '#1e293b', border: 'none', borderRadius: 8, color: '#fff', fontSize: 12 }}
+                                formatter={(v: any) => [`${Number(v).toFixed(1)}%`, 'Growth']}
+                            />
+                            <ReferenceLine y={0} stroke={C.mut} strokeWidth={0.5} />
+                            <Bar dataKey="growth" name="Growth" radius={[4, 4, 0, 0]}>
+                                {revenueData.filter(d => d.growth != null).map((d, i) => (
+                                    <Cell key={i} fill={d.growth! >= 0 ? C.acc : C.dan} />
+                                ))}
+                            </Bar>
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
+
+                {/* ROIC Decomposition Trajectory */}
+                <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">NOPAT Margin Trajectory</h3>
+                    <p className="text-xs text-slate-500 mb-4">Estimated NOPAT margin trend (Op. Inc. × 79% tax shield)</p>
+                    <ResponsiveContainer width="100%" height={260}>
+                        <ComposedChart data={marginData}>
+                            <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-800" />
+                            <XAxis dataKey="year" tick={{ fontSize: 11 }} />
+                            <YAxis tick={{ fontSize: 11 }} unit="%" />
+                            <Tooltip
+                                contentStyle={{ background: '#1e293b', border: 'none', borderRadius: 8, color: '#fff', fontSize: 12 }}
+                                formatter={(v: any, name: any) => [`${Number(v).toFixed(1)}%`, name]}
+                            />
+                            <Area type="monotone" dataKey="nopatMargin" fill={`${C.acc}20`} stroke={C.acc} strokeWidth={2.5} dot={{ r: 4 }} name="NOPAT Margin" />
+                        </ComposedChart>
+                    </ResponsiveContainer>
+                </div>
+            </div>
+
+            {/* Full-width Historical Data Table */}
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+                <h3 className="text-base font-bold text-slate-900 dark:text-white mb-4">Historical Financial Data</h3>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                        <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 font-medium">
+                            <tr>
+                                <th className="px-4 py-3 rounded-tl-lg">Year</th>
+                                <th className="px-4 py-3 text-right">Revenue ($B)</th>
+                                <th className="px-4 py-3 text-right">Op. Income ($B)</th>
+                                <th className="px-4 py-3 text-right">Net Income ($B)</th>
+                                <th className="px-4 py-3 text-right">Gross Margin</th>
+                                <th className="px-4 py-3 text-right">Op. Margin</th>
+                                <th className="px-4 py-3 text-right rounded-tr-lg">Rev. Growth</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                            {financials.map((fin, idx) => {
+                                const prevRev = idx > 0 ? financials[idx - 1].revenue : null;
+                                const growth = prevRev && prevRev > 0 ? ((fin.revenue / prevRev) - 1) * 100 : null;
+                                const gm = fin.revenue > 0 ? ((fin.revenue - fin.cost_of_revenue) / fin.revenue * 100) : 0;
+                                const om = fin.revenue > 0 ? (fin.op_income / fin.revenue * 100) : 0;
+                                return (
+                                    <tr key={fin.date} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                        <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">{fin.date.split('-')[0]}</td>
+                                        <td className="px-4 py-3 text-right font-medium">{(fin.revenue / 1e9).toFixed(1)}</td>
+                                        <td className="px-4 py-3 text-right">{(fin.op_income / 1e9).toFixed(1)}</td>
+                                        <td className="px-4 py-3 text-right">{(fin.net_income / 1e9).toFixed(1)}</td>
+                                        <td className="px-4 py-3 text-right font-semibold text-emerald-600">{gm.toFixed(1)}%</td>
+                                        <td className="px-4 py-3 text-right font-semibold text-blue-600">{om.toFixed(1)}%</td>
+                                        <td className="px-4 py-3 text-right">
+                                            {growth != null ? (
+                                                <span className={`font-bold ${growth >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                    {growth >= 0 ? '+' : ''}{growth.toFixed(1)}%
+                                                </span>
+                                            ) : <span className="text-slate-400">—</span>}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     );
 }
