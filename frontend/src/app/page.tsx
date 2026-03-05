@@ -428,7 +428,6 @@ export default function DashboardPage() {
                       ["pnl_1d", "1D PnL"],
                       ["total_pnl", "Total PnL %"],
                       ["pe", "NTM P/E"],
-                      ["best_eps", "Best EPS"],
                       ["eps_growth", "EPS Growth"],
                       ["tgt_pe", "Tgt P/E"],
                       ["tgt_eps", "Tgt EPS"],
@@ -499,9 +498,6 @@ export default function DashboardPage() {
                         </td>
                         <td className="px-4 py-3 text-right text-slate-900 dark:text-white font-medium">
                           {item.pe_next_12_months ? `${item.pe_next_12_months.toFixed(1)}x` : "—"}
-                        </td>
-                        <td className="px-4 py-3 text-right text-slate-700 dark:text-slate-300 font-medium">
-                          {item.best_eps ? `$${item.best_eps.toFixed(2)}` : "—"}
                         </td>
                         <td className={`px-4 py-3 text-right font-medium ${(item.eps_lt_growth || 0) >= 15 ? "text-emerald-600" : "text-slate-700 dark:text-slate-300"
                           }`}>

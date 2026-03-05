@@ -331,7 +331,6 @@ export default function PortfolioPage() {
                                             <th className="px-4 py-3 text-right cursor-pointer group" onClick={() => requestSort('pnl_1d')}>1D PnL <SortIndicator columnKey="pnl_1d" /></th>
                                             <th className="px-4 py-3 text-right cursor-pointer group" onClick={() => requestSort('total_pnl_pct')}>Total PnL % <SortIndicator columnKey="total_pnl_pct" /></th>
                                             <th className="px-4 py-3 text-right cursor-pointer group" onClick={() => requestSort('pe_next_12_months')}>NTM P/E <SortIndicator columnKey="pe_next_12_months" /></th>
-                                            <th className="px-4 py-3 text-right cursor-pointer group" onClick={() => requestSort('best_eps')}>Best EPS <SortIndicator columnKey="best_eps" /></th>
                                             <th className="px-4 py-3 text-right cursor-pointer group" onClick={() => requestSort('eps_growth')}>EPS Growth <SortIndicator columnKey="eps_growth" /></th>
                                             <th className="px-4 py-3 text-right cursor-pointer group bg-violet-50/30 dark:bg-violet-900/10" onClick={() => requestSort('target_pe')}>Tgt P/E <SortIndicator columnKey="target_pe" /></th>
                                             <th className="px-4 py-3 text-right cursor-pointer group bg-violet-50/30 dark:bg-violet-900/10" onClick={() => requestSort('target_eps')}>Tgt EPS <SortIndicator columnKey="target_eps" /></th>
@@ -374,9 +373,6 @@ export default function PortfolioPage() {
                                                 </td>
                                                 <td className="px-4 py-3 text-right font-medium text-slate-900 dark:text-white">
                                                     {item.pe_next_12_months ? `${item.pe_next_12_months.toFixed(1)}x` : '-'}
-                                                </td>
-                                                <td className="px-4 py-3 text-right font-medium text-slate-700 dark:text-slate-300">
-                                                    {item.best_eps ? `$${item.best_eps.toFixed(2)}` : '-'}
                                                 </td>
                                                 <td className={`px-4 py-3 text-right font-medium ${(item.eps_lt_growth || 0) >= 15 ? 'text-emerald-600' : 'text-slate-700 dark:text-slate-300'}`}>
                                                     {item.eps_lt_growth ? `${item.eps_lt_growth.toFixed(1)}%` : '-'}
