@@ -107,8 +107,7 @@ class PortfolioSnapshotViewSet(viewsets.ModelViewSet):
     queryset = PortfolioSnapshot.objects.all()
     serializer_class = PortfolioSnapshotSerializer
 
-    @action(detail=False, methods=['post'], url_path='upload_excel')
-    @permission_classes([AllowAny])
+    @action(detail=False, methods=['post'], url_path='upload_excel', permission_classes=[AllowAny])
     def upload_excel(self, request):
         file = request.FILES.get('file')
         if not file:
