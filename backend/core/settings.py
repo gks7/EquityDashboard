@@ -26,7 +26,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-**n)7&3kf7!(wh@#ndq832zx@(31nu=2al3qm3$qufzc%w11gl')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True  # TEMP: force True to debug 500 error
+DEBUG = config('DEBUG', default=False, cast=bool)
 
 ALLOWED_HOSTS = ['*'] # Railway manages domains
 
