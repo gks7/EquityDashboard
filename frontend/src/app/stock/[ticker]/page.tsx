@@ -4,6 +4,7 @@ import { useState, use, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { ArrowLeft, Save, TrendingUp, TrendingDown, RefreshCcw } from "lucide-react";
 import ModelingTab from "@/components/ModelingTab";
+import { authFetch } from "@/lib/authFetch";
 import {
     BarChart, Bar, LineChart, Line, ComposedChart, Area, ScatterChart, Scatter, Cell,
     XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine, LabelList
@@ -51,7 +52,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
     useEffect(() => {
         const fetchStockData = async () => {
             try {
-                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/stocks/${ticker}/`);
+                const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/stocks/${ticker}/`);
                 const data = await res.json();
                 setStock(data);
 
@@ -79,7 +80,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
     const handleSave = async () => {
         setSaving(true);
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/stocks/${ticker}/save_thesis/`, {
+            const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/stocks/${ticker}/save_thesis/`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

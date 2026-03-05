@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
-import { Sidebar } from "@/components/Sidebar";
+import { AuthProvider } from "@/context/AuthContext";
+import { AppShell } from "@/components/AppShell";
 
 const inter = Inter({
   variable: "--font-geist-sans",
@@ -26,14 +27,9 @@ export default function RootLayout({
         className={`${inter.variable} antialiased font-[family-name:var(--font-geist-sans)] bg-slate-50 dark:bg-[#0a0e1a] text-slate-900 dark:text-slate-100 transition-colors duration-300`}
       >
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <div className="flex h-screen overflow-hidden">
-            <Sidebar />
-            <main className="flex-1 md:ml-64 overflow-y-auto">
-              <div className="p-8 max-w-7xl mx-auto">
-                {children}
-              </div>
-            </main>
-          </div>
+          <AuthProvider>
+            <AppShell>{children}</AppShell>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

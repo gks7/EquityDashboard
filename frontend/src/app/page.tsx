@@ -14,6 +14,7 @@ import {
   ChevronDown,
   ArrowUpDown,
 } from "lucide-react";
+import { authFetch } from "@/lib/authFetch";
 
 // ─── Types ──────────────────────────────────────────────────────────
 export interface PortfolioHolding {
@@ -122,7 +123,7 @@ export default function DashboardPage() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(
+        const res = await authFetch(
           `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/portfolio/`
         );
         setHoldings(await res.json());

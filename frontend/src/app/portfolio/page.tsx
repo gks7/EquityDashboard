@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { Plus, RefreshCcw, Trash2, ChevronUp, ChevronDown, ArrowUpDown, UploadCloud } from "lucide-react";
+import { authFetch } from "@/lib/authFetch";
 
 interface StockDetails {
     ticker: string;
@@ -64,7 +65,7 @@ export default function PortfolioPage() {
 
     const fetchSnapshots = async () => {
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/snapshots/`);
+            const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/snapshots/`);
             if (res.ok) {
                 const data = await res.json();
                 setSnapshots(data);
@@ -115,7 +116,7 @@ export default function PortfolioPage() {
         formData.append("file", file);
 
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/snapshots/upload_excel/`, {
+            const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/snapshots/upload_excel/`, {
                 method: 'POST',
                 body: formData, // fetch will automatically set the correct Content-Type for FormData
             });
@@ -142,7 +143,7 @@ export default function PortfolioPage() {
         if (isNaN(numValue) || numValue < 0) return;
 
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/portfolio/${id}/`, {
+            const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/portfolio/${id}/`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ [field]: numValue })
@@ -161,7 +162,7 @@ export default function PortfolioPage() {
         if (!confirm("Are you sure you want to remove this item?")) return;
 
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/portfolio/${id}/`, {
+            const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/portfolio/${id}/`, {
                 method: 'DELETE'
             });
 

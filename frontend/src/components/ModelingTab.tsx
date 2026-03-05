@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Save, RefreshCcw, TrendingUp, TrendingDown, Info } from "lucide-react";
+import { authFetch } from "@/lib/authFetch";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -273,7 +274,7 @@ export default function ModelingTab({ ticker, currentPrice }: ModelingTabProps) 
     useEffect(() => {
         const load = async () => {
             try {
-                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/stocks/${ticker}/get_model/`);
+                const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/stocks/${ticker}/get_model/`);
                 if (res.ok) {
                     const data = await res.json();
                     if (data.model_data && Object.keys(data.model_data).length > 0) {
@@ -330,7 +331,7 @@ export default function ModelingTab({ ticker, currentPrice }: ModelingTabProps) 
         setSaving(true);
         setSaveStatus("idle");
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/stocks/${ticker}/save_model/`, {
+            const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/stocks/${ticker}/save_model/`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ model_data: { segments, netDebt, sharesOut } }),
@@ -671,10 +672,10 @@ function BridgeRow({
         <div className={`flex justify-between items-center py-1 ${highlight ? "py-2" : ""}`}>
             <span className={`text-sm ${highlight ? "font-bold text-white" : "text-slate-400"}`}>{label}</span>
             <span className={`text-sm font-mono font-bold ${highlight
-                    ? "text-white text-base"
-                    : sign
-                        ? isNeg ? "text-rose-400" : "text-emerald-400"
-                        : "text-slate-300"
+                ? "text-white text-base"
+                : sign
+                    ? isNeg ? "text-rose-400" : "text-emerald-400"
+                    : "text-slate-300"
                 }`}>
                 {sign && !isNeg ? "+" : sign && isNeg ? "-" : ""}{formatted}
             </span>

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, TrendingUp, TrendingDown, RefreshCcw, Trash2, Edit2, Check, X } from "lucide-react";
+import { authFetch } from "@/lib/authFetch";
 
 interface Stock {
   ticker: string;
@@ -29,7 +30,7 @@ export default function WatchlistPage() {
 
   const fetchStocks = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/stocks/`);
+      const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/stocks/`);
       const data = await res.json();
       setStocks(data);
     } catch (error) {
@@ -49,7 +50,7 @@ export default function WatchlistPage() {
 
     setSubmitting(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/stocks/add_ticker/`, {
+      const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/stocks/add_ticker/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ticker: newTicker.toUpperCase() })
@@ -74,7 +75,7 @@ export default function WatchlistPage() {
     if (!confirm(`Are you sure you want to remove ${ticker} from your watchlist?`)) return;
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/stocks/${ticker}/`, {
+      const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/stocks/${ticker}/`, {
         method: 'DELETE'
       });
 
@@ -93,7 +94,7 @@ export default function WatchlistPage() {
     if (!editName.trim()) return;
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/stocks/${ticker}/`, {
+      const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/stocks/${ticker}/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ company_name: editName })

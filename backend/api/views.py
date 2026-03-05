@@ -1,11 +1,28 @@
 from rest_framework import viewsets, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
 from finance.models import Stock, InvestmentThesis, Estimate5Y, PortfolioItem, ValuationModel, PortfolioSnapshot
 from .serializers import StockSerializer, InvestmentThesisSerializer, Estimate5YSerializer, PortfolioItemSerializer, PortfolioSnapshotSerializer
 from finance.services import update_stock_price
 import pandas as pd
 from datetime import datetime
+
+
+class MeView(APIView):
+    """Return the authenticated user's profile info."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        return Response({
+            'id': user.id,
+            'username': user.username,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'email': user.email,
+        })
 
 class StockViewSet(viewsets.ModelViewSet):
     queryset = Stock.objects.all()
@@ -30,11 +47,7 @@ class StockViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='save_thesis', lookup_field='ticker')
     def save_thesis(self, request, ticker=None):
         stock = self.get_object()
-        from django.contrib.auth.models import User
-        # Use first user for now, as auth is not yet implemented
-        user = User.objects.first()
-        if not user:
-            user = User.objects.create_user(username='analyst1', password='password')
+        user = request.user
 
         thesis_data = {
             'summary': request.data.get('thesis', ''),
@@ -258,15 +271,14 @@ class MoatScoreViewSet(viewsets.ModelViewSet):
         analyst_name = request.data.get('analyst')
         scores = request.data.get('scores', {})
 
-        if not ticker or not analyst_name or not scores:
-            return Response({'error': 'ticker, analyst, and scores are required'}, status=status.HTTP_400_BAD_REQUEST)
+        if not ticker or not scores:
+            return Response({'error': 'ticker and scores are required'}, status=status.HTTP_400_BAD_REQUEST)
 
         stock = Stock.objects.filter(ticker=ticker).first()
         if not stock:
             return Response({'error': 'Stock not found'}, status=status.HTTP_404_NOT_FOUND)
 
-        # Temp user resolution since auth isn't fully active
-        analyst, _ = User.objects.get_or_create(username=analyst_name)
+        analyst = request.user
 
         moat_score = MoatScore.objects.create(
             stock=stock,
@@ -297,10 +309,10 @@ class MoatRankingViewSet(viewsets.ModelViewSet):
         analyst_name = request.data.get('analyst')
         rankings = request.data.get('rankings') # list of {ticker, rank}
 
-        if not analyst_name or not isinstance(rankings, list):
-            return Response({'error': 'analyst and rankings array are required'}, status=status.HTTP_400_BAD_REQUEST)
+        if not isinstance(rankings, list):
+            return Response({'error': 'rankings array is required'}, status=status.HTTP_400_BAD_REQUEST)
 
-        analyst, _ = User.objects.get_or_create(username=analyst_name)
+        analyst = request.user
 
         # Clear old rankings for this analyst
         MoatRanking.objects.filter(analyst=analyst).delete()
@@ -319,9 +331,5 @@ class MoatRankingViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['delete'], url_path='clear_ranking')
     def clear_ranking(self, request):
-        analyst_name = request.query_params.get('analyst')
-        if not analyst_name:
-            return Response({'error': 'analyst param is required'}, status=status.HTTP_400_BAD_REQUEST)
-            
-        deleted, _ = MoatRanking.objects.filter(analyst__username=analyst_name).delete()
+        deleted, _ = MoatRanking.objects.filter(analyst=request.user).delete()
         return Response({'message': f'Cleared {deleted} rankings'}, status=status.HTTP_200_OK)

@@ -7,6 +7,7 @@ import {
 } from "recharts";
 import { Search, ExternalLink } from "lucide-react";
 import Link from "next/link";
+import { authFetch } from "@/lib/authFetch";
 
 // --- API Endpoints ---
 const API_BASE = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api`;
@@ -157,7 +158,7 @@ const Scoring = ({ stocks, moatHistory, refreshAction }: any) => {
         if (!co) return;
         setSaving(true);
         const scores = CATS.reduce((a: any, c) => { a[c.key === 'switch_costs' ? 'switchCosts' : c.key === 'physical_assets' ? 'physicalAssets' : c.key === 'network_effects' ? 'networkEffects' : c.key] = gs(c.key); return a; }, {});
-        await fetch(`${API_BASE}/moats/scores/save_score/`, {
+        await authFetch(`${API_BASE}/moats/scores/save_score/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ticker: co.ticker, analyst, scores })
@@ -363,7 +364,7 @@ const Ranking = ({ stocks, rankingData, refreshAction }: any) => {
     const save = async () => {
         setSaving(true);
         const rankingsBody = order.map((ticker, i) => ({ ticker, rank: i + 1 }));
-        await fetch(`${API_BASE}/moats/rankings/save_ranking/`, {
+        await authFetch(`${API_BASE}/moats/rankings/save_ranking/`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ analyst, rankings: rankingsBody })
         });
@@ -373,7 +374,7 @@ const Ranking = ({ stocks, rankingData, refreshAction }: any) => {
 
     const clear = async () => {
         setSaving(true);
-        await fetch(`${API_BASE}/moats/rankings/clear_ranking/?analyst=${encodeURIComponent(analyst)}`, { method: 'DELETE' });
+        await authFetch(`${API_BASE}/moats/rankings/clear_ranking/?analyst=${encodeURIComponent(analyst)}`, { method: 'DELETE' });
         await refreshAction();
         setSaving(false);
     };
@@ -427,12 +428,12 @@ export default function MoatsPage() {
     const fetchData = useCallback(async () => {
         try {
             // Fetch watchlist stocks
-            const resSt = await fetch(`${API_BASE}/stocks/`);
+            const resSt = await authFetch(`${API_BASE}/stocks/`);
             const stData = await resSt.json();
             setStocks(stData);
 
             // Fetch moat scores history
-            const resSc = await fetch(`${API_BASE}/moats/scores/`);
+            const resSc = await authFetch(`${API_BASE}/moats/scores/`);
             const scData = await resSc.json();
             const groupedScores: any = {};
             scData.forEach((s: any) => {
@@ -447,7 +448,7 @@ export default function MoatsPage() {
             setScores(groupedScores);
 
             // Fetch global rankings
-            const resRk = await fetch(`${API_BASE}/moats/rankings/`);
+            const resRk = await authFetch(`${API_BASE}/moats/rankings/`);
             const rkData = await resRk.json();
             setRankings(rkData);
 
