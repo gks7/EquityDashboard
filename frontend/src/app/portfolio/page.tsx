@@ -85,7 +85,7 @@ export default function PortfolioPage() {
             if (snapshotId) {
                 url += `?snapshot_id=${snapshotId}`;
             }
-            const res = await fetch(url);
+            const res = await authFetch(url);
             if (res.ok) {
                 const data = await res.json();
                 setItems(data);
