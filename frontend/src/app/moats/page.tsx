@@ -165,8 +165,8 @@ const Scoring = ({ stocks, moatHistory, refreshAction }: any) => {
         setSaving(false);
     };
 
-    const cur = CATS.reduce((a: any, c) => { a[c.key] = gs(c.key); return a; }, {});
-    const tot = Object.values(cur).reduce((a: any, b: any) => a + b, 0) as number;
+    const cur = CATS.reduce((a: any, c) => { a[c.key] = gs(c.key) || 1; return a; }, {});
+    const tot = Object.values(cur).reduce((a: any, b: any) => a + (b || 1), 0) as number;
     const ch = !!draft[dk];
     const cHist = moatHistory[sel] || [];
     const filtCo = stocks.filter((c: any) => c.company_name?.toLowerCase().includes(sFilter.toLowerCase()) || c.ticker.toLowerCase().includes(sFilter.toLowerCase()));
@@ -227,10 +227,10 @@ const Scoring = ({ stocks, moatHistory, refreshAction }: any) => {
                                                     key={n}
                                                     onClick={() => ss(cat.key, n)}
                                                     className={`flex-1 py-1.5 rounded-md text-sm font-bold transition-all border-2 ${n === v
-                                                            ? (v >= 4 ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-500 text-emerald-600 dark:text-emerald-400'
-                                                                : v >= 3 ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-500 text-amber-600 dark:text-amber-400'
-                                                                    : 'bg-rose-50 dark:bg-rose-900/20 border-rose-500 text-rose-600 dark:text-rose-400')
-                                                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
+                                                        ? (v >= 4 ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-500 text-emerald-600 dark:text-emerald-400'
+                                                            : v >= 3 ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-500 text-amber-600 dark:text-amber-400'
+                                                                : 'bg-rose-50 dark:bg-rose-900/20 border-rose-500 text-rose-600 dark:text-rose-400')
+                                                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
                                                         }`}
                                                 >
                                                     {n}
@@ -245,8 +245,8 @@ const Scoring = ({ stocks, moatHistory, refreshAction }: any) => {
                                 onClick={save}
                                 disabled={!ch || saving}
                                 className={`w-full py-3 rounded-xl font-bold text-sm transition-all ${ch && !saving
-                                        ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md'
-                                        : 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
+                                    ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md'
+                                    : 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
                                     }`}
                             >
                                 {saving ? "Saving..." : "Save Score"}
@@ -418,10 +418,21 @@ export default function MoatsPage() {
 
     const fetchData = useCallback(async () => {
         try {
-            // Fetch stocks
-            const resSt = await fetch(`${API_BASE}/stocks/`);
+            // Fetch stocks and portfolio snapshot
+            const [resSt, resPort] = await Promise.all([
+                fetch(`${API_BASE}/stocks/`),
+                fetch(`${API_BASE}/portfolio/`)
+            ]);
+
             const stData = await resSt.json();
-            setStocks(stData);
+            const portData = await resPort.json();
+
+            // Extract unique tickers from portfolio
+            const portTickers = new Set(portData.map((p: any) => p.ticker));
+
+            // Filter stocks to only include those in the portfolio
+            const activeStocks = stData.filter((s: any) => portTickers.has(s.ticker));
+            setStocks(activeStocks.length > 0 ? activeStocks : stData); // Fallback to all if portfolio is empty
 
             // Fetch moat scores history
             const resSc = await fetch(`${API_BASE}/moats/scores/`);
@@ -495,8 +506,8 @@ export default function MoatsPage() {
                     <button
                         key={k} onClick={() => setTab(k)}
                         className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${tab === k
-                                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm ring-1 ring-slate-200 dark:ring-slate-600'
-                                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                            ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm ring-1 ring-slate-200 dark:ring-slate-600'
+                            : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                             }`}
                     >
                         {k === "roicmap" ? "ROIC Map" : k === "scoring" ? "Moat Scoring" : "Portfolio Ranking"}
