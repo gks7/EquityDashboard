@@ -418,21 +418,10 @@ export default function MoatsPage() {
 
     const fetchData = useCallback(async () => {
         try {
-            // Fetch stocks and portfolio snapshot
-            const [resSt, resPort] = await Promise.all([
-                fetch(`${API_BASE}/stocks/`),
-                fetch(`${API_BASE}/portfolio/`)
-            ]);
-
+            // Fetch watchlist stocks
+            const resSt = await fetch(`${API_BASE}/stocks/`);
             const stData = await resSt.json();
-            const portData = await resPort.json();
-
-            // Extract unique tickers from portfolio
-            const portTickers = new Set(portData.map((p: any) => p.ticker));
-
-            // Filter stocks to only include those in the portfolio
-            const activeStocks = stData.filter((s: any) => portTickers.has(s.ticker));
-            setStocks(activeStocks.length > 0 ? activeStocks : stData); // Fallback to all if portfolio is empty
+            setStocks(stData);
 
             // Fetch moat scores history
             const resSc = await fetch(`${API_BASE}/moats/scores/`);
