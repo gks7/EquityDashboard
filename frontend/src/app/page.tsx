@@ -34,8 +34,11 @@ export interface PortfolioHolding {
   chg_pct_1d: number | null;
   pnl_1d: number | null;
   pe_next_12_months: number | null;
+  best_eps: number | null;
+  eps_lt_growth: number | null;
   yield_to_worst: number | null;
   duration: number | null;
+  rating: string | null;
   stock_details?: {
     ticker: string;
     company_name: string;
@@ -215,6 +218,14 @@ export default function DashboardPage() {
           av = calcIRR(a);
           bv = calcIRR(b);
           break;
+        case "best_eps":
+          av = a.best_eps || 0;
+          bv = b.best_eps || 0;
+          break;
+        case "eps_growth":
+          av = a.eps_lt_growth || 0;
+          bv = b.eps_lt_growth || 0;
+          break;
         case "ytw":
           av = a.yield_to_worst || 0;
           bv = b.yield_to_worst || 0;
@@ -222,6 +233,10 @@ export default function DashboardPage() {
         case "duration":
           av = a.duration || 0;
           bv = b.duration || 0;
+          break;
+        case "rating":
+          av = a.rating || '';
+          bv = b.rating || '';
           break;
         case "total_pnl":
           av = a.unrealized_pl_pct;
@@ -413,6 +428,8 @@ export default function DashboardPage() {
                       ["pnl_1d", "1D PnL"],
                       ["total_pnl", "Total PnL %"],
                       ["pe", "NTM P/E"],
+                      ["best_eps", "Best EPS"],
+                      ["eps_growth", "EPS Growth"],
                       ["tgt_pe", "Tgt P/E"],
                       ["tgt_eps", "Tgt EPS"],
                       ["irr", "5Y IRR"],
@@ -482,6 +499,13 @@ export default function DashboardPage() {
                         </td>
                         <td className="px-4 py-3 text-right text-slate-900 dark:text-white font-medium">
                           {item.pe_next_12_months ? `${item.pe_next_12_months.toFixed(1)}x` : "—"}
+                        </td>
+                        <td className="px-4 py-3 text-right text-slate-700 dark:text-slate-300 font-medium">
+                          {item.best_eps ? `$${item.best_eps.toFixed(2)}` : "—"}
+                        </td>
+                        <td className={`px-4 py-3 text-right font-medium ${(item.eps_lt_growth || 0) >= 15 ? "text-emerald-600" : "text-slate-700 dark:text-slate-300"
+                          }`}>
+                          {item.eps_lt_growth ? `${item.eps_lt_growth.toFixed(1)}%` : "—"}
                         </td>
                         <td className="px-4 py-3 text-right text-violet-700 dark:text-violet-400 bg-violet-50/10">
                           {item.stock_details?.consensus_target_pe
@@ -761,13 +785,14 @@ export default function DashboardPage() {
                         ["chg_1d", "1D %"],
                         ["pnl_1d", "1D PnL"],
                         ["total_pnl", "Total PnL %"],
+                        ["rating", "Rating"],
                         ["ytw", "YTW"],
                         ["duration", "Duration"],
                       ].map(([k, label]) => (
                         <th
                           key={k}
                           onClick={() => toggleSort(k)}
-                          className={`px-4 py-3 cursor-pointer group ${k !== "ticker" ? "text-right" : ""} ${["ytw", "duration"].includes(k) ? "bg-amber-50/30 dark:bg-amber-900/10" : ""
+                          className={`px-4 py-3 cursor-pointer group ${k !== "ticker" ? "text-right" : ""} ${["ytw", "duration", "rating"].includes(k) ? "bg-amber-50/30 dark:bg-amber-900/10" : ""
                             }`}
                         >
                           <span className="inline-flex items-center">
@@ -809,6 +834,9 @@ export default function DashboardPage() {
                           {item.average_cost > 0
                             ? `${item.unrealized_pl_pct > 0 ? "+" : ""}${item.unrealized_pl_pct.toFixed(1)}%`
                             : "—"}
+                        </td>
+                        <td className="px-4 py-3 text-right font-bold text-amber-700 dark:text-amber-400 bg-amber-50/10">
+                          {item.rating || "—"}
                         </td>
                         <td className="px-4 py-3 text-right font-bold text-amber-700 dark:text-amber-400 bg-amber-50/10">
                           {item.yield_to_worst ? `${(item.yield_to_worst * 100).toFixed(2)}%` : "—"}

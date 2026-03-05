@@ -166,6 +166,9 @@ class PortfolioSnapshotViewSet(viewsets.ModelViewSet):
                 pe_next_12_months = get_float('P/E Next 12 Quarters')
                 yield_to_worst = get_float('INDEX_YIELD_TO_WORST') or get_float('YIELD_TO_WORST') 
                 duration = get_float('DUR_ADJ_OAS_MID') or get_float('Duration')
+                rating = get_val('BB_COMPOSITE')
+                best_eps = get_float('BEST_FE_4QTRS')
+                eps_lt_growth = get_float('BEST_EST_LONG_TERM_GROWTH')
 
                 stock = None
                 ticker = raw_ticker
@@ -197,7 +200,10 @@ class PortfolioSnapshotViewSet(viewsets.ModelViewSet):
                     pnl_1d=pnl_1d,
                     pe_next_12_months=pe_next_12_months,
                     yield_to_worst=yield_to_worst,
-                    duration=duration
+                    duration=duration,
+                    rating=rating if rating else None,
+                    best_eps=best_eps if best_eps else None,
+                    eps_lt_growth=eps_lt_growth if eps_lt_growth else None
                 )
                 items_to_create.append(item)
                 

@@ -76,7 +76,12 @@ class PortfolioItem(models.Model):
     # Valuation
     pe_next_12_months = models.FloatField(blank=True, null=True)
     
+    # Equity estimates (from Bloomberg)
+    best_eps = models.FloatField(blank=True, null=True)  # BEST_FE_4QTRS
+    eps_lt_growth = models.FloatField(blank=True, null=True)  # BEST_EST_LONG_TERM_GROWTH
+
     # Fixed Income
+    rating = models.CharField(max_length=20, blank=True, null=True)  # BB_COMPOSITE
     yield_to_worst = models.FloatField(blank=True, null=True)
     duration = models.FloatField(blank=True, null=True)
 

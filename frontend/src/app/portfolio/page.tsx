@@ -28,8 +28,11 @@ interface PortfolioItem {
     chg_pct_1d: number | null;
     pnl_1d: number | null;
     pe_next_12_months: number | null;
+    best_eps: number | null;
+    eps_lt_growth: number | null;
     yield_to_worst: number | null;
     duration: number | null;
+    rating: string | null;
     total_cost: number;
     current_value: number;
     unrealized_pl: number;
@@ -225,6 +228,9 @@ export default function PortfolioPage() {
                 case 'pe_next_12_months': aValue = a.pe_next_12_months || 0; bValue = b.pe_next_12_months || 0; break;
                 case 'target_eps': aValue = a.stock_details?.consensus_target_eps || 0; bValue = b.stock_details?.consensus_target_eps || 0; break;
                 case 'irr': aValue = calculateEquityIRR(a); bValue = calculateEquityIRR(b); break;
+                case 'best_eps': aValue = a.best_eps || 0; bValue = b.best_eps || 0; break;
+                case 'eps_growth': aValue = a.eps_lt_growth || 0; bValue = b.eps_lt_growth || 0; break;
+                case 'rating': aValue = a.rating || ''; bValue = b.rating || ''; break;
             }
             if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
             if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
@@ -325,6 +331,8 @@ export default function PortfolioPage() {
                                             <th className="px-4 py-3 text-right cursor-pointer group" onClick={() => requestSort('pnl_1d')}>1D PnL <SortIndicator columnKey="pnl_1d" /></th>
                                             <th className="px-4 py-3 text-right cursor-pointer group" onClick={() => requestSort('total_pnl_pct')}>Total PnL % <SortIndicator columnKey="total_pnl_pct" /></th>
                                             <th className="px-4 py-3 text-right cursor-pointer group" onClick={() => requestSort('pe_next_12_months')}>NTM P/E <SortIndicator columnKey="pe_next_12_months" /></th>
+                                            <th className="px-4 py-3 text-right cursor-pointer group" onClick={() => requestSort('best_eps')}>Best EPS <SortIndicator columnKey="best_eps" /></th>
+                                            <th className="px-4 py-3 text-right cursor-pointer group" onClick={() => requestSort('eps_growth')}>EPS Growth <SortIndicator columnKey="eps_growth" /></th>
                                             <th className="px-4 py-3 text-right cursor-pointer group bg-violet-50/30 dark:bg-violet-900/10" onClick={() => requestSort('target_pe')}>Tgt P/E <SortIndicator columnKey="target_pe" /></th>
                                             <th className="px-4 py-3 text-right cursor-pointer group bg-violet-50/30 dark:bg-violet-900/10" onClick={() => requestSort('target_eps')}>Tgt EPS <SortIndicator columnKey="target_eps" /></th>
                                             <th className="px-4 py-3 text-right cursor-pointer group bg-violet-50/30 dark:bg-violet-900/10" onClick={() => requestSort('irr')}>5Y IRR <SortIndicator columnKey="irr" /></th>
@@ -367,6 +375,12 @@ export default function PortfolioPage() {
                                                 <td className="px-4 py-3 text-right font-medium text-slate-900 dark:text-white">
                                                     {item.pe_next_12_months ? `${item.pe_next_12_months.toFixed(1)}x` : '-'}
                                                 </td>
+                                                <td className="px-4 py-3 text-right font-medium text-slate-700 dark:text-slate-300">
+                                                    {item.best_eps ? `$${item.best_eps.toFixed(2)}` : '-'}
+                                                </td>
+                                                <td className={`px-4 py-3 text-right font-medium ${(item.eps_lt_growth || 0) >= 15 ? 'text-emerald-600' : 'text-slate-700 dark:text-slate-300'}`}>
+                                                    {item.eps_lt_growth ? `${item.eps_lt_growth.toFixed(1)}%` : '-'}
+                                                </td>
                                                 <td className="px-4 py-3 text-right text-violet-700 dark:text-violet-400 bg-violet-50/10 dark:bg-violet-900/5 lg:w-20">{item.stock_details?.consensus_target_pe ? `${item.stock_details.consensus_target_pe.toFixed(1)}x` : '-'}</td>
                                                 <td className="px-4 py-3 text-right text-violet-700 dark:text-violet-400 bg-violet-50/10 dark:bg-violet-900/5 lg:w-20">{item.stock_details?.consensus_target_eps ? `$${item.stock_details.consensus_target_eps.toFixed(2)}` : '-'}</td>
                                                 <td className={`px-4 py-3 text-right font-bold bg-violet-50/10 dark:bg-violet-900/5 lg:w-24 ${calculateEquityIRR(item) >= 15 ? 'text-emerald-600' : 'text-slate-900 dark:text-white'}`}>
@@ -404,6 +418,7 @@ export default function PortfolioPage() {
                                             <th className="px-4 py-3 text-right cursor-pointer group" onClick={() => requestSort('chg_pct_1d')}>1D % <SortIndicator columnKey="chg_pct_1d" /></th>
                                             <th className="px-4 py-3 text-right cursor-pointer group" onClick={() => requestSort('pnl_1d')}>1D PnL <SortIndicator columnKey="pnl_1d" /></th>
                                             <th className="px-4 py-3 text-right cursor-pointer group" onClick={() => requestSort('total_pnl_pct')}>Total PnL % <SortIndicator columnKey="total_pnl_pct" /></th>
+                                            <th className="px-4 py-3 text-right cursor-pointer group bg-amber-50/30 dark:bg-amber-900/10" onClick={() => requestSort('rating')}>Rating <SortIndicator columnKey="rating" /></th>
                                             <th className="px-4 py-3 text-right cursor-pointer group bg-amber-50/30 dark:bg-amber-900/10" onClick={() => requestSort('ytw')}>Yield to Worst <SortIndicator columnKey="ytw" /></th>
                                             <th className="px-4 py-3 text-right cursor-pointer group bg-amber-50/30 dark:bg-amber-900/10" onClick={() => requestSort('duration')}>Duration <SortIndicator columnKey="duration" /></th>
                                             <th className="px-4 py-3"></th>
@@ -439,6 +454,7 @@ export default function PortfolioPage() {
                                                 <td className={`px-4 py-3 text-right font-bold ${item.unrealized_pl_pct >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                                                     {item.average_cost > 0 ? `${item.unrealized_pl_pct > 0 ? '+' : ''}${item.unrealized_pl_pct.toFixed(1)}%` : '-'}
                                                 </td>
+                                                <td className="px-4 py-3 text-right font-bold text-amber-700 dark:text-amber-400 bg-amber-50/10 dark:bg-amber-900/5">{item.rating || '-'}</td>
                                                 <td className="px-4 py-3 text-right font-bold text-amber-700 dark:text-amber-400 bg-amber-50/10 dark:bg-amber-900/5">{item.yield_to_worst ? `${(item.yield_to_worst * 100).toFixed(2)}%` : '-'}</td>
                                                 <td className="px-4 py-3 text-right font-medium text-amber-700 dark:text-amber-400 bg-amber-50/10 dark:bg-amber-900/5">{item.duration ? item.duration.toFixed(2) : '-'}</td>
                                                 <td className="px-2 py-3 text-right">
