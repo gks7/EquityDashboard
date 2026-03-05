@@ -2,7 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from finance.models import Stock, InvestmentThesis, Estimate5Y, PortfolioItem, ValuationModel, PortfolioSnapshot
 from .serializers import StockSerializer, InvestmentThesisSerializer, Estimate5YSerializer, PortfolioItemSerializer, PortfolioSnapshotSerializer
 from finance.services import update_stock_price
@@ -108,6 +108,7 @@ class PortfolioSnapshotViewSet(viewsets.ModelViewSet):
     serializer_class = PortfolioSnapshotSerializer
 
     @action(detail=False, methods=['post'], url_path='upload_excel')
+    @permission_classes([AllowAny])
     def upload_excel(self, request):
         file = request.FILES.get('file')
         if not file:
