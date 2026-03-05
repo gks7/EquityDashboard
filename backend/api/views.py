@@ -236,3 +236,92 @@ class PortfolioItemViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         return Response({"error": "Manual creation is disabled; please upload a snapshot"}, status=status.HTTP_400_BAD_REQUEST)
+
+from finance.models import MoatScore, MoatRanking
+from .serializers import MoatScoreSerializer, MoatRankingSerializer
+from django.contrib.auth.models import User
+
+class MoatScoreViewSet(viewsets.ModelViewSet):
+    queryset = MoatScore.objects.all()
+    serializer_class = MoatScoreSerializer
+
+    def get_queryset(self):
+        queryset = MoatScore.objects.all()
+        ticker = self.request.query_params.get('ticker', None)
+        if ticker:
+            queryset = queryset.filter(stock__ticker=ticker)
+        return queryset
+
+    @action(detail=False, methods=['post'], url_path='save_score')
+    def save_score(self, request):
+        ticker = request.data.get('ticker')
+        analyst_name = request.data.get('analyst')
+        scores = request.data.get('scores', {})
+
+        if not ticker or not analyst_name or not scores:
+            return Response({'error': 'ticker, analyst, and scores are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        stock = Stock.objects.filter(ticker=ticker).first()
+        if not stock:
+            return Response({'error': 'Stock not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Temp user resolution since auth isn't fully active
+        analyst, _ = User.objects.get_or_create(username=analyst_name)
+
+        moat_score = MoatScore.objects.create(
+            stock=stock,
+            analyst=analyst,
+            scale=scores.get('scale', 1),
+            switch_costs=scores.get('switchCosts', 1),
+            physical_assets=scores.get('physicalAssets', 1),
+            ip=scores.get('ip', 1),
+            network_effects=scores.get('networkEffects', 1)
+        )
+
+        serializer = self.get_serializer(moat_score)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+class MoatRankingViewSet(viewsets.ModelViewSet):
+    queryset = MoatRanking.objects.all()
+    serializer_class = MoatRankingSerializer
+
+    def get_queryset(self):
+        queryset = MoatRanking.objects.all()
+        analyst = self.request.query_params.get('analyst', None)
+        if analyst:
+            queryset = queryset.filter(analyst__username=analyst)
+        return queryset
+
+    @action(detail=False, methods=['post'], url_path='save_ranking')
+    def save_ranking(self, request):
+        analyst_name = request.data.get('analyst')
+        rankings = request.data.get('rankings') # list of {ticker, rank}
+
+        if not analyst_name or not isinstance(rankings, list):
+            return Response({'error': 'analyst and rankings array are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        analyst, _ = User.objects.get_or_create(username=analyst_name)
+
+        # Clear old rankings for this analyst
+        MoatRanking.objects.filter(analyst=analyst).delete()
+
+        created_rankings = []
+        for r in rankings:
+            ticker = r.get('ticker')
+            rank = r.get('rank')
+            stock = Stock.objects.filter(ticker=ticker).first()
+            if stock and rank:
+                mr = MoatRanking(stock=stock, analyst=analyst, rank=rank)
+                created_rankings.append(mr)
+
+        MoatRanking.objects.bulk_create(created_rankings)
+        return Response({'message': f'Saved {len(created_rankings)} rankings'}, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['delete'], url_path='clear_ranking')
+    def clear_ranking(self, request):
+        analyst_name = request.query_params.get('analyst')
+        if not analyst_name:
+            return Response({'error': 'analyst param is required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        deleted, _ = MoatRanking.objects.filter(analyst__username=analyst_name).delete()
+        return Response({'message': f'Cleared {deleted} rankings'}, status=status.HTTP_200_OK)

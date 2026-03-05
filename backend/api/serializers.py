@@ -63,3 +63,20 @@ class PortfolioItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = PortfolioItem
         fields = '__all__'
+
+from finance.models import MoatScore, MoatRanking
+
+class MoatScoreSerializer(serializers.ModelSerializer):
+    analyst_name = serializers.CharField(source='analyst.username', read_only=True)
+    total_score = serializers.ReadOnlyField()
+
+    class Meta:
+        model = MoatScore
+        fields = '__all__'
+
+class MoatRankingSerializer(serializers.ModelSerializer):
+    analyst_name = serializers.CharField(source='analyst.username', read_only=True)
+
+    class Meta:
+        model = MoatRanking
+        fields = '__all__'

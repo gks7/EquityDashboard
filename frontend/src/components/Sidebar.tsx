@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
-import { LayoutDashboard, List, LineChart, Users, Settings, Sun, Moon } from "lucide-react";
+import { LayoutDashboard, List, LineChart, Users, Settings, Sun, Moon, Shield } from "lucide-react";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/watchlist", label: "Watchlist", icon: List },
   { href: "/portfolio", label: "Portfolio", icon: LineChart },
+  { href: "/moats", label: "Moats", icon: Shield },
   { href: "/analysts", label: "Analysts", icon: Users },
 ];
 
@@ -47,8 +48,8 @@ export function Sidebar() {
               key={href}
               href={href}
               className={`flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${isActive
-                  ? "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-white/[0.03]"
+                ? "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-white/[0.03]"
                 }`}
               style={isActive ? { borderLeft: '2px solid #3b82f6', paddingLeft: '10px' } : {}}
             >

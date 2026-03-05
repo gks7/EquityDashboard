@@ -197,3 +197,46 @@ class ValuationModel(models.Model):
 
     def __str__(self):
         return f"Valuation Model for {self.stock.ticker}"
+
+class MoatScore(models.Model):
+    """
+    Stores 1-5 ratings across 5 categories to quantify a company's economic moat.
+    Each analyst can have multiple historic entries per stock, but the latest one is their active score.
+    """
+    stock = models.ForeignKey(Stock, on_delete=models.CASCADE, related_name='moat_scores')
+    analyst = models.ForeignKey(User, on_delete=models.CASCADE, related_name='moat_scores')
+    
+    scale = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)], default=1)
+    switch_costs = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)], default=1)
+    physical_assets = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)], default=1)
+    ip = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)], default=1)
+    network_effects = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)], default=1)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        
+    def __str__(self):
+        return f"{self.stock.ticker} Moat by {self.analyst.username} ({self.created_at.date()})"
+        
+    @property
+    def total_score(self):
+        return self.scale + self.switch_costs + self.physical_assets + self.ip + self.network_effects
+
+class MoatRanking(models.Model):
+    """
+    Stores an ordered ranking (1 to N) of stocks by moat strength, as determined by an analyst.
+    Multiple entries per analyst represent history; the latest is the active ranking.
+    """
+    stock = models.ForeignKey(Stock, on_delete=models.CASCADE, related_name='moat_rankings')
+    analyst = models.ForeignKey(User, on_delete=models.CASCADE, related_name='moat_rankings')
+    
+    rank = models.IntegerField(validators=[MinValueValidator(1)])
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at', 'rank']
+        
+    def __str__(self):
+        return f"#{self.rank} {self.stock.ticker} by {self.analyst.username}"
