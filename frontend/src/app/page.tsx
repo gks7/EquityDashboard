@@ -276,7 +276,9 @@ export default function DashboardPage() {
   const sectorData = useMemo(() => {
     const vals: Record<string, number> = {};
     equities.forEach((h) => {
-      const ticker = (h.ticker || "").toUpperCase();
+      const rawTicker = (h.ticker || "").toUpperCase();
+      // Bloomberg exports often format equities as "SPY US Equity". We just want the base ticker.
+      const ticker = rawTicker.split(' ')[0];
       const val = h.current_value;
 
       if (ticker === "SPY" || ticker === "VOO" || ticker === "IVV") {
