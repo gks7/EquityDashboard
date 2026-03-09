@@ -285,7 +285,7 @@ export default function DashboardPage() {
     equities.forEach((h) => {
       const rawTicker = (h.ticker || "").toUpperCase();
       // Bloomberg exports often format equities as "SPY US Equity". We just want the base ticker.
-      const ticker = rawTicker.split(' ')[0];
+      const ticker = rawTicker.split(' ')[0].trim();
       const val = h.current_value;
 
       if (ticker === "SPY" || ticker === "VOO" || ticker === "IVV") {
