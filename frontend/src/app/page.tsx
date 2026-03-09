@@ -90,6 +90,18 @@ const SP500: Record<string, number> = {
   "Real Estate": 1.9,
 };
 
+// ─── Nasdaq 100 approximate weights ─────────────────────────────────
+const QQQ_WEIGHTS: Record<string, number> = {
+  Technology: 50.5,
+  "Communication Services": 16.5,
+  "Consumer Cyclical": 14.5, // Consumer Discretionary
+  "Consumer Defensive": 6.5, // Consumer Staples
+  Healthcare: 5.5,
+  Industrials: 4.0,
+  Utilities: 1.5,
+  "Basic Materials": 1.0,
+};
+
 // ─── Scatter color map for FI sub-types ─────────────────────────────
 const FI_COLORS: Record<string, string> = {
   corp: "#14b8a6",      // teal
@@ -264,9 +276,23 @@ export default function DashboardPage() {
   const sectorData = useMemo(() => {
     const vals: Record<string, number> = {};
     equities.forEach((h) => {
-      const sec = h.stock_details?.sector || "Unknown";
-      vals[sec] = (vals[sec] || 0) + h.current_value;
+      const ticker = (h.ticker || "").toUpperCase();
+      const val = h.current_value;
+
+      if (ticker === "SPY" || ticker === "VOO" || ticker === "IVV") {
+        Object.entries(SP500).forEach(([sec, w]) => {
+          vals[sec] = (vals[sec] || 0) + val * (w / 100);
+        });
+      } else if (ticker === "QQQ" || ticker === "QQQM") {
+        Object.entries(QQQ_WEIGHTS).forEach(([sec, w]) => {
+          vals[sec] = (vals[sec] || 0) + val * (w / 100);
+        });
+      } else {
+        const sec = h.stock_details?.sector || "Unknown";
+        vals[sec] = (vals[sec] || 0) + val;
+      }
     });
+
     const allSecs = new Set([...Object.keys(vals), ...Object.keys(SP500)]);
     return Array.from(allSecs)
       .map((s) => {
