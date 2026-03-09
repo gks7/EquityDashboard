@@ -15,6 +15,12 @@ import {
   ArrowUpDown,
 } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
+import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from "recharts";
+
+const PIE_COLORS = [
+  "#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6",
+  "#ec4899", "#14b8a6", "#f97316", "#06b6d4", "#84cc16", "#64748b"
+];
 
 // ─── Types ──────────────────────────────────────────────────────────
 export interface PortfolioHolding {
@@ -131,6 +137,7 @@ export default function DashboardPage() {
     dir: "desc",
   });
   const [hoveredDot, setHoveredDot] = useState<PortfolioHolding | null>(null);
+  const [exposureTab, setExposureTab] = useState<"diff" | "pies" | "table">("diff");
 
   useEffect(() => {
     (async () => {
@@ -560,54 +567,146 @@ export default function DashboardPage() {
 
           {/* Sector Exposure vs S&P 500 */}
           <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-6 bg-white dark:bg-[#111827] shadow-sm">
-            <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center justify-between mb-6">
               <h2 className="text-base font-bold text-slate-900 dark:text-white">
                 Sector Exposure vs. S&P 500
               </h2>
-              <div className="flex items-center gap-4 text-[11px] font-bold text-slate-400">
-                <span>← Underweight</span>
-                <span>Overweight →</span>
+              <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
+                {(["diff", "pies", "table"] as const).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setExposureTab(t)}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${exposureTab === t
+                      ? "bg-white dark:bg-[#111827] text-slate-900 dark:text-white shadow-sm"
+                      : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                      }`}
+                  >
+                    {t === "diff" ? "Difference" : t === "pies" ? "Pie Charts" : "Data Table"}
+                  </button>
+                ))}
               </div>
             </div>
-            <div className="space-y-2">
-              {sectorData.map((d) => {
-                const barW = (Math.abs(d.diff) / maxDiff) * 50;
-                const over = d.diff >= 0;
-                return (
-                  <div key={d.sector} className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-slate-500 w-40 text-right truncate shrink-0">
-                      {d.sector}
-                    </span>
-                    <div className="flex-1 flex items-center h-6 relative bg-slate-50 dark:bg-slate-800/20 rounded-sm">
-                      <div className="absolute left-1/2 top-0 bottom-0 w-px bg-slate-200 dark:bg-slate-700 z-10" />
-                      {!over && (
-                        <div
-                          className="absolute right-1/2 h-5 rounded-l-sm bg-rose-500 transition-all"
-                          style={{ width: `${barW}%` }}
-                        />
-                      )}
-                      {over && (
-                        <div
-                          className="absolute left-1/2 h-5 rounded-r-sm bg-emerald-500 transition-all"
-                          style={{ width: `${barW}%` }}
-                        />
-                      )}
-                    </div>
-                    <span
-                      className={`text-xs font-bold w-16 text-right shrink-0 ${d.diff > 0.5
-                        ? "text-emerald-600 dark:text-emerald-400"
-                        : d.diff < -0.5
-                          ? "text-rose-600 dark:text-rose-400"
-                          : "text-slate-500"
-                        }`}
-                    >
-                      {d.diff > 0 ? "+" : ""}
-                      {d.diff.toFixed(1)}%
-                    </span>
+
+            {exposureTab === "diff" && (
+              <>
+                <div className="flex items-center justify-end mb-4">
+                  <div className="flex items-center gap-4 text-[11px] font-bold text-slate-400">
+                    <span>← Underweight</span>
+                    <span>Overweight →</span>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+                <div className="space-y-2">
+                  {sectorData.map((d) => {
+                    const barW = (Math.abs(d.diff) / maxDiff) * 50;
+                    const over = d.diff >= 0;
+                    return (
+                      <div key={d.sector} className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-slate-500 w-40 text-right truncate shrink-0">
+                          {d.sector}
+                        </span>
+                        <div className="flex-1 flex items-center h-6 relative bg-slate-50 dark:bg-slate-800/20 rounded-sm">
+                          <div className="absolute left-1/2 top-0 bottom-0 w-px bg-slate-200 dark:bg-slate-700 z-10" />
+                          {!over && (
+                            <div
+                              className="absolute right-1/2 h-5 rounded-l-sm bg-rose-500 transition-all"
+                              style={{ width: `${barW}%` }}
+                            />
+                          )}
+                          {over && (
+                            <div
+                              className="absolute left-1/2 h-5 rounded-r-sm bg-emerald-500 transition-all"
+                              style={{ width: `${barW}%` }}
+                            />
+                          )}
+                        </div>
+                        <span
+                          className={`text-xs font-bold w-16 text-right shrink-0 ${d.diff > 0.5
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : d.diff < -0.5
+                              ? "text-rose-600 dark:text-rose-400"
+                              : "text-slate-500"
+                            }`}
+                        >
+                          {d.diff > 0 ? "+" : ""}
+                          {d.diff.toFixed(1)}%
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {exposureTab === "pies" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                <div className="flex flex-col items-center">
+                  <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Your Portfolio</h3>
+                  <div className="w-full h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={sectorData.filter(d => d.pw > 0).map(d => ({ name: d.sector, value: d.pw }))}
+                          cx="50%" cy="50%" innerRadius={60} outerRadius={100} dataKey="value" stroke="none"
+                        >
+                          {sectorData.filter(d => d.pw > 0).map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <RechartsTooltip formatter={(val: any) => `${Number(val).toFixed(1)}%`} />
+                        <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+                <div className="flex flex-col items-center">
+                  <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">S&P 500</h3>
+                  <div className="w-full h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={sectorData.filter(d => d.bw > 0).map(d => ({ name: d.sector, value: d.bw }))}
+                          cx="50%" cy="50%" innerRadius={60} outerRadius={100} dataKey="value" stroke="none"
+                        >
+                          {sectorData.filter(d => d.bw > 0).map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <RechartsTooltip formatter={(val: any) => `${Number(val).toFixed(1)}%`} />
+                        <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {exposureTab === "table" && (
+              <div className="rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+                    <tr className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                      <th className="px-4 py-3">Sector</th>
+                      <th className="px-4 py-3 text-right">Portfolio weight</th>
+                      <th className="px-4 py-3 text-right">S&P 500 weight</th>
+                      <th className="px-4 py-3 text-right">Active weight</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {sectorData.map((d) => (
+                      <tr key={d.sector} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                        <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">{d.sector}</td>
+                        <td className="px-4 py-3 text-right text-slate-600 dark:text-slate-300">{d.pw.toFixed(2)}%</td>
+                        <td className="px-4 py-3 text-right text-slate-600 dark:text-slate-300">{d.bw.toFixed(2)}%</td>
+                        <td className={`px-4 py-3 text-right font-bold ${d.diff > 0 ? "text-emerald-600" : d.diff < 0 ? "text-rose-600" : "text-slate-500"
+                          }`}>
+                          {d.diff > 0 ? "+" : ""}{d.diff.toFixed(2)}%
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}
