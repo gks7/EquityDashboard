@@ -1,4 +1,3 @@
-import yfinance as yf
 from .models import Stock
 from django.utils import timezone
 import datetime
@@ -72,6 +71,7 @@ def update_stock_price(ticker_symbol: str):
     Creates or updates the Stock model in the database.
     Returns the Stock object.
     """
+    import yfinance as yf
     symbol = ticker_symbol.upper()
     try:
         yf_ticker = yf.Ticker(symbol)
