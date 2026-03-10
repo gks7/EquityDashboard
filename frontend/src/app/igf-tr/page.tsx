@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   ResponsiveContainer, LineChart, Line, AreaChart, Area,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
 } from "recharts";
 import { TrendingUp, TrendingDown, Activity, DollarSign, RefreshCcw, ChevronDown, ArrowUpDown } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
@@ -38,6 +38,29 @@ interface IgfData {
   available_assets: string[];
   available_infos: string[];
 }
+
+// One entry per date; each asset_group is a dynamic key with a number value
+type BreakdownRow = { date: string; total?: number; [group: string]: number | string | undefined };
+
+interface AssetBreakdownData {
+  allocation_history: BreakdownRow[];
+  synthetic_cotas: BreakdownRow[];
+  available_groups: string[];
+}
+
+// ─── Asset group colours ──────────────────────────────────────────────────────
+
+const GROUP_PALETTE: Record<string, string> = {
+  Stock:          "#10b981", Stocks:   "#10b981", Equity:   "#10b981", Equities: "#10b981",
+  Bond:           "#3b82f6", Bonds:    "#3b82f6", "Fixed Income": "#3b82f6", "Renda Fixa": "#3b82f6",
+  Cash:           "#f59e0b", Caixa:    "#f59e0b",
+  Derivative:     "#8b5cf6", Derivatives: "#8b5cf6", Derivativo: "#8b5cf6",
+  FII:            "#ec4899",
+  ETF:            "#06b6d4",
+  Commodity:      "#f97316",
+};
+const FALLBACK_PALETTE = ["#6366f1", "#f43f5e", "#84cc16", "#0ea5e9", "#a78bfa", "#fb923c"];
+const groupColor = (g: string, idx: number) => GROUP_PALETTE[g] ?? FALLBACK_PALETTE[idx % FALLBACK_PALETTE.length];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -273,6 +296,10 @@ export default function IgfTrPage() {
   const [compareIndex, setCompareIndex] = useState<string | null>(null);
   const [navRange, setNavRange] = useState<Range>("Máx");
   const [flowsRange, setFlowsRange] = useState<Range>("Máx");
+  const [allocRange, setAllocRange] = useState<Range>("Máx");
+  const [cotaAcRange, setCotaAcRange] = useState<Range>("Máx");
+
+  const [breakdownData, setBreakdownData] = useState<AssetBreakdownData | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -291,6 +318,16 @@ export default function IgfTrPage() {
   }, [selectedFund]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const params = selectedFund ? `?fund=${encodeURIComponent(selectedFund)}` : "";
+        const res = await authFetch(`${API_BASE}/igf-tr/asset-breakdown/${params}`);
+        if (res.ok) setBreakdownData(await res.json());
+      } catch {}
+    })();
+  }, [selectedFund]);
 
   // ── Sorted NAV positions ────────────────────────────────────────────────────
   const navRows = useMemo(
@@ -395,6 +432,37 @@ export default function IgfTrPage() {
 
 
   const fundOptions = useMemo(() => (data?.available_funds ?? []).map((f) => ({ value: f, label: f })), [data]);
+
+  // ── Asset breakdown chart data ─────────────────────────────────────────────
+  const availableGroups: string[] = breakdownData?.available_groups ?? [];
+
+  const allocChartData = useMemo(() => {
+    if (!breakdownData?.allocation_history.length) return [];
+    return filterByRange(breakdownData.allocation_history, allocRange)
+      .map((row) => ({ ...row, date: fmtDate(row.date as string) }));
+  }, [breakdownData, allocRange]);
+
+  const latestAlloc = useMemo(() => {
+    if (!breakdownData?.allocation_history.length) return null;
+    return breakdownData.allocation_history[breakdownData.allocation_history.length - 1];
+  }, [breakdownData]);
+
+  const cotaAcChartData = useMemo(() => {
+    if (!breakdownData?.synthetic_cotas.length) return [];
+    return filterByRange(breakdownData.synthetic_cotas, cotaAcRange)
+      .map((row) => ({ ...row, date: fmtDate(row.date as string) }));
+  }, [breakdownData, cotaAcRange]);
+
+  const cotaAcDomain = useMemo((): [number, number] => {
+    const values = cotaAcChartData.flatMap((row) =>
+      availableGroups.map((g) => row[g] as number).filter((v) => v != null && isFinite(v))
+    );
+    if (!values.length) return [90, 110];
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const pad = (max - min) * 0.05 || 1;
+    return [parseFloat((min - pad).toFixed(2)), parseFloat((max + pad).toFixed(2))];
+  }, [cotaAcChartData, availableGroups]);
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
@@ -626,6 +694,204 @@ export default function IgfTrPage() {
                 )}
               </div>
             </div>
+
+            {/* ── Asset Class Breakdown ─────────────────────────────────── */}
+            {breakdownData && availableGroups.length > 0 && (
+              <>
+                {/* Latest allocation stat pills */}
+                {latestAlloc && (
+                  <div className="flex flex-wrap gap-3">
+                    {availableGroups.map((g, i) => {
+                      const pct = latestAlloc[g] as number;
+                      return (
+                        <div key={g} className={`${cardCls} px-4 py-3 flex items-center gap-3 min-w-[140px]`}>
+                          <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: groupColor(g, i) }} />
+                          <div>
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">{g}</p>
+                            <p className="text-lg font-bold text-slate-900 dark:text-white tabular-nums">
+                              {pct != null ? pct.toFixed(1) : "—"}%
+                            </p>
+                            <p className="text-[10px] text-slate-400">
+                              {latestAlloc.total != null ? `R$ ${fmtM(latestAlloc.total as number * pct / 100)}` : ""}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <div className={`${cardCls} px-4 py-3 flex items-center gap-3 min-w-[140px]`}>
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Total</p>
+                        <p className="text-lg font-bold text-slate-900 dark:text-white tabular-nums">
+                          {latestAlloc.total != null ? `R$ ${fmtM(latestAlloc.total as number)}` : "—"}
+                        </p>
+                        <p className="text-[10px] text-slate-400">{latestAlloc.date as string ? fmtDate(latestAlloc.date as string) : ""}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Allocation stacked area chart */}
+                <div className={`${cardCls} p-6`}>
+                  <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
+                    <SectionHeader
+                      title="Composição por Asset Class"
+                      subtitle="Participação % diária de cada classe no portfólio — finance_assetpositionhistofficial"
+                    />
+                    <RangeBar value={allocRange} onChange={setAllocRange} color="emerald" />
+                  </div>
+                  {allocChartData.length === 0 ? (
+                    <EmptyState message="Nenhum dado de composição disponível." />
+                  ) : (
+                    <ResponsiveContainer width="100%" height={320}>
+                      <AreaChart data={allocChartData} margin={{ top: 4, right: 16, left: 0, bottom: 0 }} stackOffset="none">
+                        <defs>
+                          {availableGroups.map((g, i) => (
+                            <linearGradient key={g} id={`allocGrad${i}`} x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor={groupColor(g, i)} stopOpacity={0.5} />
+                              <stop offset="100%" stopColor={groupColor(g, i)} stopOpacity={0.05} />
+                            </linearGradient>
+                          ))}
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" className="dark:[stroke:#1e293b]" />
+                        <XAxis dataKey="date" tick={{ fill: "#94a3b8", fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                        <YAxis
+                          domain={[0, 100]}
+                          tick={{ fill: "#94a3b8", fontSize: 10 }}
+                          tickLine={false}
+                          axisLine={false}
+                          tickFormatter={(v) => `${v}%`}
+                          width={44}
+                        />
+                        <Tooltip
+                          content={({ active, payload, label }) => {
+                            if (!active || !payload?.length) return null;
+                            return (
+                              <div className="bg-slate-900 border border-slate-700/60 rounded-xl px-4 py-3 shadow-2xl text-xs min-w-[160px]">
+                                <p className="text-slate-400 mb-2 font-medium">{label}</p>
+                                {[...payload].reverse().map((p: any, i: number) => (
+                                  <div key={i} className="flex items-center justify-between gap-4 py-0.5">
+                                    <span className="flex items-center gap-1.5">
+                                      <span className="w-2 h-2 rounded-full" style={{ background: p.fill }} />
+                                      <span className="text-slate-300">{p.name}</span>
+                                    </span>
+                                    <span className="font-semibold text-white">{(p.value as number).toFixed(1)}%</span>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          }}
+                        />
+                        <Legend
+                          formatter={(value) => <span className="text-xs text-slate-500 dark:text-slate-400">{value}</span>}
+                          wrapperStyle={{ paddingTop: 12 }}
+                        />
+                        {availableGroups.map((g, i) => (
+                          <Area
+                            key={g}
+                            type="monotone"
+                            dataKey={g}
+                            name={g}
+                            stackId="a"
+                            stroke={groupColor(g, i)}
+                            strokeWidth={1.5}
+                            fill={`url(#allocGrad${i})`}
+                            dot={false}
+                            activeDot={{ r: 3 }}
+                          />
+                        ))}
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+
+                {/* Synthetic cota per asset class */}
+                <div className={`${cardCls} p-6`}>
+                  <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
+                    <SectionHeader
+                      title="Cota Sintética por Asset Class"
+                      subtitle="Retorno acumulado base 100 por classe (TWR diário: PnL total / valor de abertura)"
+                    />
+                    <RangeBar value={cotaAcRange} onChange={setCotaAcRange} color="blue" />
+                  </div>
+
+                  {/* Legend with latest value */}
+                  <div className="flex flex-wrap gap-5 mb-4">
+                    {availableGroups.map((g, i) => {
+                      const last = cotaAcChartData[cotaAcChartData.length - 1];
+                      const val = last ? (last[g] as number) : null;
+                      const ret = val != null ? val - 100 : null;
+                      return (
+                        <div key={g} className="flex items-center gap-2">
+                          <span className="w-4 h-0.5 rounded inline-block" style={{ background: groupColor(g, i) }} />
+                          <span className="text-xs text-slate-500 dark:text-slate-400">{g}</span>
+                          {val != null && (
+                            <span className={`text-xs font-semibold tabular-nums ${ret! >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
+                              {ret! >= 0 ? "+" : ""}{ret!.toFixed(2)}%
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {cotaAcChartData.length === 0 ? (
+                    <EmptyState message="Nenhum dado de cota sintética disponível." />
+                  ) : (
+                    <ResponsiveContainer width="100%" height={320}>
+                      <LineChart data={cotaAcChartData} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" className="dark:[stroke:#1e293b]" />
+                        <XAxis dataKey="date" tick={{ fill: "#94a3b8", fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                        <YAxis
+                          domain={cotaAcDomain}
+                          tick={{ fill: "#94a3b8", fontSize: 10 }}
+                          tickLine={false}
+                          axisLine={false}
+                          tickFormatter={(v) => `${(v - 100).toFixed(1)}%`}
+                          width={52}
+                        />
+                        <Tooltip
+                          content={({ active, payload, label }) => {
+                            if (!active || !payload?.length) return null;
+                            return (
+                              <div className="bg-slate-900 border border-slate-700/60 rounded-xl px-4 py-3 shadow-2xl text-xs min-w-[180px]">
+                                <p className="text-slate-400 mb-2 font-medium">{label}</p>
+                                {payload.map((p: any, i: number) => {
+                                  const ret = (p.value as number) - 100;
+                                  return (
+                                    <div key={i} className="flex items-center justify-between gap-4 py-0.5">
+                                      <span className="flex items-center gap-1.5">
+                                        <span className="w-2 h-2 rounded-full" style={{ background: p.color }} />
+                                        <span className="text-slate-300">{p.name}</span>
+                                      </span>
+                                      <span className={`font-semibold tabular-nums ${ret >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                                        {ret >= 0 ? "+" : ""}{ret.toFixed(2)}%
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            );
+                          }}
+                        />
+                        {availableGroups.map((g, i) => (
+                          <Line
+                            key={g}
+                            type="monotone"
+                            dataKey={g}
+                            name={g}
+                            stroke={groupColor(g, i)}
+                            strokeWidth={2}
+                            dot={false}
+                            activeDot={{ r: 4 }}
+                            connectNulls
+                          />
+                        ))}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+              </>
+            )}
           </>
         )}
 
