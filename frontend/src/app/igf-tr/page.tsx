@@ -305,6 +305,19 @@ export default function IgfTrPage() {
     }));
   }, [cotaSeries, compareSeries, cotaRange, compareAsset]);
 
+  // ── Cota Y-axis domain: tight fit around data range ────────────────────────
+  const cotaDomain = useMemo((): [number, number] => {
+    const values = cotaChartData.flatMap((p) => [p.cota, (p as any).compare].filter((v) => v != null)) as number[];
+    if (!values.length) return [0, 1];
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const pad = (max - min) * 0.05 || 0.01;
+    return [
+      parseFloat((min - pad).toFixed(6)),
+      parseFloat((max + pad).toFixed(6)),
+    ];
+  }, [cotaChartData]);
+
   // ── Flows chart data (monthly aggregation) ─────────────────────────────────
   const flowsChartData = useMemo(() => {
     const byMonth: Record<string, { subscriptions: number; redemptions: number }> = {};
@@ -475,11 +488,12 @@ export default function IgfTrPage() {
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" className="dark:[stroke:#1e293b]" />
                     <XAxis dataKey="date" tick={{ fill: "#94a3b8", fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
                     <YAxis
+                      domain={cotaDomain}
                       tick={{ fill: "#94a3b8", fontSize: 10 }}
                       tickLine={false}
                       axisLine={false}
                       tickFormatter={(v) => compareAsset ? v.toFixed(1) : v.toFixed(4)}
-                      width={compareAsset ? 44 : 64}
+                      width={compareAsset ? 44 : 68}
                     />
                     <Tooltip content={<ChartTooltip formatter={(v: number) => compareAsset ? v.toFixed(2) : fmt(v, 6)} />} />
                     {compareAsset && <ReferenceLine y={100} stroke="#94a3b8" strokeDasharray="4 4" />}
