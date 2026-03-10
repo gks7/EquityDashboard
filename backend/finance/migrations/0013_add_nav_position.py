@@ -36,25 +36,4 @@ class Migration(migrations.Migration):
                 "ordering": ["date"],
             },
         ),
-        migrations.AlterField(
-            model_name="assetpositionhistofficial",
-            name="id",
-            field=models.BigAutoField(
-                auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
-            ),
-        ),
-        migrations.AlterField(
-            model_name="histcashtransaction",
-            name="id",
-            field=models.BigAutoField(
-                auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
-            ),
-        ),
-        migrations.AlterField(
-            model_name="histindexprice",
-            name="id",
-            field=models.BigAutoField(
-                auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
-            ),
-        ),
     ]
