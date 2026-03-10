@@ -222,6 +222,10 @@ export default function IgfTrPage() {
   const [cotaRange, setCotaRange] = useState<Range>("Máx");
   const [navRange, setNavRange] = useState<Range>("Máx");
   const [flowsRange, setFlowsRange] = useState<Range>("Máx");
+  const [cotaPage, setCotaPage] = useState(0);
+  const [navPage, setNavPage] = useState(0);
+  const COTA_PAGE_SIZE = 20;
+  const NAV_PAGE_SIZE = 20;
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -462,114 +466,193 @@ export default function IgfTrPage() {
               )}
             </div>
 
-            {/* NAV over time */}
-            <div className="rounded-2xl border border-slate-800/60 bg-[#0c1528]/80 p-6">
-              <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
-                <SectionHeader
-                  title="Patrimônio Líquido (NAV)"
-                  subtitle="Evolução do patrimônio total do fundo"
-                />
-                <RangeBar value={navRange} onChange={setNavRange} color="violet" />
-              </div>
-
-              {navChartData.length === 0 ? (
-                <EmptyState message="Nenhum dado de patrimônio disponível. Faça upload da tabela RefTableAuxNAVPosition." />
-              ) : (
-                <ResponsiveContainer width="100%" height={260}>
-                  <AreaChart data={navChartData} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="navGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.35} />
-                        <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.02} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                    <XAxis dataKey="date" tick={{ fill: "#64748b", fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-                    <YAxis tick={{ fill: "#64748b", fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(v) => `R$ ${fmtM(v)}`} width={72} />
-                    <Tooltip content={<ChartTooltip formatter={(v: number) => `R$ ${fmtM(v)}`} />} />
-                    <Area type="monotone" dataKey="nav" name="Patrimônio" stroke="#8b5cf6" strokeWidth={2} fill="url(#navGrad)" activeDot={{ r: 4, fill: "#8b5cf6" }} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              )}
-            </div>
-
-            {/* Subscriptions & Redemptions */}
-            <div className="rounded-2xl border border-slate-800/60 bg-[#0c1528]/80 p-6">
-              <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
-                <div>
-                  <SectionHeader
-                    title="Captações e Resgates"
-                    subtitle="Fluxo mensal de aplicações (Subscription D0) e resgates (Redemption D0 + D1)"
-                  />
-                  <div className="flex items-center gap-5 mt-2.5">
-                    <span className="flex items-center gap-1.5 text-xs text-slate-400">
-                      <span className="w-3 h-3 rounded-sm bg-emerald-500/80 inline-block" />
-                      Captações: <strong className="text-emerald-400 ml-1">R$ {fmtM(totalSubs)}</strong>
-                    </span>
-                    <span className="flex items-center gap-1.5 text-xs text-slate-400">
-                      <span className="w-3 h-3 rounded-sm bg-rose-500/80 inline-block" />
-                      Resgates: <strong className="text-rose-400 ml-1">R$ {fmtM(totalReds)}</strong>
-                    </span>
-                    <span className="text-xs text-slate-400">
-                      Líquido:{" "}
-                      <strong className={totalSubs - totalReds >= 0 ? "text-emerald-400" : "text-rose-400"}>
-                        R$ {fmtM(totalSubs - totalReds)}
-                      </strong>
+            {/* ── Tabela de Cotas (NAV/Share) ─────────────────────────────────────── */}
+            {navRows.length > 0 && (() => {
+              const cotaRows = [...navRows].reverse();
+              const cotaTotalPages = Math.ceil(cotaRows.length / COTA_PAGE_SIZE);
+              const cotaSlice = cotaRows.slice(cotaPage * COTA_PAGE_SIZE, (cotaPage + 1) * COTA_PAGE_SIZE);
+              return (
+                <div className="rounded-2xl border border-slate-800/60 bg-[#0c1528]/80 p-6">
+                  <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
+                    <SectionHeader
+                      title="Histórico de Cotas"
+                      subtitle="Valor diário da cota (NAV por cota) — todos os registros"
+                    />
+                    <span className="text-[10px] text-slate-500 font-medium self-end">
+                      {cotaRows.length} registros
                     </span>
                   </div>
-                </div>
-                <RangeBar value={flowsRange} onChange={setFlowsRange} color="emerald" />
-              </div>
-
-              {flowsChartData.length === 0 ? (
-                <EmptyState message="Nenhum dado de fluxo disponível. Faça upload da tabela RefTableAuxNAVPosition." />
-              ) : (
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={flowsChartData} margin={{ top: 4, right: 16, left: 0, bottom: 0 }} barCategoryGap="30%">
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                    <XAxis dataKey="month" tick={{ fill: "#64748b", fontSize: 10 }} tickLine={false} axisLine={false} />
-                    <YAxis tick={{ fill: "#64748b", fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(v) => `${fmtM(Math.abs(v))}`} width={56} />
-                    <Tooltip content={<ChartTooltip formatter={(v: number) => `R$ ${fmtM(Math.abs(v))}`} />} />
-                    <ReferenceLine y={0} stroke="#334155" />
-                    <Bar dataKey="subscriptions" name="Captações" fill="#10b981" fillOpacity={0.85} radius={[3, 3, 0, 0]} />
-                    <Bar dataKey="redemptions" name="Resgates" fill="#ef4444" fillOpacity={0.85} radius={[0, 0, 3, 3]} />
-                    <Legend wrapperStyle={{ fontSize: 11, color: "#94a3b8", paddingTop: 8 }} />
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </div>
-
-            {/* Latest rows table */}
-            {navRows.length > 0 && (
-              <div className="rounded-2xl border border-slate-800/60 bg-[#0c1528]/80 p-6">
-                <SectionHeader title="Últimas Entradas" subtitle="10 registros mais recentes do NAVPosition" />
-                <div className="overflow-x-auto mt-4">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="border-b border-slate-800/80">
-                        {["Data", "Fundo", "NAV", "Cotas", "Cota (NAV/Cotas)", "Captação D0", "Resgate D0", "Resgate D1"].map((h) => (
-                          <th key={h} className="text-left py-2 px-3 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[...navRows].reverse().slice(0, 10).map((row, i) => (
-                        <tr key={i} className="border-b border-slate-800/40 hover:bg-slate-800/20 transition-colors">
-                          <td className="py-2.5 px-3 text-slate-300 font-mono">{fmtDate(row.date)}</td>
-                          <td className="py-2.5 px-3 text-slate-400">{row.fund || "—"}</td>
-                          <td className="py-2.5 px-3 text-slate-200 font-mono">{row.nav != null ? `R$ ${fmtM(row.nav)}` : "—"}</td>
-                          <td className="py-2.5 px-3 text-slate-200 font-mono">{row.shares != null ? fmtM(row.shares) : "—"}</td>
-                          <td className="py-2.5 px-3 text-blue-300 font-mono font-semibold">{row.nav_per_share != null ? fmt(row.nav_per_share, 6) : "—"}</td>
-                          <td className="py-2.5 px-3 text-emerald-400 font-mono">{row.subscription_d0 != null && row.subscription_d0 !== 0 ? `R$ ${fmtM(row.subscription_d0)}` : "—"}</td>
-                          <td className="py-2.5 px-3 text-rose-400 font-mono">{row.redemption_d0 != null && row.redemption_d0 !== 0 ? `R$ ${fmtM(row.redemption_d0)}` : "—"}</td>
-                          <td className="py-2.5 px-3 text-rose-400 font-mono">{row.redemption_d1 != null && row.redemption_d1 !== 0 ? `R$ ${fmtM(row.redemption_d1)}` : "—"}</td>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-slate-800/80">
+                          {["Data", "Fundo", "Cota (NAV/Cota)", "Var. Dia", "Var. %"].map((h) => (
+                            <th key={h} className="text-left py-2 px-3 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">{h}</th>
+                          ))}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {cotaSlice.map((row, i) => {
+                          const globalIdx = cotaRows.indexOf(row);
+                          const prevRow = cotaRows[globalIdx + 1];
+                          const varDia = row.nav_per_share != null && prevRow?.nav_per_share != null
+                            ? row.nav_per_share - prevRow.nav_per_share : null;
+                          const varPct = varDia != null && prevRow?.nav_per_share
+                            ? (varDia / prevRow.nav_per_share) * 100 : null;
+                          return (
+                            <tr key={i} className="border-b border-slate-800/40 hover:bg-slate-800/20 transition-colors">
+                              <td className="py-2.5 px-3 text-slate-300 font-mono">{fmtDate(row.date)}</td>
+                              <td className="py-2.5 px-3 text-slate-400">{row.fund || "—"}</td>
+                              <td className="py-2.5 px-3 text-blue-300 font-mono font-semibold">
+                                {row.nav_per_share != null ? fmt(row.nav_per_share, 6) : "—"}
+                              </td>
+                              <td className={`py-2.5 px-3 font-mono ${varDia == null ? "text-slate-500" : varDia >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                                {varDia != null ? `${varDia >= 0 ? "+" : ""}${fmt(varDia, 6)}` : "—"}
+                              </td>
+                              <td className={`py-2.5 px-3 font-mono ${varPct == null ? "text-slate-500" : varPct >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                                {varPct != null ? `${varPct >= 0 ? "+" : ""}${varPct.toFixed(4)}%` : "—"}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  {cotaTotalPages > 1 && (
+                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-800/60">
+                      <span className="text-[10px] text-slate-500">
+                        Página {cotaPage + 1} de {cotaTotalPages}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setCotaPage(0)}
+                          disabled={cotaPage === 0}
+                          className="px-2 py-1 text-[10px] font-medium rounded-md bg-slate-800/60 border border-slate-700/40 text-slate-400 hover:text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        >«</button>
+                        <button
+                          onClick={() => setCotaPage((p) => Math.max(0, p - 1))}
+                          disabled={cotaPage === 0}
+                          className="px-2.5 py-1 text-[10px] font-medium rounded-md bg-slate-800/60 border border-slate-700/40 text-slate-400 hover:text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        >‹</button>
+                        <button
+                          onClick={() => setCotaPage((p) => Math.min(cotaTotalPages - 1, p + 1))}
+                          disabled={cotaPage === cotaTotalPages - 1}
+                          className="px-2.5 py-1 text-[10px] font-medium rounded-md bg-slate-800/60 border border-slate-700/40 text-slate-400 hover:text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        >›</button>
+                        <button
+                          onClick={() => setCotaPage(cotaTotalPages - 1)}
+                          disabled={cotaPage === cotaTotalPages - 1}
+                          className="px-2 py-1 text-[10px] font-medium rounded-md bg-slate-800/60 border border-slate-700/40 text-slate-400 hover:text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        >»</button>
+                      </div>
+                    </div>
+                  )}
                 </div>
+              );
+            })()}
+
+            {/* ── NAV Table + Subscriptions Bar Chart ─────────────────────────────── */}
+            <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
+
+              {/* NAV Table */}
+              {navRows.length > 0 && (() => {
+                const navTableRows = [...navRows].reverse();
+                const navTotalPages = Math.ceil(navTableRows.length / NAV_PAGE_SIZE);
+                const navSlice = navTableRows.slice(navPage * NAV_PAGE_SIZE, (navPage + 1) * NAV_PAGE_SIZE);
+                return (
+                  <div className="xl:col-span-3 rounded-2xl border border-slate-800/60 bg-[#0c1528]/80 p-6 flex flex-col">
+                    <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
+                      <SectionHeader
+                        title="Patrimônio Líquido (NAV)"
+                        subtitle="NAV total do fundo, cotas e fluxos diários"
+                      />
+                      <span className="text-[10px] text-slate-500 font-medium self-end">
+                        {navTableRows.length} registros
+                      </span>
+                    </div>
+                    <div className="overflow-x-auto flex-1">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="border-b border-slate-800/80">
+                            {["Data", "Fundo", "NAV", "Cotas", "Captação D0", "Resgate D0+D1"].map((h) => (
+                              <th key={h} className="text-left py-2 px-3 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {navSlice.map((row, i) => {
+                            const totalRed = (row.redemption_d0 ?? 0) + (row.redemption_d1 ?? 0);
+                            return (
+                              <tr key={i} className="border-b border-slate-800/40 hover:bg-slate-800/20 transition-colors">
+                                <td className="py-2.5 px-3 text-slate-300 font-mono">{fmtDate(row.date)}</td>
+                                <td className="py-2.5 px-3 text-slate-400">{row.fund || "—"}</td>
+                                <td className="py-2.5 px-3 text-violet-300 font-mono font-semibold">
+                                  {row.nav != null ? `R$ ${fmtM(row.nav)}` : "—"}
+                                </td>
+                                <td className="py-2.5 px-3 text-slate-200 font-mono">
+                                  {row.shares != null ? fmtM(row.shares) : "—"}
+                                </td>
+                                <td className={`py-2.5 px-3 font-mono ${row.subscription_d0 && row.subscription_d0 > 0 ? "text-emerald-400" : "text-slate-500"}`}>
+                                  {row.subscription_d0 != null && row.subscription_d0 !== 0 ? `R$ ${fmtM(row.subscription_d0)}` : "—"}
+                                </td>
+                                <td className={`py-2.5 px-3 font-mono ${totalRed !== 0 ? "text-rose-400" : "text-slate-500"}`}>
+                                  {totalRed !== 0 ? `R$ ${fmtM(Math.abs(totalRed))}` : "—"}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                    {navTotalPages > 1 && (
+                      <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-800/60">
+                        <span className="text-[10px] text-slate-500">
+                          Página {navPage + 1} de {navTotalPages}
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => setNavPage(0)} disabled={navPage === 0} className="px-2 py-1 text-[10px] font-medium rounded-md bg-slate-800/60 border border-slate-700/40 text-slate-400 hover:text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">«</button>
+                          <button onClick={() => setNavPage((p) => Math.max(0, p - 1))} disabled={navPage === 0} className="px-2.5 py-1 text-[10px] font-medium rounded-md bg-slate-800/60 border border-slate-700/40 text-slate-400 hover:text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">‹</button>
+                          <button onClick={() => setNavPage((p) => Math.min(navTotalPages - 1, p + 1))} disabled={navPage === navTotalPages - 1} className="px-2.5 py-1 text-[10px] font-medium rounded-md bg-slate-800/60 border border-slate-700/40 text-slate-400 hover:text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">›</button>
+                          <button onClick={() => setNavPage(navTotalPages - 1)} disabled={navPage === navTotalPages - 1} className="px-2 py-1 text-[10px] font-medium rounded-md bg-slate-800/60 border border-slate-700/40 text-slate-400 hover:text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">»</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Monthly Subscriptions Bar Chart */}
+              <div className="xl:col-span-2 rounded-2xl border border-slate-800/60 bg-[#0c1528]/80 p-6 flex flex-col">
+                <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
+                  <div>
+                    <SectionHeader
+                      title="Captações por Mês"
+                      subtitle="Subscription D0 — fluxo mensal de aplicações"
+                    />
+                    <div className="flex items-center gap-3 mt-2.5">
+                      <span className="flex items-center gap-1.5 text-xs text-slate-400">
+                        <span className="w-3 h-3 rounded-sm bg-emerald-500/80 inline-block" />
+                        Total: <strong className="text-emerald-400 ml-1">R$ {fmtM(totalSubs)}</strong>
+                      </span>
+                    </div>
+                  </div>
+                  <RangeBar value={flowsRange} onChange={setFlowsRange} color="emerald" />
+                </div>
+                {flowsChartData.length === 0 ? (
+                  <EmptyState message="Nenhum dado de captação disponível." />
+                ) : (
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart data={flowsChartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barCategoryGap="30%">
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                      <XAxis dataKey="month" tick={{ fill: "#64748b", fontSize: 9 }} tickLine={false} axisLine={false} />
+                      <YAxis tick={{ fill: "#64748b", fontSize: 9 }} tickLine={false} axisLine={false} tickFormatter={(v) => fmtM(v)} width={52} />
+                      <Tooltip content={<ChartTooltip formatter={(v: number) => `R$ ${fmtM(v)}`} />} />
+                      <Bar dataKey="subscriptions" name="Captações" fill="#10b981" fillOpacity={0.85} radius={[3, 3, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
               </div>
-            )}
+            </div>
           </>
         )}
 
