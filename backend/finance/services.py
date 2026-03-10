@@ -3,6 +3,69 @@ from .models import Stock
 from django.utils import timezone
 import datetime
 
+# Bloomberg exchange code → yfinance suffix mapping
+BLOOMBERG_TO_YFINANCE: dict[str, str] = {
+    "CN": ".TO",    # Canada (Toronto)
+    "CT": ".TO",    # Canada (Toronto) alternate
+    "LN": ".L",     # London
+    "GY": ".DE",    # Germany (Xetra/Frankfurt)
+    "GR": ".DE",    # Germany alternate
+    "FP": ".PA",    # France (Paris)
+    "IM": ".MI",    # Italy (Milan)
+    "SM": ".MC",    # Spain (Madrid)
+    "NA": ".AS",    # Netherlands (Amsterdam)
+    "BB": ".BR",    # Belgium (Brussels)
+    "SE": ".ST",    # Sweden (Stockholm)
+    "SS": ".ST",    # Sweden alternate
+    "NO": ".OL",    # Norway (Oslo)
+    "DC": ".CO",    # Denmark (Copenhagen)
+    "FH": ".HE",    # Finland (Helsinki)
+    "SW": ".SW",    # Switzerland (Zurich)
+    "AU": ".AX",    # Australia (ASX)
+    "AT": ".AX",    # Australia alternate
+    "JP": ".T",     # Japan (Tokyo)
+    "JT": ".T",     # Japan (Tokyo) alternate
+    "HK": ".HK",    # Hong Kong
+    "SP": ".SI",    # Singapore
+    "KS": ".KS",    # South Korea (KOSPI)
+    "KP": ".KQ",    # South Korea (KOSDAQ)
+    "IT": ".TA",    # Israel (Tel Aviv)
+    "BZ": ".SA",    # Brazil (São Paulo)
+    "MM": ".MX",    # Mexico
+    "IB": ".BO",    # India (Bombay)
+    "IN": ".NS",    # India (NSE)
+    "TB": ".BK",    # Thailand (Bangkok)
+    "MK": ".KL",    # Malaysia (Kuala Lumpur)
+    "PM": ".PS",    # Philippines
+    "IJ": ".JK",    # Indonesia (Jakarta)
+    "NZ": ".NZ",    # New Zealand
+    "PL": ".WA",    # Poland (Warsaw)
+    "TI": ".IS",    # Turkey (Istanbul)
+    "SJ": ".JO",    # South Africa (Johannesburg)
+}
+
+
+def bloomberg_to_yfinance(raw_ticker: str) -> str:
+    """
+    Convert a Bloomberg-style ticker (e.g. 'CSU CN Equity') to a yfinance-compatible
+    ticker (e.g. 'CSU.TO'). US equities keep no suffix.
+    If the format is just a plain ticker like 'AAPL', return as-is.
+    """
+    parts = raw_ticker.strip().upper().split()
+    base = parts[0]
+
+    if len(parts) >= 2:
+        exchange_code = parts[1]
+        # US exchanges don't need a suffix
+        if exchange_code in ("US", "UW", "UN", "UQ", "UA", "UP"):
+            return base
+        suffix = BLOOMBERG_TO_YFINANCE.get(exchange_code)
+        if suffix:
+            return base + suffix
+
+    return base
+
+
 def update_stock_price(ticker_symbol: str):
     """
     Fetches the latest info for a ticker from yfinance.

@@ -5,7 +5,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from finance.models import Stock, InvestmentThesis, Estimate5Y, PortfolioItem, ValuationModel, PortfolioSnapshot
 from .serializers import StockSerializer, InvestmentThesisSerializer, Estimate5YSerializer, PortfolioItemSerializer, PortfolioSnapshotSerializer
-from finance.services import update_stock_price
+from finance.services import update_stock_price, bloomberg_to_yfinance
 import pandas as pd
 from datetime import datetime
 
@@ -187,10 +187,10 @@ class PortfolioSnapshotViewSet(viewsets.ModelViewSet):
                 ticker = raw_ticker
                 
                 if asset_type == 'Equity' and raw_ticker:
-                    clean_ticker = raw_ticker.split(' ')[0]
-                    ticker = clean_ticker
-                    stock, _ = Stock.objects.get_or_create(ticker=clean_ticker, defaults={'company_name': clean_ticker})
-                    update_stock_price(clean_ticker)
+                    yf_ticker = bloomberg_to_yfinance(raw_ticker)
+                    ticker = yf_ticker
+                    stock, _ = Stock.objects.get_or_create(ticker=yf_ticker, defaults={'company_name': yf_ticker})
+                    update_stock_price(yf_ticker)
 
                 # Carried over average cost
                 key = ticker or isin

@@ -93,9 +93,26 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
             });
 
             if (res.ok) {
+                // Re-fetch to confirm the save persisted and sync state
+                const refreshRes = await authFetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/stocks/${ticker}/`);
+                if (refreshRes.ok) {
+                    const data = await refreshRes.json();
+                    setStock(data);
+                    if (data.theses && data.theses.length > 0) {
+                        const thesis = data.theses[0];
+                        setThesisText(thesis.summary);
+                        setConviction(thesis.conviction);
+                        if (thesis.estimates_5y) {
+                            setPeMultiple(thesis.estimates_5y.target_pe_multiple);
+                            setEps(thesis.estimates_5y.target_eps);
+                            setDividends(thesis.estimates_5y.accumulated_dividends_5y);
+                        }
+                    }
+                }
                 alert("Estimates and thesis saved successfully!");
             } else {
-                alert("Failed to save changes.");
+                const errData = await res.json().catch(() => null);
+                alert(`Failed to save changes.${errData?.error ? ' ' + errData.error : ''}`);
             }
         } catch (error) {
             console.error("Error saving data:", error);
