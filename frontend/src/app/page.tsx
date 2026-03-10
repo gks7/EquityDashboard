@@ -96,16 +96,93 @@ const SP500: Record<string, number> = {
   "Real Estate": 1.9,
 };
 
-// ─── Nasdaq 100 approximate weights ─────────────────────────────────
-const QQQ_WEIGHTS: Record<string, number> = {
-  Technology: 50.5,
-  "Communication Services": 16.5,
-  "Consumer Cyclical": 14.5, // Consumer Discretionary
-  "Consumer Defensive": 6.5, // Consumer Staples
-  Healthcare: 5.5,
-  Industrials: 4.0,
-  Utilities: 1.5,
-  "Basic Materials": 1.0,
+// ─── ETF sector breakdown mappings ──────────────────────────────────
+// Maps ETF tickers to their approximate sector allocations (must sum to ~100)
+const ETF_SECTOR_WEIGHTS: Record<string, Record<string, number>> = {
+  // S&P 500 trackers
+  SPY:  { ...SP500 },
+  VOO:  { ...SP500 },
+  IVV:  { ...SP500 },
+  SPLG: { ...SP500 },
+  // Nasdaq 100
+  QQQ:  { Technology: 50.5, "Communication Services": 16.5, "Consumer Cyclical": 14.5, "Consumer Defensive": 6.5, Healthcare: 5.5, Industrials: 4.0, Utilities: 1.5, "Basic Materials": 1.0 },
+  QQQM: { Technology: 50.5, "Communication Services": 16.5, "Consumer Cyclical": 14.5, "Consumer Defensive": 6.5, Healthcare: 5.5, Industrials: 4.0, Utilities: 1.5, "Basic Materials": 1.0 },
+  // Total US market
+  VTI:  { Technology: 30.5, "Financial Services": 13.0, "Consumer Cyclical": 10.5, Healthcare: 12.0, Industrials: 10.0, "Communication Services": 9.0, "Consumer Defensive": 5.5, Energy: 3.8, Utilities: 2.7, "Real Estate": 2.0, "Basic Materials": 2.0 },
+  ITOT: { Technology: 30.5, "Financial Services": 13.0, "Consumer Cyclical": 10.5, Healthcare: 12.0, Industrials: 10.0, "Communication Services": 9.0, "Consumer Defensive": 5.5, Energy: 3.8, Utilities: 2.7, "Real Estate": 2.0, "Basic Materials": 2.0 },
+  SPTM: { Technology: 30.5, "Financial Services": 13.0, "Consumer Cyclical": 10.5, Healthcare: 12.0, Industrials: 10.0, "Communication Services": 9.0, "Consumer Defensive": 5.5, Energy: 3.8, Utilities: 2.7, "Real Estate": 2.0, "Basic Materials": 2.0 },
+  // Dow Jones
+  DIA:  { Technology: 20.0, "Financial Services": 22.0, Healthcare: 17.0, Industrials: 15.0, "Consumer Cyclical": 12.0, "Consumer Defensive": 5.0, "Communication Services": 4.0, Energy: 3.0, "Basic Materials": 2.0 },
+  // Russell 2000
+  IWM:  { "Financial Services": 16.0, Healthcare: 15.5, Industrials: 15.5, Technology: 13.5, "Consumer Cyclical": 11.0, Energy: 7.5, "Real Estate": 7.0, "Consumer Defensive": 4.0, "Basic Materials": 4.0, "Communication Services": 3.0, Utilities: 3.0 },
+  // Russell 1000
+  IWB:  { Technology: 31.0, "Financial Services": 12.5, Healthcare: 11.0, "Consumer Cyclical": 10.5, Industrials: 9.0, "Communication Services": 10.0, "Consumer Defensive": 5.5, Energy: 3.5, Utilities: 2.5, "Real Estate": 2.0, "Basic Materials": 2.0 },
+  // S&P 500 Growth / Value
+  SPYG: { Technology: 46.0, "Communication Services": 14.0, "Consumer Cyclical": 15.0, Healthcare: 10.0, Industrials: 6.0, "Financial Services": 4.0, "Consumer Defensive": 3.0, Energy: 1.0, "Basic Materials": 1.0 },
+  SPYV: { "Financial Services": 22.0, Healthcare: 14.0, Industrials: 11.0, "Consumer Defensive": 10.0, Energy: 8.0, Technology: 9.0, Utilities: 7.0, "Consumer Cyclical": 6.0, "Real Estate": 5.0, "Communication Services": 4.0, "Basic Materials": 4.0 },
+  IVW:  { Technology: 46.0, "Communication Services": 14.0, "Consumer Cyclical": 15.0, Healthcare: 10.0, Industrials: 6.0, "Financial Services": 4.0, "Consumer Defensive": 3.0, Energy: 1.0, "Basic Materials": 1.0 },
+  IVE:  { "Financial Services": 22.0, Healthcare: 14.0, Industrials: 11.0, "Consumer Defensive": 10.0, Energy: 8.0, Technology: 9.0, Utilities: 7.0, "Consumer Cyclical": 6.0, "Real Estate": 5.0, "Communication Services": 4.0, "Basic Materials": 4.0 },
+  // SPDR Sector ETFs
+  XLK:  { Technology: 100.0 },
+  XLF:  { "Financial Services": 100.0 },
+  XLV:  { Healthcare: 100.0 },
+  XLY:  { "Consumer Cyclical": 100.0 },
+  XLP:  { "Consumer Defensive": 100.0 },
+  XLE:  { Energy: 100.0 },
+  XLI:  { Industrials: 100.0 },
+  XLB:  { "Basic Materials": 100.0 },
+  XLRE: { "Real Estate": 100.0 },
+  XLC:  { "Communication Services": 100.0 },
+  XLU:  { Utilities: 100.0 },
+  // Vanguard sector ETFs
+  VGT:  { Technology: 100.0 },
+  VFH:  { "Financial Services": 100.0 },
+  VHT:  { Healthcare: 100.0 },
+  VCR:  { "Consumer Cyclical": 100.0 },
+  VDC:  { "Consumer Defensive": 100.0 },
+  VDE:  { Energy: 100.0 },
+  VIS:  { Industrials: 100.0 },
+  VAW:  { "Basic Materials": 100.0 },
+  VNQ:  { "Real Estate": 100.0 },
+  VOX:  { "Communication Services": 100.0 },
+  VPU:  { Utilities: 100.0 },
+  // iShares sector ETFs
+  IYW:  { Technology: 100.0 },
+  IYF:  { "Financial Services": 100.0 },
+  IYH:  { Healthcare: 100.0 },
+  IYC:  { "Consumer Cyclical": 100.0 },
+  IYK:  { "Consumer Defensive": 100.0 },
+  IYE:  { Energy: 100.0 },
+  IYJ:  { Industrials: 100.0 },
+  IYM:  { "Basic Materials": 100.0 },
+  IYR:  { "Real Estate": 100.0 },
+  IYZ:  { "Communication Services": 100.0 },
+  IDU:  { Utilities: 100.0 },
+  // MSCI EAFE / International (approximate)
+  EFA:  { "Financial Services": 18.0, Industrials: 15.0, Healthcare: 13.0, Technology: 10.0, "Consumer Cyclical": 12.0, "Consumer Defensive": 10.0, "Basic Materials": 7.0, Energy: 5.0, Utilities: 4.0, "Communication Services": 4.0, "Real Estate": 2.0 },
+  IEFA: { "Financial Services": 18.0, Industrials: 15.0, Healthcare: 13.0, Technology: 10.0, "Consumer Cyclical": 12.0, "Consumer Defensive": 10.0, "Basic Materials": 7.0, Energy: 5.0, Utilities: 4.0, "Communication Services": 4.0, "Real Estate": 2.0 },
+  VEA:  { "Financial Services": 18.0, Industrials: 15.0, Healthcare: 13.0, Technology: 10.0, "Consumer Cyclical": 12.0, "Consumer Defensive": 10.0, "Basic Materials": 7.0, Energy: 5.0, Utilities: 4.0, "Communication Services": 4.0, "Real Estate": 2.0 },
+  // Emerging Markets
+  EEM:  { Technology: 22.0, "Financial Services": 21.0, "Consumer Cyclical": 14.0, "Communication Services": 10.0, Energy: 6.0, "Basic Materials": 7.0, Industrials: 6.0, "Consumer Defensive": 6.0, Healthcare: 4.0, Utilities: 3.0, "Real Estate": 1.0 },
+  VWO:  { Technology: 22.0, "Financial Services": 21.0, "Consumer Cyclical": 14.0, "Communication Services": 10.0, Energy: 6.0, "Basic Materials": 7.0, Industrials: 6.0, "Consumer Defensive": 6.0, Healthcare: 4.0, Utilities: 3.0, "Real Estate": 1.0 },
+  IEMG: { Technology: 22.0, "Financial Services": 21.0, "Consumer Cyclical": 14.0, "Communication Services": 10.0, Energy: 6.0, "Basic Materials": 7.0, Industrials: 6.0, "Consumer Defensive": 6.0, Healthcare: 4.0, Utilities: 3.0, "Real Estate": 1.0 },
+  // All-World / ACWI
+  VT:   { Technology: 26.0, "Financial Services": 15.0, Healthcare: 10.5, "Consumer Cyclical": 11.0, Industrials: 10.0, "Communication Services": 8.0, "Consumer Defensive": 6.0, Energy: 4.5, "Basic Materials": 4.0, Utilities: 3.0, "Real Estate": 2.0 },
+  ACWI: { Technology: 26.0, "Financial Services": 15.0, Healthcare: 10.5, "Consumer Cyclical": 11.0, Industrials: 10.0, "Communication Services": 8.0, "Consumer Defensive": 6.0, Energy: 4.5, "Basic Materials": 4.0, Utilities: 3.0, "Real Estate": 2.0 },
+  // S&P 500 Equal Weight
+  RSP:  { ...SP500 },
+  // Mid-Cap
+  MDY:  { Industrials: 18.0, "Financial Services": 15.0, Technology: 13.0, "Consumer Cyclical": 13.0, Healthcare: 10.0, "Real Estate": 7.0, Energy: 6.0, "Basic Materials": 5.0, "Consumer Defensive": 5.0, Utilities: 4.0, "Communication Services": 4.0 },
+  IJH:  { Industrials: 18.0, "Financial Services": 15.0, Technology: 13.0, "Consumer Cyclical": 13.0, Healthcare: 10.0, "Real Estate": 7.0, Energy: 6.0, "Basic Materials": 5.0, "Consumer Defensive": 5.0, Utilities: 4.0, "Communication Services": 4.0 },
+  VO:   { Industrials: 18.0, "Financial Services": 15.0, Technology: 13.0, "Consumer Cyclical": 13.0, Healthcare: 10.0, "Real Estate": 7.0, Energy: 6.0, "Basic Materials": 5.0, "Consumer Defensive": 5.0, Utilities: 4.0, "Communication Services": 4.0 },
+  // Large Cap Growth
+  VUG:  { Technology: 46.0, "Communication Services": 14.0, "Consumer Cyclical": 15.0, Healthcare: 10.0, Industrials: 6.0, "Financial Services": 4.0, "Consumer Defensive": 3.0, Energy: 1.0, "Basic Materials": 1.0 },
+  IWF:  { Technology: 46.0, "Communication Services": 14.0, "Consumer Cyclical": 15.0, Healthcare: 10.0, Industrials: 6.0, "Financial Services": 4.0, "Consumer Defensive": 3.0, Energy: 1.0, "Basic Materials": 1.0 },
+  MGK:  { Technology: 50.0, "Communication Services": 15.0, "Consumer Cyclical": 14.0, Healthcare: 8.0, Industrials: 5.0, "Financial Services": 4.0, "Consumer Defensive": 2.0, Energy: 1.0, "Basic Materials": 1.0 },
+  // Large Cap Value
+  VTV:  { "Financial Services": 22.0, Healthcare: 14.0, Industrials: 11.0, "Consumer Defensive": 10.0, Energy: 8.0, Technology: 9.0, Utilities: 7.0, "Consumer Cyclical": 6.0, "Real Estate": 5.0, "Communication Services": 4.0, "Basic Materials": 4.0 },
+  IWD:  { "Financial Services": 22.0, Healthcare: 14.0, Industrials: 11.0, "Consumer Defensive": 10.0, Energy: 8.0, Technology: 9.0, Utilities: 7.0, "Consumer Cyclical": 6.0, "Real Estate": 5.0, "Communication Services": 4.0, "Basic Materials": 4.0 },
+  SCHV: { "Financial Services": 22.0, Healthcare: 14.0, Industrials: 11.0, "Consumer Defensive": 10.0, Energy: 8.0, Technology: 9.0, Utilities: 7.0, "Consumer Cyclical": 6.0, "Real Estate": 5.0, "Communication Services": 4.0, "Basic Materials": 4.0 },
 };
 
 // ─── Scatter color map for FI sub-types ─────────────────────────────
@@ -285,15 +362,13 @@ export default function DashboardPage() {
     equities.forEach((h) => {
       const rawTicker = (h.ticker || "").toUpperCase();
       // Bloomberg exports often format equities as "SPY US Equity". We just want the base ticker.
-      const ticker = rawTicker.split(' ')[0].trim();
+      const ticker = rawTicker.split(/[\s.\/]+/)[0].trim();
       const val = h.current_value;
 
-      if (ticker === "SPY" || ticker === "VOO" || ticker === "IVV") {
-        Object.entries(SP500).forEach(([sec, w]) => {
-          vals[sec] = (vals[sec] || 0) + val * (w / 100);
-        });
-      } else if (ticker === "QQQ" || ticker === "QQQM") {
-        Object.entries(QQQ_WEIGHTS).forEach(([sec, w]) => {
+      // Check if this ticker has a known ETF sector breakdown
+      const etfWeights = ETF_SECTOR_WEIGHTS[ticker];
+      if (etfWeights) {
+        Object.entries(etfWeights).forEach(([sec, w]) => {
           vals[sec] = (vals[sec] || 0) + val * (w / 100);
         });
       } else {
