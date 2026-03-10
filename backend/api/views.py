@@ -190,7 +190,6 @@ class PortfolioSnapshotViewSet(viewsets.ModelViewSet):
                     yf_ticker = bloomberg_to_yfinance(raw_ticker)
                     ticker = yf_ticker
                     stock, _ = Stock.objects.get_or_create(ticker=yf_ticker, defaults={'company_name': yf_ticker})
-                    update_stock_price(yf_ticker)
 
                 # Carried over average cost
                 key = ticker or isin
@@ -221,8 +220,20 @@ class PortfolioSnapshotViewSet(viewsets.ModelViewSet):
                 items_to_create.append(item)
                 
             PortfolioItem.objects.bulk_create(items_to_create)
+
+            # Update stock prices in background (best-effort, don't block the response)
+            equity_tickers = list({item.ticker for item in items_to_create if item.asset_type == 'Equity' and item.ticker})
+            import threading
+            def _update_prices(tickers):
+                for t in tickers:
+                    try:
+                        update_stock_price(t)
+                    except Exception:
+                        pass
+            threading.Thread(target=_update_prices, args=(equity_tickers,), daemon=True).start()
+
             return Response({
-                "message": f"Portfolio uploaded successfully. {len(items_to_create)} items created.", 
+                "message": f"Portfolio uploaded successfully. {len(items_to_create)} items created.",
                 "snapshot_id": snapshot.id,
                 "columns_detected": df.columns.tolist(),
                 "items_created": len(items_to_create)
