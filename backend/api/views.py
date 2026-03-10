@@ -250,8 +250,8 @@ class PortfolioItemViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         return Response({"error": "Manual creation is disabled; please upload a snapshot"}, status=status.HTTP_400_BAD_REQUEST)
 
-from finance.models import MoatScore, MoatRanking
-from .serializers import MoatScoreSerializer, MoatRankingSerializer
+from finance.models import MoatScore, MoatRanking, HistCashTransaction, HistIndexPrice, AssetPositionHistOfficial
+from .serializers import MoatScoreSerializer, MoatRankingSerializer, HistCashTransactionSerializer, HistIndexPriceSerializer, AssetPositionHistOfficialSerializer
 from django.contrib.auth.models import User
 
 class MoatScoreViewSet(viewsets.ModelViewSet):
@@ -333,3 +333,175 @@ class MoatRankingViewSet(viewsets.ModelViewSet):
     def clear_ranking(self, request):
         deleted, _ = MoatRanking.objects.filter(analyst=request.user).delete()
         return Response({'message': f'Cleared {deleted} rankings'}, status=status.HTTP_200_OK)
+
+
+def _parse_date(val):
+    """Try to parse a date value from various formats. Returns None on failure."""
+    if not val or (isinstance(val, float) and val != val):  # NaN check
+        return None
+    import re
+    s = str(val).strip()
+    if not s or s in ('nan', 'None', ''):
+        return None
+    # Try common formats
+    for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y', '%d-%m-%Y', '%Y%m%d'):
+        try:
+            from datetime import datetime
+            return datetime.strptime(s[:10], fmt).date()
+        except ValueError:
+            continue
+    return None
+
+
+def _safe_float(val):
+    if val is None:
+        return None
+    try:
+        s = str(val).strip()
+        if s in ('', 'nan', 'None', '#N/A', '-'):
+            return None
+        return float(s.replace(',', ''))
+    except (ValueError, AttributeError):
+        return None
+
+
+def _safe_bool(val):
+    if val is None:
+        return None
+    if isinstance(val, bool):
+        return val
+    s = str(val).strip().lower()
+    if s in ('true', '1', 'yes'):
+        return True
+    if s in ('false', '0', 'no'):
+        return False
+    return None
+
+
+class HistCashTransactionViewSet(viewsets.ViewSet):
+    permission_classes = [AllowAny]
+
+    @action(detail=False, methods=['post'], url_path='upload')
+    def upload(self, request):
+        import traceback
+        try:
+            data = request.data.get('rows')
+            if not data or not isinstance(data, list):
+                return Response({'error': 'Expected {"rows": [...]}'}, status=status.HTTP_400_BAD_REQUEST)
+
+            if request.query_params.get('append') != '1':
+                HistCashTransaction.objects.all().delete()
+            objs = []
+            for row in data:
+                objs.append(HistCashTransaction(
+                    excel_id=row.get('ID'),
+                    date=_parse_date(row.get('Date')),
+                    settlement_date=_parse_date(row.get('SettlementDate')),
+                    fund=row.get('Fund') or None,
+                    cash_account=row.get('Cash Account') or None,
+                    amount=_safe_float(row.get('Amount')),
+                    type=row.get('Type') or None,
+                    counterparty_account=row.get('Counterparty Account') or None,
+                    is_manual=_safe_bool(row.get('IsManual')),
+                    obs=row.get('Obs') or None,
+                    cmd=row.get('CMD') or None,
+                ))
+            HistCashTransaction.objects.bulk_create(objs)
+            return Response({'message': f'{len(objs)} cash transactions uploaded.'}, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({'error': str(e), 'traceback': traceback.format_exc()}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class HistIndexPriceViewSet(viewsets.ViewSet):
+    permission_classes = [AllowAny]
+
+    @action(detail=False, methods=['post'], url_path='upload')
+    def upload(self, request):
+        import traceback
+        try:
+            data = request.data.get('rows')
+            if not data or not isinstance(data, list):
+                return Response({'error': 'Expected {"rows": [...]}'}, status=status.HTTP_400_BAD_REQUEST)
+
+            if request.query_params.get('append') != '1':
+                HistIndexPrice.objects.all().delete()
+            objs = []
+            for row in data:
+                objs.append(HistIndexPrice(
+                    pk_asset_info_id=row.get('pk_AssetInfoID'),
+                    date=_parse_date(row.get('Date')),
+                    fund=row.get('Fund') or None,
+                    asset=row.get('Asset') or None,
+                    info=row.get('Info') or None,
+                    st_value=row.get('st_Value') or None,
+                    flt_value=_safe_float(row.get('flt_Value')),
+                    bln_value=_safe_bool(row.get('bln_Value')),
+                    dte_value=_parse_date(row.get('dte_Value')),
+                    column1=row.get('Column1') or None,
+                    column2=row.get('Column2') or None,
+                ))
+            HistIndexPrice.objects.bulk_create(objs)
+            return Response({'message': f'{len(objs)} index prices uploaded.'}, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({'error': str(e), 'traceback': traceback.format_exc()}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class AssetPositionHistOfficialViewSet(viewsets.ViewSet):
+    permission_classes = [AllowAny]
+
+    @action(detail=False, methods=['post'], url_path='upload')
+    def upload(self, request):
+        import traceback
+        try:
+            data = request.data.get('rows')
+            if not data or not isinstance(data, list):
+                return Response({'error': 'Expected {"rows": [...]}'}, status=status.HTTP_400_BAD_REQUEST)
+
+            if request.query_params.get('append') != '1':
+                AssetPositionHistOfficial.objects.all().delete()
+            objs = []
+            for row in data:
+                objs.append(AssetPositionHistOfficial(
+                    date=_parse_date(row.get('Date')),
+                    fund=row.get('Fund') or None,
+                    portfolio=row.get('Portfolio') or None,
+                    asset_group=row.get('AssetGroup') or None,
+                    broker=row.get('Broker') or None,
+                    asset_market=row.get('AssetMarket') or None,
+                    asset=row.get('Asset') or None,
+                    is_leveraged_product=_safe_bool(row.get('IsLeveragedProduct')),
+                    units_open=_safe_float(row.get('UnitsOpen')),
+                    units_close=_safe_float(row.get('UnitsClose')),
+                    units_transaction=_safe_float(row.get('Units Transaction')),
+                    units_lending=_safe_float(row.get('Units Lending')),
+                    units_margin=_safe_float(row.get('Units Margin')),
+                    currency=row.get('Currency') or None,
+                    avg_cost=_safe_float(row.get('AvgCost')),
+                    price_open=_safe_float(row.get('PriceOpen')),
+                    price_close=_safe_float(row.get('PriceClose')),
+                    price_open_source=row.get('PriceOpenSource') or None,
+                    price_close_source=row.get('PriceCloseSource') or None,
+                    price_open_date=_parse_date(row.get('PriceOpenDate')),
+                    price_close_date=_parse_date(row.get('PriceCloseDate')),
+                    price_opens_official=_safe_float(row.get('PriceOpensOfficial')),
+                    price_closes_official=_safe_float(row.get('PriceCloselsOfficial')),
+                    delta_open=_safe_float(row.get('DeltaOpen')),
+                    delta_close=_safe_float(row.get('DeltaClose')),
+                    underlying_price_open=_safe_float(row.get('UnderlyingPriceOpen')),
+                    underlying_price_close=_safe_float(row.get('UnderlyingPriceClose')),
+                    contract_size=_safe_float(row.get('ContractSize')),
+                    avg_price_transaction=_safe_float(row.get('Avg PriceTransaction')),
+                    amount_open=_safe_float(row.get('AmountOpen')),
+                    amount_close=_safe_float(row.get('AmountClose')),
+                    amount_transaction=_safe_float(row.get('AmountTransaction')),
+                    pnl_open_position=_safe_float(row.get('Pnl OpenPosition')),
+                    pnl_transaction=_safe_float(row.get('Pnl Transaction')),
+                    pnl_transaction_fee=_safe_float(row.get('PnlTransactionFee')),
+                    pnl_dividend=_safe_float(row.get('Pnl Dividend')),
+                    pnl_lending=_safe_float(row.get('Pnl Lending')),
+                    pnl_total=_safe_float(row.get('Pnl Total')),
+                ))
+            AssetPositionHistOfficial.objects.bulk_create(objs)
+            return Response({'message': f'{len(objs)} asset positions uploaded.'}, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({'error': str(e), 'traceback': traceback.format_exc()}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
