@@ -268,7 +268,7 @@ export default function IgfTrPage() {
     return indexed.map((p) => ({
       date: fmtDate(p.date), rawDate: p.date,
       cota: p.indexed,
-      compare: compMap.get(p.rawDate) ?? null,
+      compare: compMap.get(p.date) ?? null,
     }));
   }, [cotaSeries, compareSeries, cotaRange, compareAsset]);
 
