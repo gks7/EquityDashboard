@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import {
-  ResponsiveContainer, LineChart, Line, AreaChart, Area,
+  ResponsiveContainer, LineChart, Line,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ReferenceLine,
 } from "recharts";
@@ -100,7 +100,7 @@ function filterByRange<T extends { date: string }>(data: T[], range: Range): T[]
 const ChartTooltip = ({ active, payload, label, formatter }: any) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-[#0f1629] border border-slate-700/60 rounded-xl px-4 py-3 shadow-2xl text-xs min-w-[160px]">
+    <div className="bg-slate-900 border border-slate-700/60 rounded-xl px-4 py-3 shadow-2xl text-xs min-w-[160px]">
       <p className="text-slate-400 mb-2 font-medium">{label}</p>
       {payload.map((p: any, i: number) => (
         <div key={i} className="flex items-center justify-between gap-4 py-0.5">
@@ -124,26 +124,29 @@ function StatCard({
   icon: React.ElementType; trend?: "up" | "down" | "neutral"; color?: string;
 }) {
   const border: Record<string, string> = {
-    blue: "border-blue-500/20 from-blue-500/10 to-blue-600/5",
-    emerald: "border-emerald-500/20 from-emerald-500/10 to-emerald-600/5",
-    violet: "border-violet-500/20 from-violet-500/10 to-violet-600/5",
-    amber: "border-amber-500/20 from-amber-500/10 to-amber-600/5",
-    rose: "border-rose-500/20 from-rose-500/10 to-rose-600/5",
+    blue: "border-blue-200 dark:border-blue-500/20 from-blue-50 dark:from-blue-500/10 to-blue-50/50 dark:to-blue-600/5",
+    emerald: "border-emerald-200 dark:border-emerald-500/20 from-emerald-50 dark:from-emerald-500/10 to-emerald-50/50 dark:to-emerald-600/5",
+    violet: "border-violet-200 dark:border-violet-500/20 from-violet-50 dark:from-violet-500/10 to-violet-50/50 dark:to-violet-600/5",
+    amber: "border-amber-200 dark:border-amber-500/20 from-amber-50 dark:from-amber-500/10 to-amber-50/50 dark:to-amber-600/5",
+    rose: "border-rose-200 dark:border-rose-500/20 from-rose-50 dark:from-rose-500/10 to-rose-50/50 dark:to-rose-600/5",
   };
   const ic: Record<string, string> = {
-    blue: "text-blue-400", emerald: "text-emerald-400",
-    violet: "text-violet-400", amber: "text-amber-400", rose: "text-rose-400",
+    blue: "text-blue-500 dark:text-blue-400",
+    emerald: "text-emerald-500 dark:text-emerald-400",
+    violet: "text-violet-500 dark:text-violet-400",
+    amber: "text-amber-500 dark:text-amber-400",
+    rose: "text-rose-500 dark:text-rose-400",
   };
   return (
-    <div className={`rounded-2xl border bg-gradient-to-br ${border[color]} p-5 flex flex-col gap-3`}>
+    <div className={`rounded-xl border bg-gradient-to-br ${border[color]} p-5 flex flex-col gap-3`}>
       <div className="flex items-center justify-between">
-        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">{label}</span>
+        <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{label}</span>
         <Icon className={`w-4 h-4 ${ic[color]}`} />
       </div>
       <div>
-        <p className="text-2xl font-bold text-white tracking-tight">{value}</p>
+        <p className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{value}</p>
         {sub && (
-          <p className={`text-xs mt-1 font-medium ${trend === "up" ? "text-emerald-400" : trend === "down" ? "text-rose-400" : "text-slate-500"}`}>
+          <p className={`text-xs mt-1 font-medium ${trend === "up" ? "text-emerald-600 dark:text-emerald-400" : trend === "down" ? "text-rose-600 dark:text-rose-400" : "text-slate-500"}`}>
             {sub}
           </p>
         )}
@@ -155,7 +158,7 @@ function StatCard({
 function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <div className="mb-1">
-      <h2 className="text-sm font-semibold text-white tracking-wide">{title}</h2>
+      <h2 className="text-sm font-semibold text-slate-900 dark:text-white tracking-wide">{title}</h2>
       {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
     </div>
   );
@@ -163,15 +166,15 @@ function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }
 
 function RangeBar({ value, onChange, color = "blue" }: { value: Range; onChange: (r: Range) => void; color?: string }) {
   const active: Record<string, string> = {
-    blue: "bg-blue-600", emerald: "bg-emerald-600", violet: "bg-violet-600",
+    blue: "bg-blue-600 text-white", emerald: "bg-emerald-600 text-white", violet: "bg-violet-600 text-white",
   };
   return (
-    <div className="flex items-center gap-0.5 bg-slate-800/60 rounded-lg p-0.5 border border-slate-700/40">
+    <div className="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800/60 rounded-lg p-0.5 border border-slate-200 dark:border-slate-700/40">
       {RANGES.map((r) => (
         <button
           key={r}
           onClick={() => onChange(r)}
-          className={`px-2.5 py-1 text-[10px] font-semibold rounded-md transition-all ${value === r ? `${active[color]} text-white shadow` : "text-slate-400 hover:text-slate-200"}`}
+          className={`px-2.5 py-1 text-[10px] font-semibold rounded-md transition-all ${value === r ? active[color] : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"}`}
         >
           {r}
         </button>
@@ -189,7 +192,7 @@ function Dropdown({ value, options, onChange, placeholder = "Selecionar…" }: {
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="appearance-none bg-slate-800/60 border border-slate-700/60 text-slate-200 text-xs rounded-lg pl-3 pr-8 py-2 focus:outline-none focus:border-blue-500/60 cursor-pointer transition-colors"
+        className="appearance-none bg-slate-100 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-slate-200 text-xs rounded-lg pl-3 pr-8 py-2 focus:outline-none focus:border-blue-500 cursor-pointer transition-colors"
       >
         <option value="">{placeholder}</option>
         {options.map((o) => (
@@ -203,8 +206,24 @@ function Dropdown({ value, options, onChange, placeholder = "Selecionar…" }: {
 
 function EmptyState({ message }: { message: string }) {
   return (
-    <div className="flex items-center justify-center h-40 rounded-xl border border-slate-800/40 bg-slate-800/10">
+    <div className="flex items-center justify-center h-40 rounded-xl border border-slate-200 dark:border-slate-800/40 bg-slate-50 dark:bg-slate-800/10">
       <p className="text-xs text-slate-500 text-center max-w-xs px-4">{message}</p>
+    </div>
+  );
+}
+
+function PaginationBar({ page, total, onChange }: { page: number; total: number; onChange: (p: number) => void }) {
+  if (total <= 1) return null;
+  const btnCls = "px-2.5 py-1 text-[10px] font-medium rounded-md bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/40 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors";
+  return (
+    <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-200 dark:border-slate-800/60">
+      <span className="text-[10px] text-slate-500">Página {page + 1} de {total}</span>
+      <div className="flex items-center gap-1">
+        <button onClick={() => onChange(0)} disabled={page === 0} className={btnCls}>«</button>
+        <button onClick={() => onChange(Math.max(0, page - 1))} disabled={page === 0} className={btnCls}>‹</button>
+        <button onClick={() => onChange(Math.min(total - 1, page + 1))} disabled={page === total - 1} className={btnCls}>›</button>
+        <button onClick={() => onChange(total - 1)} disabled={page === total - 1} className={btnCls}>»</button>
+      </div>
     </div>
   );
 }
@@ -220,12 +239,10 @@ export default function IgfTrPage() {
   const [compareAsset, setCompareAsset] = useState("");
   const [compareInfo, setCompareInfo] = useState("");
   const [cotaRange, setCotaRange] = useState<Range>("Máx");
-  const [navRange, setNavRange] = useState<Range>("Máx");
   const [flowsRange, setFlowsRange] = useState<Range>("Máx");
   const [cotaPage, setCotaPage] = useState(0);
   const [navPage, setNavPage] = useState(0);
-  const COTA_PAGE_SIZE = 20;
-  const NAV_PAGE_SIZE = 20;
+  const PAGE_SIZE = 20;
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -268,13 +285,15 @@ export default function IgfTrPage() {
       .sort((a, b) => a.date.localeCompare(b.date));
   }, [data, compareAsset, compareInfo]);
 
-  // ── Cota chart data (indexed to 100) ───────────────────────────────────────
+  // ── Cota chart data ─────────────────────────────────────────────────────────
+  // Without comparison: show actual nav_per_share values from finance_navposition
+  // With comparison: index both series to 100 for a fair comparison
   const cotaChartData = useMemo(() => {
     const ranged = filterByRange(cotaSeries, cotaRange);
-    const indexed = reindex(ranged);
     if (!compareAsset || !compareSeries.length) {
-      return indexed.map((p) => ({ date: fmtDate(p.date), rawDate: p.date, cota: p.indexed }));
+      return ranged.map((p) => ({ date: fmtDate(p.date), rawDate: p.date, cota: p.value }));
     }
+    const indexed = reindex(ranged);
     const minDate = ranged.length ? ranged[0].date : "";
     const compFiltered = compareSeries.filter((p) => p.date >= minDate);
     const compIndexed = reindex(compFiltered);
@@ -285,12 +304,6 @@ export default function IgfTrPage() {
       compare: compMap.get(p.date) ?? null,
     }));
   }, [cotaSeries, compareSeries, cotaRange, compareAsset]);
-
-  // ── NAV chart data ─────────────────────────────────────────────────────────
-  const navChartData = useMemo(() => {
-    const series = navRows.filter((r) => r.nav != null).map((r) => ({ date: r.date, nav: r.nav! }));
-    return filterByRange(series, navRange).map((p) => ({ date: fmtDate(p.date), nav: p.nav }));
-  }, [navRows, navRange]);
 
   // ── Flows chart data (monthly aggregation) ─────────────────────────────────
   const flowsChartData = useMemo(() => {
@@ -307,8 +320,6 @@ export default function IgfTrPage() {
         date: month,
         month: fmtMonthYear(month + "-01"),
         subscriptions: v.subscriptions,
-        redemptions: -v.redemptions,
-        net: v.subscriptions - v.redemptions,
       }));
     return filterByRange(sorted, flowsRange);
   }, [navRows, flowsRange]);
@@ -331,25 +342,35 @@ export default function IgfTrPage() {
   }, [cotaSeries, latest]);
 
   const totalSubs = useMemo(() => flowsChartData.reduce((s, r) => s + r.subscriptions, 0), [flowsChartData]);
-  const totalReds = useMemo(() => flowsChartData.reduce((s, r) => s + Math.abs(r.redemptions), 0), [flowsChartData]);
 
   const assetOptions = useMemo(() => (data?.available_assets ?? []).map((a) => ({ value: a, label: a })), [data]);
   const infoOptions = useMemo(() => (data?.available_infos ?? []).map((i) => ({ value: i, label: i })), [data]);
   const fundOptions = useMemo(() => (data?.available_funds ?? []).map((f) => ({ value: f, label: f })), [data]);
 
+  // ── Table rows (desc) ──────────────────────────────────────────────────────
+  const cotaRows = useMemo(() => [...navRows].reverse(), [navRows]);
+  const cotaTotalPages = Math.ceil(cotaRows.length / PAGE_SIZE);
+  const cotaSlice = cotaRows.slice(cotaPage * PAGE_SIZE, (cotaPage + 1) * PAGE_SIZE);
+
+  const navTableRows = useMemo(() => [...navRows].reverse(), [navRows]);
+  const navTotalPages = Math.ceil(navTableRows.length / PAGE_SIZE);
+  const navSlice = navTableRows.slice(navPage * PAGE_SIZE, (navPage + 1) * PAGE_SIZE);
+
   // ─── Render ───────────────────────────────────────────────────────────────
 
+  const cardCls = "rounded-xl border border-slate-200 dark:border-slate-800/60 bg-white dark:bg-slate-900/50 shadow-sm";
+
   return (
-    <div className="min-h-screen bg-[#060d1f] text-white">
+    <div className="min-h-screen">
       {/* Header */}
-      <div className="border-b border-slate-800/60 bg-[#080f23]/80 backdrop-blur-sm px-8 py-5">
+      <div className="border-b border-slate-200 dark:border-slate-800/60 bg-white/80 dark:bg-[#080f23]/80 backdrop-blur-sm px-8 py-5">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
             <div className="flex items-center gap-2.5 mb-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#10b981]" />
-              <span className="text-[10px] font-semibold text-emerald-400 uppercase tracking-widest">Live</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
+              <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Live</span>
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-white">IGF TR</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">IGF TR</h1>
             <p className="text-xs text-slate-500 mt-0.5">Fundo de Investimento — Histórico e Performance</p>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
@@ -358,7 +379,7 @@ export default function IgfTrPage() {
             )}
             <button
               onClick={fetchData}
-              className="flex items-center gap-2 px-3 py-2 text-xs font-medium bg-slate-800/60 border border-slate-700/60 text-slate-300 rounded-lg hover:bg-slate-700/60 transition-colors"
+              className="flex items-center gap-2 px-3 py-2 text-xs font-medium bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700/60 transition-colors"
             >
               <RefreshCcw className="w-3.5 h-3.5" />
               Atualizar
@@ -367,19 +388,19 @@ export default function IgfTrPage() {
         </div>
       </div>
 
-      <div className="px-8 py-7 space-y-8 max-w-[1600px]">
+      <div className="px-8 py-7 space-y-6 max-w-[1600px]">
 
         {loading && (
           <div className="flex items-center justify-center h-64">
             <div className="flex flex-col items-center gap-3">
               <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-              <p className="text-sm text-slate-400">Carregando dados…</p>
+              <p className="text-sm text-slate-500">Carregando dados…</p>
             </div>
           </div>
         )}
 
         {error && (
-          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-6 py-5 text-sm text-rose-300">
+          <div className="rounded-xl border border-rose-300 dark:border-rose-500/30 bg-rose-50 dark:bg-rose-500/10 px-6 py-5 text-sm text-rose-600 dark:text-rose-300">
             Erro ao carregar dados: {error}
           </div>
         )}
@@ -421,12 +442,12 @@ export default function IgfTrPage() {
               />
             </div>
 
-            {/* Cota Histórica */}
-            <div className="rounded-2xl border border-slate-800/60 bg-[#0c1528]/80 p-6">
+            {/* Cota Histórica chart */}
+            <div className={`${cardCls} p-6`}>
               <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
                 <SectionHeader
                   title="Cota Histórica"
-                  subtitle="Valor da cota (NAV/Cota) indexado à base 100"
+                  subtitle={compareAsset ? "Indexado à base 100 para comparação" : "Valor da cota (NAV/Cota) — finance_navposition"}
                 />
                 <div className="flex items-center gap-2 flex-wrap">
                   <div className="flex items-center gap-1.5">
@@ -451,11 +472,17 @@ export default function IgfTrPage() {
                         <stop offset="100%" stopColor="#8b5cf6" />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                    <XAxis dataKey="date" tick={{ fill: "#64748b", fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-                    <YAxis tick={{ fill: "#64748b", fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(v) => v.toFixed(1)} width={48} />
-                    <Tooltip content={<ChartTooltip formatter={(v: number) => v.toFixed(2)} />} />
-                    <ReferenceLine y={100} stroke="#334155" strokeDasharray="4 4" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" className="dark:[stroke:#1e293b]" />
+                    <XAxis dataKey="date" tick={{ fill: "#94a3b8", fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                    <YAxis
+                      tick={{ fill: "#94a3b8", fontSize: 10 }}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(v) => compareAsset ? v.toFixed(1) : v.toFixed(4)}
+                      width={compareAsset ? 44 : 64}
+                    />
+                    <Tooltip content={<ChartTooltip formatter={(v: number) => compareAsset ? v.toFixed(2) : fmt(v, 6)} />} />
+                    {compareAsset && <ReferenceLine y={100} stroke="#94a3b8" strokeDasharray="4 4" />}
                     <Line type="monotone" dataKey="cota" name="IGF TR" stroke="url(#cotaGrad)" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: "#3b82f6" }} />
                     {compareAsset && (
                       <Line type="monotone" dataKey="compare" name={compareAsset} stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="4 3" dot={false} activeDot={{ r: 3, fill: "#f59e0b" }} />
@@ -466,51 +493,96 @@ export default function IgfTrPage() {
               )}
             </div>
 
-            {/* ── Tabela de Cotas (NAV/Share) ─────────────────────────────────────── */}
-            {navRows.length > 0 && (() => {
-              const cotaRows = [...navRows].reverse();
-              const cotaTotalPages = Math.ceil(cotaRows.length / COTA_PAGE_SIZE);
-              const cotaSlice = cotaRows.slice(cotaPage * COTA_PAGE_SIZE, (cotaPage + 1) * COTA_PAGE_SIZE);
-              return (
-                <div className="rounded-2xl border border-slate-800/60 bg-[#0c1528]/80 p-6">
-                  <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
+            {/* Tabela de Cotas */}
+            {cotaRows.length > 0 && (
+              <div className={`${cardCls} p-6`}>
+                <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
+                  <SectionHeader
+                    title="Histórico de Cotas"
+                    subtitle="Valor diário da cota (NAV/Cota) — finance_navposition"
+                  />
+                  <span className="text-[10px] text-slate-400 font-medium self-end">{cotaRows.length} registros</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-200 dark:border-slate-800/80">
+                        {["Data", "Fundo", "Cota (NAV/Cota)", "Var. Dia", "Var. %"].map((h) => (
+                          <th key={h} className="text-left py-2.5 px-3 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cotaSlice.map((row, i) => {
+                        const globalIdx = cotaRows.indexOf(row);
+                        const prevRow = cotaRows[globalIdx + 1];
+                        const varDia = row.nav_per_share != null && prevRow?.nav_per_share != null
+                          ? row.nav_per_share - prevRow.nav_per_share : null;
+                        const varPct = varDia != null && prevRow?.nav_per_share
+                          ? (varDia / prevRow.nav_per_share) * 100 : null;
+                        return (
+                          <tr key={i} className="border-b border-slate-100 dark:border-slate-800/40 hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-colors">
+                            <td className="py-2.5 px-3 text-slate-600 dark:text-slate-300 font-mono">{fmtDate(row.date)}</td>
+                            <td className="py-2.5 px-3 text-slate-500 dark:text-slate-400">{row.fund || "—"}</td>
+                            <td className="py-2.5 px-3 text-blue-600 dark:text-blue-300 font-mono font-semibold">
+                              {row.nav_per_share != null ? fmt(row.nav_per_share, 6) : "—"}
+                            </td>
+                            <td className={`py-2.5 px-3 font-mono ${varDia == null ? "text-slate-400" : varDia >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                              {varDia != null ? `${varDia >= 0 ? "+" : ""}${fmt(varDia, 6)}` : "—"}
+                            </td>
+                            <td className={`py-2.5 px-3 font-mono ${varPct == null ? "text-slate-400" : varPct >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                              {varPct != null ? `${varPct >= 0 ? "+" : ""}${varPct.toFixed(4)}%` : "—"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <PaginationBar page={cotaPage} total={cotaTotalPages} onChange={setCotaPage} />
+              </div>
+            )}
+
+            {/* NAV Table + Subscriptions Bar Chart */}
+            <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
+
+              {/* NAV Table */}
+              {navTableRows.length > 0 && (
+                <div className={`xl:col-span-3 ${cardCls} p-6 flex flex-col`}>
+                  <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
                     <SectionHeader
-                      title="Histórico de Cotas"
-                      subtitle="Valor diário da cota (NAV por cota) — todos os registros"
+                      title="Patrimônio Líquido (NAV)"
+                      subtitle="NAV total do fundo, cotas e fluxos diários"
                     />
-                    <span className="text-[10px] text-slate-500 font-medium self-end">
-                      {cotaRows.length} registros
-                    </span>
+                    <span className="text-[10px] text-slate-400 font-medium self-end">{navTableRows.length} registros</span>
                   </div>
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto flex-1">
                     <table className="w-full text-xs">
                       <thead>
-                        <tr className="border-b border-slate-800/80">
-                          {["Data", "Fundo", "Cota (NAV/Cota)", "Var. Dia", "Var. %"].map((h) => (
-                            <th key={h} className="text-left py-2 px-3 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">{h}</th>
+                        <tr className="border-b border-slate-200 dark:border-slate-800/80">
+                          {["Data", "Fundo", "NAV", "Cotas", "Captação D0", "Resgate D0+D1"].map((h) => (
+                            <th key={h} className="text-left py-2.5 px-3 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">{h}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody>
-                        {cotaSlice.map((row, i) => {
-                          const globalIdx = cotaRows.indexOf(row);
-                          const prevRow = cotaRows[globalIdx + 1];
-                          const varDia = row.nav_per_share != null && prevRow?.nav_per_share != null
-                            ? row.nav_per_share - prevRow.nav_per_share : null;
-                          const varPct = varDia != null && prevRow?.nav_per_share
-                            ? (varDia / prevRow.nav_per_share) * 100 : null;
+                        {navSlice.map((row, i) => {
+                          const totalRed = (row.redemption_d0 ?? 0) + (row.redemption_d1 ?? 0);
                           return (
-                            <tr key={i} className="border-b border-slate-800/40 hover:bg-slate-800/20 transition-colors">
-                              <td className="py-2.5 px-3 text-slate-300 font-mono">{fmtDate(row.date)}</td>
-                              <td className="py-2.5 px-3 text-slate-400">{row.fund || "—"}</td>
-                              <td className="py-2.5 px-3 text-blue-300 font-mono font-semibold">
-                                {row.nav_per_share != null ? fmt(row.nav_per_share, 6) : "—"}
+                            <tr key={i} className="border-b border-slate-100 dark:border-slate-800/40 hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-colors">
+                              <td className="py-2.5 px-3 text-slate-600 dark:text-slate-300 font-mono">{fmtDate(row.date)}</td>
+                              <td className="py-2.5 px-3 text-slate-500 dark:text-slate-400">{row.fund || "—"}</td>
+                              <td className="py-2.5 px-3 text-violet-600 dark:text-violet-300 font-mono font-semibold">
+                                {row.nav != null ? `R$ ${fmtM(row.nav)}` : "—"}
                               </td>
-                              <td className={`py-2.5 px-3 font-mono ${varDia == null ? "text-slate-500" : varDia >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                                {varDia != null ? `${varDia >= 0 ? "+" : ""}${fmt(varDia, 6)}` : "—"}
+                              <td className="py-2.5 px-3 text-slate-600 dark:text-slate-200 font-mono">
+                                {row.shares != null ? fmtM(row.shares) : "—"}
                               </td>
-                              <td className={`py-2.5 px-3 font-mono ${varPct == null ? "text-slate-500" : varPct >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                                {varPct != null ? `${varPct >= 0 ? "+" : ""}${varPct.toFixed(4)}%` : "—"}
+                              <td className={`py-2.5 px-3 font-mono ${row.subscription_d0 && row.subscription_d0 > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400"}`}>
+                                {row.subscription_d0 != null && row.subscription_d0 !== 0 ? `R$ ${fmtM(row.subscription_d0)}` : "—"}
+                              </td>
+                              <td className={`py-2.5 px-3 font-mono ${totalRed !== 0 ? "text-rose-600 dark:text-rose-400" : "text-slate-400"}`}>
+                                {totalRed !== 0 ? `R$ ${fmtM(Math.abs(totalRed))}` : "—"}
                               </td>
                             </tr>
                           );
@@ -518,122 +590,21 @@ export default function IgfTrPage() {
                       </tbody>
                     </table>
                   </div>
-                  {cotaTotalPages > 1 && (
-                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-800/60">
-                      <span className="text-[10px] text-slate-500">
-                        Página {cotaPage + 1} de {cotaTotalPages}
-                      </span>
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => setCotaPage(0)}
-                          disabled={cotaPage === 0}
-                          className="px-2 py-1 text-[10px] font-medium rounded-md bg-slate-800/60 border border-slate-700/40 text-slate-400 hover:text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                        >«</button>
-                        <button
-                          onClick={() => setCotaPage((p) => Math.max(0, p - 1))}
-                          disabled={cotaPage === 0}
-                          className="px-2.5 py-1 text-[10px] font-medium rounded-md bg-slate-800/60 border border-slate-700/40 text-slate-400 hover:text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                        >‹</button>
-                        <button
-                          onClick={() => setCotaPage((p) => Math.min(cotaTotalPages - 1, p + 1))}
-                          disabled={cotaPage === cotaTotalPages - 1}
-                          className="px-2.5 py-1 text-[10px] font-medium rounded-md bg-slate-800/60 border border-slate-700/40 text-slate-400 hover:text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                        >›</button>
-                        <button
-                          onClick={() => setCotaPage(cotaTotalPages - 1)}
-                          disabled={cotaPage === cotaTotalPages - 1}
-                          className="px-2 py-1 text-[10px] font-medium rounded-md bg-slate-800/60 border border-slate-700/40 text-slate-400 hover:text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                        >»</button>
-                      </div>
-                    </div>
-                  )}
+                  <PaginationBar page={navPage} total={navTotalPages} onChange={setNavPage} />
                 </div>
-              );
-            })()}
-
-            {/* ── NAV Table + Subscriptions Bar Chart ─────────────────────────────── */}
-            <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
-
-              {/* NAV Table */}
-              {navRows.length > 0 && (() => {
-                const navTableRows = [...navRows].reverse();
-                const navTotalPages = Math.ceil(navTableRows.length / NAV_PAGE_SIZE);
-                const navSlice = navTableRows.slice(navPage * NAV_PAGE_SIZE, (navPage + 1) * NAV_PAGE_SIZE);
-                return (
-                  <div className="xl:col-span-3 rounded-2xl border border-slate-800/60 bg-[#0c1528]/80 p-6 flex flex-col">
-                    <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
-                      <SectionHeader
-                        title="Patrimônio Líquido (NAV)"
-                        subtitle="NAV total do fundo, cotas e fluxos diários"
-                      />
-                      <span className="text-[10px] text-slate-500 font-medium self-end">
-                        {navTableRows.length} registros
-                      </span>
-                    </div>
-                    <div className="overflow-x-auto flex-1">
-                      <table className="w-full text-xs">
-                        <thead>
-                          <tr className="border-b border-slate-800/80">
-                            {["Data", "Fundo", "NAV", "Cotas", "Captação D0", "Resgate D0+D1"].map((h) => (
-                              <th key={h} className="text-left py-2 px-3 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">{h}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {navSlice.map((row, i) => {
-                            const totalRed = (row.redemption_d0 ?? 0) + (row.redemption_d1 ?? 0);
-                            return (
-                              <tr key={i} className="border-b border-slate-800/40 hover:bg-slate-800/20 transition-colors">
-                                <td className="py-2.5 px-3 text-slate-300 font-mono">{fmtDate(row.date)}</td>
-                                <td className="py-2.5 px-3 text-slate-400">{row.fund || "—"}</td>
-                                <td className="py-2.5 px-3 text-violet-300 font-mono font-semibold">
-                                  {row.nav != null ? `R$ ${fmtM(row.nav)}` : "—"}
-                                </td>
-                                <td className="py-2.5 px-3 text-slate-200 font-mono">
-                                  {row.shares != null ? fmtM(row.shares) : "—"}
-                                </td>
-                                <td className={`py-2.5 px-3 font-mono ${row.subscription_d0 && row.subscription_d0 > 0 ? "text-emerald-400" : "text-slate-500"}`}>
-                                  {row.subscription_d0 != null && row.subscription_d0 !== 0 ? `R$ ${fmtM(row.subscription_d0)}` : "—"}
-                                </td>
-                                <td className={`py-2.5 px-3 font-mono ${totalRed !== 0 ? "text-rose-400" : "text-slate-500"}`}>
-                                  {totalRed !== 0 ? `R$ ${fmtM(Math.abs(totalRed))}` : "—"}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                    {navTotalPages > 1 && (
-                      <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-800/60">
-                        <span className="text-[10px] text-slate-500">
-                          Página {navPage + 1} de {navTotalPages}
-                        </span>
-                        <div className="flex items-center gap-1">
-                          <button onClick={() => setNavPage(0)} disabled={navPage === 0} className="px-2 py-1 text-[10px] font-medium rounded-md bg-slate-800/60 border border-slate-700/40 text-slate-400 hover:text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">«</button>
-                          <button onClick={() => setNavPage((p) => Math.max(0, p - 1))} disabled={navPage === 0} className="px-2.5 py-1 text-[10px] font-medium rounded-md bg-slate-800/60 border border-slate-700/40 text-slate-400 hover:text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">‹</button>
-                          <button onClick={() => setNavPage((p) => Math.min(navTotalPages - 1, p + 1))} disabled={navPage === navTotalPages - 1} className="px-2.5 py-1 text-[10px] font-medium rounded-md bg-slate-800/60 border border-slate-700/40 text-slate-400 hover:text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">›</button>
-                          <button onClick={() => setNavPage(navTotalPages - 1)} disabled={navPage === navTotalPages - 1} className="px-2 py-1 text-[10px] font-medium rounded-md bg-slate-800/60 border border-slate-700/40 text-slate-400 hover:text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">»</button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
+              )}
 
               {/* Monthly Subscriptions Bar Chart */}
-              <div className="xl:col-span-2 rounded-2xl border border-slate-800/60 bg-[#0c1528]/80 p-6 flex flex-col">
-                <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
+              <div className={`xl:col-span-2 ${cardCls} p-6 flex flex-col`}>
+                <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
                   <div>
                     <SectionHeader
                       title="Captações por Mês"
                       subtitle="Subscription D0 — fluxo mensal de aplicações"
                     />
-                    <div className="flex items-center gap-3 mt-2.5">
-                      <span className="flex items-center gap-1.5 text-xs text-slate-400">
-                        <span className="w-3 h-3 rounded-sm bg-emerald-500/80 inline-block" />
-                        Total: <strong className="text-emerald-400 ml-1">R$ {fmtM(totalSubs)}</strong>
-                      </span>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="w-3 h-3 rounded-sm bg-emerald-500/80 inline-block" />
+                      <span className="text-xs text-slate-500">Total: <strong className="text-emerald-600 dark:text-emerald-400">R$ {fmtM(totalSubs)}</strong></span>
                     </div>
                   </div>
                   <RangeBar value={flowsRange} onChange={setFlowsRange} color="emerald" />
@@ -643,9 +614,9 @@ export default function IgfTrPage() {
                 ) : (
                   <ResponsiveContainer width="100%" height={280}>
                     <BarChart data={flowsChartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barCategoryGap="30%">
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                      <XAxis dataKey="month" tick={{ fill: "#64748b", fontSize: 9 }} tickLine={false} axisLine={false} />
-                      <YAxis tick={{ fill: "#64748b", fontSize: 9 }} tickLine={false} axisLine={false} tickFormatter={(v) => fmtM(v)} width={52} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" className="dark:[stroke:#1e293b]" vertical={false} />
+                      <XAxis dataKey="month" tick={{ fill: "#94a3b8", fontSize: 9 }} tickLine={false} axisLine={false} />
+                      <YAxis tick={{ fill: "#94a3b8", fontSize: 9 }} tickLine={false} axisLine={false} tickFormatter={(v) => fmtM(v)} width={52} />
                       <Tooltip content={<ChartTooltip formatter={(v: number) => `R$ ${fmtM(v)}`} />} />
                       <Bar dataKey="subscriptions" name="Captações" fill="#10b981" fillOpacity={0.85} radius={[3, 3, 0, 0]} />
                     </BarChart>
@@ -657,11 +628,11 @@ export default function IgfTrPage() {
         )}
 
         {!loading && !error && data && !data.nav_positions.length && (
-          <div className="rounded-2xl border border-slate-700/40 bg-[#0c1528]/60 p-12 text-center">
-            <ArrowUpDown className="w-10 h-10 text-slate-600 mx-auto mb-4" />
-            <p className="text-slate-300 font-semibold text-base mb-1">Nenhum dado encontrado</p>
+          <div className={`${cardCls} p-12 text-center`}>
+            <ArrowUpDown className="w-10 h-10 text-slate-400 mx-auto mb-4" />
+            <p className="text-slate-700 dark:text-slate-300 font-semibold text-base mb-1">Nenhum dado encontrado</p>
             <p className="text-slate-500 text-sm max-w-sm mx-auto">
-              Faça upload da tabela <code className="text-blue-400">RefTableAuxNAVPosition</code> usando o macro Excel UploadTables para começar.
+              Faça upload da tabela <code className="text-blue-500">RefTableAuxNAVPosition</code> usando o macro Excel UploadTables para começar.
             </p>
           </div>
         )}
