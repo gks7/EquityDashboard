@@ -103,34 +103,50 @@ End Sub
 
 ' ---- NAV Positions -------------------------------------------
 Sub UploadNAVPositions()
-    Dim tbl As ListObject
-    Set tbl = FindTable("RefTableAuxNAVPosition")
-    If tbl Is Nothing Then
-        MsgBox "Table RefTableAuxNAVPosition not found!", vbCritical
-        Exit Sub
-    End If
+    Dim rng As Range
+    On Error GoTo NotFound
+    Set rng = ThisWorkbook.Names("RefTableAuxNAVPosition").RefersToRange
+    On Error GoTo 0
 
-    Dim cols As Object
-    Set cols = BuildColIndex(tbl)
+    ' Headers are one row above the data range
+    Dim headers() As String
+    Dim nCols As Integer
+    nCols = rng.Columns.Count
+    ReDim headers(1 To nCols)
+    Dim i As Integer
+    For i = 1 To nCols
+        headers(i) = CStr(rng.Cells(0, i).Value)
+    Next i
 
     Dim rows As New Collection
-    Dim r As ListRow
-    For Each r In tbl.ListRows
+    Dim nRows As Long
+    nRows = rng.Rows.Count
+    Dim rowIdx As Long
+
+    For rowIdx = 1 To nRows
+        ' Skip if Fund and Date cells are both empty
+        Dim fundVal As String
+        fundVal = Trim(CStr(rng.Cells(rowIdx, 1).Value))
+        If fundVal = "" Or fundVal = "0" Then GoTo NextNavRow
+
         Dim obj As String
         obj = "{"
-        obj = obj & """Fund"":" & JsonStr(CellVal(r, cols, "Fund")) & ","
-        obj = obj & """Date"":" & JsonStr(CellVal(r, cols, "Date")) & ","
-        obj = obj & """NAV"":" & JsonVal(CellVal(r, cols, "NAV")) & ","
-        obj = obj & """Shares"":" & JsonVal(CellVal(r, cols, "Shares")) & ","
-        obj = obj & """NAV/Shares"":" & JsonVal(CellVal(r, cols, "NAV/Shares")) & ","
-        obj = obj & """Subscription D0"":" & JsonVal(CellVal(r, cols, "Subscription D0")) & ","
-        obj = obj & """Redemption D0"":" & JsonVal(CellVal(r, cols, "Redemption D0")) & ","
-        obj = obj & """Redemption D1"":" & JsonVal(CellVal(r, cols, "Redemption D1"))
+        For i = 1 To nCols
+            Dim cellVal As String
+            cellVal = Trim(CStr(rng.Cells(rowIdx, i).Value))
+            obj = obj & """" & EscapeJson(headers(i)) & """:" & JsonStr(cellVal)
+            If i < nCols Then obj = obj & ","
+        Next i
         obj = obj & "}"
         rows.Add obj
-    Next r
+NextNavRow:
+    Next rowIdx
 
     PostInChunks API_BASE_URL & "/hist/nav-positions/upload/", rows, "NAV Positions"
+    Exit Sub
+
+NotFound:
+    MsgBox "Named range RefTableAuxNAVPosition not found!", vbCritical
 End Sub
 
 ' ---- Asset Positions (Named Range) ---------------------------
