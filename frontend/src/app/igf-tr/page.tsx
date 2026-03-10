@@ -447,7 +447,7 @@ export default function IgfTrPage() {
     return breakdownData.allocation_history[breakdownData.allocation_history.length - 1];
   }, [breakdownData]);
 
-  const cotaAcChartData = useMemo(() => {
+  const cotaAcChartData = useMemo((): BreakdownRow[] => {
     if (!breakdownData?.synthetic_cotas.length) return [];
     return filterByRange(breakdownData.synthetic_cotas, cotaAcRange)
       .map((row) => ({ ...row, date: fmtDate(row.date as string) }));
