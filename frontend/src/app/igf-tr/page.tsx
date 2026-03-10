@@ -71,10 +71,10 @@ const fmtMonthYear = (d: string) => {
 };
 
 // Re-index a series to 100 at the first available date
-const reindex = (series: { date: string; value: number }[]) => {
+const reindex = (series: { date: string; value: number }[]): { date: string; value: number; indexed: number }[] => {
   if (!series.length) return [];
   const base = series[0].value;
-  if (!base) return series;
+  if (!base) return series.map((p) => ({ ...p, indexed: p.value }));
   return series.map((p) => ({ ...p, indexed: parseFloat(((p.value / base) * 100).toFixed(4)) }));
 };
 
