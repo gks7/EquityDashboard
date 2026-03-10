@@ -5,7 +5,7 @@ from api.views import (
     PortfolioItemViewSet, PortfolioSnapshotViewSet,
     MoatScoreViewSet, MoatRankingViewSet, MeView,
     HistCashTransactionViewSet, HistIndexPriceViewSet, AssetPositionHistOfficialViewSet,
-    IgfTrView,
+    NAVPositionViewSet, IgfTrView,
 )
 
 router = DefaultRouter()
@@ -19,6 +19,7 @@ router.register(r'moats/rankings', MoatRankingViewSet, basename='moat-rankings')
 router.register(r'hist/cash-transactions', HistCashTransactionViewSet, basename='hist-cash-transactions')
 router.register(r'hist/index-prices', HistIndexPriceViewSet, basename='hist-index-prices')
 router.register(r'hist/asset-positions', AssetPositionHistOfficialViewSet, basename='hist-asset-positions')
+router.register(r'hist/nav-positions', NAVPositionViewSet, basename='hist-nav-positions')
 
 urlpatterns = [
     path('', include(router.urls)),

@@ -64,7 +64,13 @@ class PortfolioItemSerializer(serializers.ModelSerializer):
         model = PortfolioItem
         fields = '__all__'
 
-from finance.models import MoatScore, MoatRanking, HistCashTransaction, HistIndexPrice, AssetPositionHistOfficial
+from finance.models import MoatScore, MoatRanking, HistCashTransaction, HistIndexPrice, AssetPositionHistOfficial, NAVPosition
+
+
+class NAVPositionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NAVPosition
+        fields = '__all__'
 
 
 class HistCashTransactionSerializer(serializers.ModelSerializer):

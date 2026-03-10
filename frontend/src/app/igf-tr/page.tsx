@@ -6,54 +6,50 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ReferenceLine,
 } from "recharts";
-import { TrendingUp, TrendingDown, Activity, DollarSign, ArrowUpDown, RefreshCcw, ChevronDown } from "lucide-react";
+import { TrendingUp, TrendingDown, Activity, DollarSign, RefreshCcw, ChevronDown, ArrowUpDown } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
 
 const API_BASE = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api`;
 
-// ─── Types ──────────────────────────────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+interface NAVPositionRow {
+  date: string;
+  fund: string | null;
+  nav: number | null;
+  shares: number | null;
+  nav_per_share: number | null;
+  subscription_d0: number | null;
+  redemption_d0: number | null;
+  redemption_d1: number | null;
+}
 
 interface IndexPriceRow {
   date: string;
-  fund: string;
+  fund: string | null;
   asset: string;
   info: string;
   flt_value: number;
-  st_value: string | null;
-}
-
-interface CashTxRow {
-  date: string;
-  fund: string;
-  amount: number;
-  type: string;
-  cash_account: string | null;
-  obs: string | null;
-}
-
-interface NavRow {
-  date: string;
-  nav: number;
 }
 
 interface IgfData {
+  nav_positions: NAVPositionRow[];
   index_prices: IndexPriceRow[];
-  cash_transactions: CashTxRow[];
-  nav_history: NavRow[];
   available_funds: string[];
   available_assets: string[];
   available_infos: string[];
-  available_tx_types: string[];
 }
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const fmt = (n: number | null | undefined, decimals = 2) =>
   n == null ? "—" : n.toLocaleString("pt-BR", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 
 const fmtM = (n: number) => {
-  if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (Math.abs(n) >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
+  const abs = Math.abs(n);
+  if (abs >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B`;
+  if (abs >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
+  if (abs >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
   return n.toFixed(0);
 };
 
@@ -65,20 +61,41 @@ const fmtDate = (d: string) => {
 
 const fmtMonthYear = (d: string) => {
   if (!d) return "";
-  const [y, m] = d.split("-");
+  const parts = d.split("-");
+  const y = parts[0];
+  const m = parts[1];
   const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
   return `${months[parseInt(m) - 1]}/${y.slice(2)}`;
 };
 
-// Re-index a series to 100 at the first available date
-const reindex = (series: { date: string; value: number }[]): { date: string; value: number; indexed: number }[] => {
+const reindex = (
+  series: { date: string; value: number }[]
+): { date: string; value: number; indexed: number }[] => {
   if (!series.length) return [];
   const base = series[0].value;
   if (!base) return series.map((p) => ({ ...p, indexed: p.value }));
   return series.map((p) => ({ ...p, indexed: parseFloat(((p.value / base) * 100).toFixed(4)) }));
 };
 
-// ─── Custom Tooltip ──────────────────────────────────────────────────────────
+// ─── Range filter ─────────────────────────────────────────────────────────────
+
+const RANGES = ["1M", "3M", "6M", "YTD", "1A", "3A", "Máx"] as const;
+type Range = typeof RANGES[number];
+
+function filterByRange<T extends { date: string }>(data: T[], range: Range): T[] {
+  if (range === "Máx" || !data.length) return data;
+  const last = new Date(data[data.length - 1].date);
+  const cutoff = new Date(last);
+  if (range === "1M") cutoff.setMonth(cutoff.getMonth() - 1);
+  else if (range === "3M") cutoff.setMonth(cutoff.getMonth() - 3);
+  else if (range === "6M") cutoff.setMonth(cutoff.getMonth() - 6);
+  else if (range === "YTD") { cutoff.setMonth(0); cutoff.setDate(1); }
+  else if (range === "1A") cutoff.setFullYear(cutoff.getFullYear() - 1);
+  else if (range === "3A") cutoff.setFullYear(cutoff.getFullYear() - 3);
+  return data.filter((d) => new Date(d.date) >= cutoff);
+}
+
+// ─── Sub-components ──────────────────────────────────────────────────────────
 
 const ChartTooltip = ({ active, payload, label, formatter }: any) => {
   if (!active || !payload?.length) return null;
@@ -100,30 +117,28 @@ const ChartTooltip = ({ active, payload, label, formatter }: any) => {
   );
 };
 
-// ─── Stat Card ───────────────────────────────────────────────────────────────
-
 function StatCard({
   label, value, sub, icon: Icon, trend, color = "blue",
 }: {
   label: string; value: string; sub?: string;
   icon: React.ElementType; trend?: "up" | "down" | "neutral"; color?: string;
 }) {
-  const colors: Record<string, string> = {
-    blue: "from-blue-500/20 to-blue-600/5 border-blue-500/20",
-    emerald: "from-emerald-500/20 to-emerald-600/5 border-emerald-500/20",
-    violet: "from-violet-500/20 to-violet-600/5 border-violet-500/20",
-    amber: "from-amber-500/20 to-amber-600/5 border-amber-500/20",
-    rose: "from-rose-500/20 to-rose-600/5 border-rose-500/20",
+  const border: Record<string, string> = {
+    blue: "border-blue-500/20 from-blue-500/10 to-blue-600/5",
+    emerald: "border-emerald-500/20 from-emerald-500/10 to-emerald-600/5",
+    violet: "border-violet-500/20 from-violet-500/10 to-violet-600/5",
+    amber: "border-amber-500/20 from-amber-500/10 to-amber-600/5",
+    rose: "border-rose-500/20 from-rose-500/10 to-rose-600/5",
   };
-  const iconColors: Record<string, string> = {
+  const ic: Record<string, string> = {
     blue: "text-blue-400", emerald: "text-emerald-400",
     violet: "text-violet-400", amber: "text-amber-400", rose: "text-rose-400",
   };
   return (
-    <div className={`rounded-2xl border bg-gradient-to-br ${colors[color]} p-5 flex flex-col gap-3`}>
+    <div className={`rounded-2xl border bg-gradient-to-br ${border[color]} p-5 flex flex-col gap-3`}>
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">{label}</span>
-        <Icon className={`w-4 h-4 ${iconColors[color]}`} />
+        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">{label}</span>
+        <Icon className={`w-4 h-4 ${ic[color]}`} />
       </div>
       <div>
         <p className="text-2xl font-bold text-white tracking-tight">{value}</p>
@@ -137,20 +152,35 @@ function StatCard({
   );
 }
 
-// ─── Section Header ──────────────────────────────────────────────────────────
-
 function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
-    <div className="mb-4">
+    <div className="mb-1">
       <h2 className="text-sm font-semibold text-white tracking-wide">{title}</h2>
       {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
     </div>
   );
 }
 
-// ─── Dropdown ────────────────────────────────────────────────────────────────
+function RangeBar({ value, onChange, color = "blue" }: { value: Range; onChange: (r: Range) => void; color?: string }) {
+  const active: Record<string, string> = {
+    blue: "bg-blue-600", emerald: "bg-emerald-600", violet: "bg-violet-600",
+  };
+  return (
+    <div className="flex items-center gap-0.5 bg-slate-800/60 rounded-lg p-0.5 border border-slate-700/40">
+      {RANGES.map((r) => (
+        <button
+          key={r}
+          onClick={() => onChange(r)}
+          className={`px-2.5 py-1 text-[10px] font-semibold rounded-md transition-all ${value === r ? `${active[color]} text-white shadow` : "text-slate-400 hover:text-slate-200"}`}
+        >
+          {r}
+        </button>
+      ))}
+    </div>
+  );
+}
 
-function Dropdown({ value, options, onChange, placeholder = "Select…" }: {
+function Dropdown({ value, options, onChange, placeholder = "Selecionar…" }: {
   value: string; options: { value: string; label: string }[];
   onChange: (v: string) => void; placeholder?: string;
 }) {
@@ -171,42 +201,27 @@ function Dropdown({ value, options, onChange, placeholder = "Select…" }: {
   );
 }
 
-// ─── RANGE BUTTONS ───────────────────────────────────────────────────────────
-
-const RANGES = ["1M", "3M", "6M", "YTD", "1A", "3A", "Máx"] as const;
-type Range = typeof RANGES[number];
-
-function filterByRange<T extends { date: string }>(data: T[], range: Range): T[] {
-  if (range === "Máx" || !data.length) return data;
-  const last = new Date(data[data.length - 1].date);
-  const cutoff = new Date(last);
-  if (range === "1M") cutoff.setMonth(cutoff.getMonth() - 1);
-  else if (range === "3M") cutoff.setMonth(cutoff.getMonth() - 3);
-  else if (range === "6M") cutoff.setMonth(cutoff.getMonth() - 6);
-  else if (range === "YTD") cutoff.setMonth(0, 1);
-  else if (range === "1A") cutoff.setFullYear(cutoff.getFullYear() - 1);
-  else if (range === "3A") cutoff.setFullYear(cutoff.getFullYear() - 3);
-  return data.filter((d) => new Date(d.date) >= cutoff);
+function EmptyState({ message }: { message: string }) {
+  return (
+    <div className="flex items-center justify-center h-40 rounded-xl border border-slate-800/40 bg-slate-800/10">
+      <p className="text-xs text-slate-500 text-center max-w-xs px-4">{message}</p>
+    </div>
+  );
 }
 
-// ─── Main Page ───────────────────────────────────────────────────────────────
+// ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function IgfTrPage() {
   const [data, setData] = useState<IgfData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Filters
   const [selectedFund, setSelectedFund] = useState("");
-  const [cotaAsset, setCotaAsset] = useState("");
-  const [cotaInfo, setCotaInfo] = useState("");
   const [compareAsset, setCompareAsset] = useState("");
   const [compareInfo, setCompareInfo] = useState("");
   const [cotaRange, setCotaRange] = useState<Range>("Máx");
   const [navRange, setNavRange] = useState<Range>("Máx");
   const [flowsRange, setFlowsRange] = useState<Range>("Máx");
-  const [subType, setSubType] = useState("");
-  const [redType, setRedType] = useState("");
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -217,32 +232,28 @@ export default function IgfTrPage() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json: IgfData = await res.json();
       setData(json);
-
-      // Auto-select first available cota series
-      if (!cotaAsset && json.available_assets.length) setCotaAsset(json.available_assets[0]);
-      if (!cotaInfo && json.available_infos.length) setCotaInfo(json.available_infos[0]);
     } catch (e: any) {
       setError(e.message);
     } finally {
       setLoading(false);
     }
-  }, [selectedFund]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedFund]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // ── Derived series ─────────────────────────────────────────────────────────
+  // ── Sorted NAV positions ────────────────────────────────────────────────────
+  const navRows = useMemo(
+    () => [...(data?.nav_positions ?? [])].sort((a, b) => a.date.localeCompare(b.date)),
+    [data]
+  );
 
-  const cotaSeries = useMemo(() => {
-    if (!data) return [];
-    let rows = data.index_prices;
-    if (cotaAsset) rows = rows.filter((r) => r.asset === cotaAsset);
-    if (cotaInfo) rows = rows.filter((r) => r.info === cotaInfo);
-    return rows
-      .filter((r) => r.flt_value != null)
-      .map((r) => ({ date: r.date, value: r.flt_value }))
-      .sort((a, b) => a.date.localeCompare(b.date));
-  }, [data, cotaAsset, cotaInfo]);
+  // ── Cota Histórica (NAV/Share) series ──────────────────────────────────────
+  const cotaSeries = useMemo(
+    () => navRows.filter((r) => r.nav_per_share != null).map((r) => ({ date: r.date, value: r.nav_per_share! })),
+    [navRows]
+  );
 
+  // ── Compare series from HistIndexPrice ─────────────────────────────────────
   const compareSeries = useMemo(() => {
     if (!data || !compareAsset) return [];
     let rows = data.index_prices.filter((r) => r.asset === compareAsset);
@@ -253,14 +264,13 @@ export default function IgfTrPage() {
       .sort((a, b) => a.date.localeCompare(b.date));
   }, [data, compareAsset, compareInfo]);
 
-  // Merge cota + compare into a single indexed series for the comparison chart
+  // ── Cota chart data (indexed to 100) ───────────────────────────────────────
   const cotaChartData = useMemo(() => {
     const ranged = filterByRange(cotaSeries, cotaRange);
     const indexed = reindex(ranged);
     if (!compareAsset || !compareSeries.length) {
       return indexed.map((p) => ({ date: fmtDate(p.date), rawDate: p.date, cota: p.indexed }));
     }
-    // Align compare to same date range
     const minDate = ranged.length ? ranged[0].date : "";
     const compFiltered = compareSeries.filter((p) => p.date >= minDate);
     const compIndexed = reindex(compFiltered);
@@ -272,38 +282,20 @@ export default function IgfTrPage() {
     }));
   }, [cotaSeries, compareSeries, cotaRange, compareAsset]);
 
-  // NAV over time
+  // ── NAV chart data ─────────────────────────────────────────────────────────
   const navChartData = useMemo(() => {
-    if (!data) return [];
-    const ranged = filterByRange(data.nav_history, navRange);
-    return ranged.map((p) => ({ date: fmtDate(p.date), nav: p.nav }));
-  }, [data, navRange]);
+    const series = navRows.filter((r) => r.nav != null).map((r) => ({ date: r.date, nav: r.nav! }));
+    return filterByRange(series, navRange).map((p) => ({ date: fmtDate(p.date), nav: p.nav }));
+  }, [navRows, navRange]);
 
-  // Subscriptions & redemptions — aggregate by month
+  // ── Flows chart data (monthly aggregation) ─────────────────────────────────
   const flowsChartData = useMemo(() => {
-    if (!data) return [];
-    const txs = data.cash_transactions.filter((t) => {
-      if (!t.date || t.amount == null) return false;
-      const typeLC = (t.type || "").toLowerCase();
-      const isSub = subType
-        ? t.type === subType
-        : typeLC.includes("subscri") || typeLC.includes("applica") || typeLC.includes("entrada") || typeLC.includes("sub");
-      const isRed = redType
-        ? t.type === redType
-        : typeLC.includes("redemp") || typeLC.includes("resgate") || typeLC.includes("saída") || typeLC.includes("red");
-      return isSub || isRed;
-    });
-
     const byMonth: Record<string, { subscriptions: number; redemptions: number }> = {};
-    for (const tx of txs) {
-      const monthKey = tx.date.slice(0, 7);
+    for (const row of navRows) {
+      const monthKey = row.date.slice(0, 7);
       if (!byMonth[monthKey]) byMonth[monthKey] = { subscriptions: 0, redemptions: 0 };
-      const typeLC = (tx.type || "").toLowerCase();
-      const isSub = subType
-        ? tx.type === subType
-        : typeLC.includes("subscri") || typeLC.includes("applica") || typeLC.includes("entrada") || typeLC.includes("sub");
-      if (isSub) byMonth[monthKey].subscriptions += tx.amount;
-      else byMonth[monthKey].redemptions += Math.abs(tx.amount);
+      byMonth[monthKey].subscriptions += row.subscription_d0 ?? 0;
+      byMonth[monthKey].redemptions += Math.abs(row.redemption_d0 ?? 0) + Math.abs(row.redemption_d1 ?? 0);
     }
     const sorted = Object.entries(byMonth)
       .sort(([a], [b]) => a.localeCompare(b))
@@ -315,70 +307,50 @@ export default function IgfTrPage() {
         net: v.subscriptions - v.redemptions,
       }));
     return filterByRange(sorted, flowsRange);
-  }, [data, flowsRange, subType, redType]);
+  }, [navRows, flowsRange]);
 
-  // ── Key stats ──────────────────────────────────────────────────────────────
+  // ── KPI stats ──────────────────────────────────────────────────────────────
+  const latest = navRows[navRows.length - 1] ?? null;
+  const prev = navRows[navRows.length - 2] ?? null;
 
-  const latestCota = cotaSeries[cotaSeries.length - 1]?.value ?? null;
-  const prevCota = cotaSeries[cotaSeries.length - 2]?.value ?? null;
-  const cotaChange = latestCota && prevCota ? latestCota - prevCota : null;
-  const cotaChangePct = cotaChange && prevCota ? (cotaChange / prevCota) * 100 : null;
+  const cotaChange = latest?.nav_per_share != null && prev?.nav_per_share != null
+    ? latest.nav_per_share - prev.nav_per_share : null;
+  const cotaChangePct = cotaChange != null && prev?.nav_per_share
+    ? (cotaChange / prev.nav_per_share) * 100 : null;
 
-  const latestNav = data?.nav_history[data.nav_history.length - 1]?.nav ?? null;
-
-  const ytdCota = useMemo(() => {
-    if (!cotaSeries.length) return null;
+  const ytdReturn = useMemo(() => {
+    if (!cotaSeries.length || latest?.nav_per_share == null) return null;
     const year = new Date(cotaSeries[cotaSeries.length - 1].date).getFullYear();
     const ytdStart = cotaSeries.find((p) => new Date(p.date).getFullYear() === year);
     if (!ytdStart) return null;
-    return ((latestCota! / ytdStart.value) - 1) * 100;
-  }, [cotaSeries, latestCota]);
+    return ((latest.nav_per_share / ytdStart.value) - 1) * 100;
+  }, [cotaSeries, latest]);
 
   const totalSubs = useMemo(() => flowsChartData.reduce((s, r) => s + r.subscriptions, 0), [flowsChartData]);
   const totalReds = useMemo(() => flowsChartData.reduce((s, r) => s + Math.abs(r.redemptions), 0), [flowsChartData]);
 
-  // ── Asset / Info option lists ──────────────────────────────────────────────
+  const assetOptions = useMemo(() => (data?.available_assets ?? []).map((a) => ({ value: a, label: a })), [data]);
+  const infoOptions = useMemo(() => (data?.available_infos ?? []).map((i) => ({ value: i, label: i })), [data]);
+  const fundOptions = useMemo(() => (data?.available_funds ?? []).map((f) => ({ value: f, label: f })), [data]);
 
-  const assetOptions = useMemo(
-    () => (data?.available_assets ?? []).map((a) => ({ value: a, label: a })),
-    [data]
-  );
-  const infoOptions = useMemo(
-    () => (data?.available_infos ?? []).map((i) => ({ value: i, label: i })),
-    [data]
-  );
-  const txTypeOptions = useMemo(
-    () => (data?.available_tx_types ?? []).map((t) => ({ value: t, label: t })),
-    [data]
-  );
-  const fundOptions = useMemo(
-    () => (data?.available_funds ?? []).map((f) => ({ value: f, label: f })),
-    [data]
-  );
-
-  // ─── Render ────────────────────────────────────────────────────────────────
+  // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
     <div className="min-h-screen bg-[#060d1f] text-white">
-      {/* ── Header bar ── */}
+      {/* Header */}
       <div className="border-b border-slate-800/60 bg-[#080f23]/80 backdrop-blur-sm px-8 py-5">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
             <div className="flex items-center gap-2.5 mb-1">
-              <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#10b981]" />
+              <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#10b981]" />
               <span className="text-[10px] font-semibold text-emerald-400 uppercase tracking-widest">Live</span>
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-white">IGF TR</h1>
             <p className="text-xs text-slate-500 mt-0.5">Fundo de Investimento — Histórico e Performance</p>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
-            {data?.available_funds && data.available_funds.length > 1 && (
-              <Dropdown
-                value={selectedFund}
-                options={fundOptions}
-                onChange={setSelectedFund}
-                placeholder="Todos os fundos"
-              />
+            {fundOptions.length > 1 && (
+              <Dropdown value={selectedFund} options={fundOptions} onChange={setSelectedFund} placeholder="Todos os fundos" />
             )}
             <button
               onClick={fetchData}
@@ -393,7 +365,6 @@ export default function IgfTrPage() {
 
       <div className="px-8 py-7 space-y-8 max-w-[1600px]">
 
-        {/* ── Loading / Error ── */}
         {loading && (
           <div className="flex items-center justify-center h-64">
             <div className="flex flex-col items-center gap-3">
@@ -411,53 +382,49 @@ export default function IgfTrPage() {
 
         {!loading && !error && data && (
           <>
-            {/* ── KPI Cards ── */}
+            {/* KPI Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <StatCard
-                label="Cota Atual"
-                value={latestCota ? fmt(latestCota, 4) : "—"}
-                sub={cotaChangePct != null ? `${cotaChangePct >= 0 ? "+" : ""}${cotaChangePct.toFixed(2)}% no dia` : undefined}
+                label="Cota Atual (NAV/Cota)"
+                value={latest?.nav_per_share != null ? fmt(latest.nav_per_share, 6) : "—"}
+                sub={latest?.date ? fmtDate(latest.date) : undefined}
                 icon={Activity}
-                trend={cotaChangePct != null ? (cotaChangePct >= 0 ? "up" : "down") : "neutral"}
+                trend="neutral"
                 color="blue"
               />
               <StatCard
                 label="Variação no Dia"
-                value={cotaChange != null ? `${cotaChange >= 0 ? "+" : ""}${fmt(cotaChange, 4)}` : "—"}
-                sub={cotaSeries[cotaSeries.length - 1]?.date ? fmtDate(cotaSeries[cotaSeries.length - 1].date) : undefined}
+                value={cotaChange != null ? `${cotaChange >= 0 ? "+" : ""}${fmt(cotaChange, 6)}` : "—"}
+                sub={cotaChangePct != null ? `${cotaChangePct >= 0 ? "+" : ""}${cotaChangePct.toFixed(4)}%` : undefined}
                 icon={cotaChange != null && cotaChange >= 0 ? TrendingUp : TrendingDown}
                 trend={cotaChange != null ? (cotaChange >= 0 ? "up" : "down") : "neutral"}
                 color={cotaChange != null && cotaChange >= 0 ? "emerald" : "rose"}
               />
               <StatCard
                 label="Retorno YTD"
-                value={ytdCota != null ? `${ytdCota >= 0 ? "+" : ""}${ytdCota.toFixed(2)}%` : "—"}
+                value={ytdReturn != null ? `${ytdReturn >= 0 ? "+" : ""}${ytdReturn.toFixed(2)}%` : "—"}
                 sub="Acumulado no ano"
                 icon={TrendingUp}
-                trend={ytdCota != null ? (ytdCota >= 0 ? "up" : "down") : "neutral"}
-                color={ytdCota != null && ytdCota >= 0 ? "emerald" : "rose"}
+                trend={ytdReturn != null ? (ytdReturn >= 0 ? "up" : "down") : "neutral"}
+                color={ytdReturn != null && ytdReturn >= 0 ? "emerald" : "rose"}
               />
               <StatCard
-                label="Patrimônio Total"
-                value={latestNav ? `R$ ${fmtM(latestNav)}` : "—"}
-                sub="Posições consolidadas"
+                label="Patrimônio (NAV)"
+                value={latest?.nav != null ? `R$ ${fmtM(latest.nav)}` : "—"}
+                sub={latest?.shares != null ? `${fmtM(latest.shares)} cotas` : undefined}
                 icon={DollarSign}
                 color="violet"
               />
             </div>
 
-            {/* ── Cota Histórica ── */}
+            {/* Cota Histórica */}
             <div className="rounded-2xl border border-slate-800/60 bg-[#0c1528]/80 p-6">
               <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
                 <SectionHeader
                   title="Cota Histórica"
-                  subtitle="Evolução do valor da cota indexado à base 100"
+                  subtitle="Valor da cota (NAV/Cota) indexado à base 100"
                 />
                 <div className="flex items-center gap-2 flex-wrap">
-                  {/* Series selector */}
-                  <Dropdown value={cotaAsset} options={assetOptions} onChange={setCotaAsset} placeholder="Ativo (Cota)" />
-                  <Dropdown value={cotaInfo} options={infoOptions} onChange={setCotaInfo} placeholder="Tipo de Info" />
-                  {/* Comparar com */}
                   <div className="flex items-center gap-1.5">
                     <span className="text-[10px] text-slate-500 uppercase tracking-wider font-medium">Comparar:</span>
                     <Dropdown value={compareAsset} options={assetOptions} onChange={setCompareAsset} placeholder="Índice" />
@@ -465,26 +432,12 @@ export default function IgfTrPage() {
                       <Dropdown value={compareInfo} options={infoOptions} onChange={setCompareInfo} placeholder="Tipo" />
                     )}
                   </div>
-                  {/* Range buttons */}
-                  <div className="flex items-center gap-0.5 bg-slate-800/60 rounded-lg p-0.5 border border-slate-700/40">
-                    {RANGES.map((r) => (
-                      <button
-                        key={r}
-                        onClick={() => setCotaRange(r)}
-                        className={`px-2.5 py-1 text-[10px] font-semibold rounded-md transition-all ${cotaRange === r
-                          ? "bg-blue-600 text-white shadow"
-                          : "text-slate-400 hover:text-slate-200"
-                          }`}
-                      >
-                        {r}
-                      </button>
-                    ))}
-                  </div>
+                  <RangeBar value={cotaRange} onChange={setCotaRange} color="blue" />
                 </div>
               </div>
 
               {cotaChartData.length === 0 ? (
-                <EmptyState message="Nenhum dado de cota disponível. Verifique os filtros de ativo e tipo de informação." />
+                <EmptyState message="Nenhum dado de cota disponível. Faça upload da tabela RefTableAuxNAVPosition." />
               ) : (
                 <ResponsiveContainer width="100%" height={320}>
                   <LineChart data={cotaChartData} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
@@ -497,20 +450,11 @@ export default function IgfTrPage() {
                     <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                     <XAxis dataKey="date" tick={{ fill: "#64748b", fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
                     <YAxis tick={{ fill: "#64748b", fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(v) => v.toFixed(1)} width={48} />
-                    <Tooltip
-                      content={<ChartTooltip formatter={(v: number) => v.toFixed(2)} />}
-                    />
+                    <Tooltip content={<ChartTooltip formatter={(v: number) => v.toFixed(2)} />} />
                     <ReferenceLine y={100} stroke="#334155" strokeDasharray="4 4" />
-                    <Line
-                      type="monotone" dataKey="cota" name={cotaAsset || "Cota"}
-                      stroke="url(#cotaGrad)" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: "#3b82f6" }}
-                    />
+                    <Line type="monotone" dataKey="cota" name="IGF TR" stroke="url(#cotaGrad)" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: "#3b82f6" }} />
                     {compareAsset && (
-                      <Line
-                        type="monotone" dataKey="compare" name={compareAsset}
-                        stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="4 3" dot={false}
-                        activeDot={{ r: 3, fill: "#f59e0b" }}
-                      />
+                      <Line type="monotone" dataKey="compare" name={compareAsset} stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="4 3" dot={false} activeDot={{ r: 3, fill: "#f59e0b" }} />
                     )}
                     {compareAsset && <Legend wrapperStyle={{ fontSize: 11, color: "#94a3b8" }} />}
                   </LineChart>
@@ -518,31 +462,18 @@ export default function IgfTrPage() {
               )}
             </div>
 
-            {/* ── NAV over time ── */}
+            {/* NAV over time */}
             <div className="rounded-2xl border border-slate-800/60 bg-[#0c1528]/80 p-6">
               <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
                 <SectionHeader
                   title="Patrimônio Líquido (NAV)"
                   subtitle="Evolução do patrimônio total do fundo"
                 />
-                <div className="flex items-center gap-0.5 bg-slate-800/60 rounded-lg p-0.5 border border-slate-700/40">
-                  {RANGES.map((r) => (
-                    <button
-                      key={r}
-                      onClick={() => setNavRange(r)}
-                      className={`px-2.5 py-1 text-[10px] font-semibold rounded-md transition-all ${navRange === r
-                        ? "bg-violet-600 text-white shadow"
-                        : "text-slate-400 hover:text-slate-200"
-                        }`}
-                    >
-                      {r}
-                    </button>
-                  ))}
-                </div>
+                <RangeBar value={navRange} onChange={setNavRange} color="violet" />
               </div>
 
               {navChartData.length === 0 ? (
-                <EmptyState message="Nenhum dado de patrimônio disponível. Faça upload dos dados de posições históricas." />
+                <EmptyState message="Nenhum dado de patrimônio disponível. Faça upload da tabela RefTableAuxNAVPosition." />
               ) : (
                 <ResponsiveContainer width="100%" height={260}>
                   <AreaChart data={navChartData} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
@@ -554,81 +485,51 @@ export default function IgfTrPage() {
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                     <XAxis dataKey="date" tick={{ fill: "#64748b", fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-                    <YAxis tick={{ fill: "#64748b", fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(v) => `R$ ${fmtM(v)}`} width={64} />
-                    <Tooltip
-                      content={<ChartTooltip formatter={(v: number) => `R$ ${fmtM(v)}`} />}
-                    />
-                    <Area
-                      type="monotone" dataKey="nav" name="Patrimônio"
-                      stroke="#8b5cf6" strokeWidth={2} fill="url(#navGrad)"
-                      activeDot={{ r: 4, fill: "#8b5cf6" }}
-                    />
+                    <YAxis tick={{ fill: "#64748b", fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(v) => `R$ ${fmtM(v)}`} width={72} />
+                    <Tooltip content={<ChartTooltip formatter={(v: number) => `R$ ${fmtM(v)}`} />} />
+                    <Area type="monotone" dataKey="nav" name="Patrimônio" stroke="#8b5cf6" strokeWidth={2} fill="url(#navGrad)" activeDot={{ r: 4, fill: "#8b5cf6" }} />
                   </AreaChart>
                 </ResponsiveContainer>
               )}
             </div>
 
-            {/* ── Subscriptions & Redemptions ── */}
+            {/* Subscriptions & Redemptions */}
             <div className="rounded-2xl border border-slate-800/60 bg-[#0c1528]/80 p-6">
               <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
                 <div>
                   <SectionHeader
                     title="Captações e Resgates"
-                    subtitle="Fluxo mensal de aplicações e resgates"
+                    subtitle="Fluxo mensal de aplicações (Subscription D0) e resgates (Redemption D0 + D1)"
                   />
-                  <div className="flex items-center gap-4 mt-2">
+                  <div className="flex items-center gap-5 mt-2.5">
                     <span className="flex items-center gap-1.5 text-xs text-slate-400">
-                      <span className="w-3 h-3 rounded-sm bg-emerald-500/80" />
-                      Captações: <strong className="text-emerald-400">R$ {fmtM(totalSubs)}</strong>
+                      <span className="w-3 h-3 rounded-sm bg-emerald-500/80 inline-block" />
+                      Captações: <strong className="text-emerald-400 ml-1">R$ {fmtM(totalSubs)}</strong>
                     </span>
                     <span className="flex items-center gap-1.5 text-xs text-slate-400">
-                      <span className="w-3 h-3 rounded-sm bg-rose-500/80" />
-                      Resgates: <strong className="text-rose-400">R$ {fmtM(totalReds)}</strong>
+                      <span className="w-3 h-3 rounded-sm bg-rose-500/80 inline-block" />
+                      Resgates: <strong className="text-rose-400 ml-1">R$ {fmtM(totalReds)}</strong>
                     </span>
-                    <span className="flex items-center gap-1.5 text-xs text-slate-400">
-                      Líquido: <strong className={totalSubs - totalReds >= 0 ? "text-emerald-400" : "text-rose-400"}>
+                    <span className="text-xs text-slate-400">
+                      Líquido:{" "}
+                      <strong className={totalSubs - totalReds >= 0 ? "text-emerald-400" : "text-rose-400"}>
                         R$ {fmtM(totalSubs - totalReds)}
                       </strong>
                     </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-slate-500 uppercase tracking-wider">Captação:</span>
-                    <Dropdown value={subType} options={txTypeOptions} onChange={setSubType} placeholder="Auto" />
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-slate-500 uppercase tracking-wider">Resgate:</span>
-                    <Dropdown value={redType} options={txTypeOptions} onChange={setRedType} placeholder="Auto" />
-                  </div>
-                  <div className="flex items-center gap-0.5 bg-slate-800/60 rounded-lg p-0.5 border border-slate-700/40">
-                    {RANGES.map((r) => (
-                      <button
-                        key={r}
-                        onClick={() => setFlowsRange(r)}
-                        className={`px-2.5 py-1 text-[10px] font-semibold rounded-md transition-all ${flowsRange === r
-                          ? "bg-emerald-600 text-white shadow"
-                          : "text-slate-400 hover:text-slate-200"
-                          }`}
-                      >
-                        {r}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                <RangeBar value={flowsRange} onChange={setFlowsRange} color="emerald" />
               </div>
 
               {flowsChartData.length === 0 ? (
-                <EmptyState message="Nenhum dado de fluxo disponível. Verifique os tipos de transação ou faça upload dos dados." />
+                <EmptyState message="Nenhum dado de fluxo disponível. Faça upload da tabela RefTableAuxNAVPosition." />
               ) : (
                 <ResponsiveContainer width="100%" height={280}>
                   <BarChart data={flowsChartData} margin={{ top: 4, right: 16, left: 0, bottom: 0 }} barCategoryGap="30%">
                     <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
                     <XAxis dataKey="month" tick={{ fill: "#64748b", fontSize: 10 }} tickLine={false} axisLine={false} />
-                    <YAxis tick={{ fill: "#64748b", fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(v) => `${fmtM(Math.abs(v))}`} width={52} />
-                    <Tooltip
-                      content={<ChartTooltip formatter={(v: number, name: string) => `R$ ${fmtM(Math.abs(v))}`} />}
-                    />
+                    <YAxis tick={{ fill: "#64748b", fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(v) => `${fmtM(Math.abs(v))}`} width={56} />
+                    <Tooltip content={<ChartTooltip formatter={(v: number) => `R$ ${fmtM(Math.abs(v))}`} />} />
                     <ReferenceLine y={0} stroke="#334155" />
                     <Bar dataKey="subscriptions" name="Captações" fill="#10b981" fillOpacity={0.85} radius={[3, 3, 0, 0]} />
                     <Bar dataKey="redemptions" name="Resgates" fill="#ef4444" fillOpacity={0.85} radius={[0, 0, 3, 3]} />
@@ -638,42 +539,32 @@ export default function IgfTrPage() {
               )}
             </div>
 
-            {/* ── Summary table — latest transactions ── */}
-            {data.cash_transactions.length > 0 && (
+            {/* Latest rows table */}
+            {navRows.length > 0 && (
               <div className="rounded-2xl border border-slate-800/60 bg-[#0c1528]/80 p-6">
-                <SectionHeader title="Últimas Movimentações" subtitle="10 transações mais recentes" />
-                <div className="overflow-x-auto">
+                <SectionHeader title="Últimas Entradas" subtitle="10 registros mais recentes do NAVPosition" />
+                <div className="overflow-x-auto mt-4">
                   <table className="w-full text-xs">
                     <thead>
                       <tr className="border-b border-slate-800/80">
-                        {["Data", "Fundo", "Tipo", "Valor", "Conta", "Obs"].map((h) => (
-                          <th key={h} className="text-left py-2 px-3 text-slate-500 font-medium uppercase tracking-wider text-[10px]">{h}</th>
+                        {["Data", "Fundo", "NAV", "Cotas", "Cota (NAV/Cotas)", "Captação D0", "Resgate D0", "Resgate D1"].map((h) => (
+                          <th key={h} className="text-left py-2 px-3 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
-                      {[...data.cash_transactions]
-                        .sort((a, b) => b.date.localeCompare(a.date))
-                        .slice(0, 10)
-                        .map((tx, i) => {
-                          const isPos = tx.amount >= 0;
-                          return (
-                            <tr key={i} className="border-b border-slate-800/40 hover:bg-slate-800/20 transition-colors">
-                              <td className="py-2.5 px-3 text-slate-300 font-mono">{fmtDate(tx.date)}</td>
-                              <td className="py-2.5 px-3 text-slate-400">{tx.fund || "—"}</td>
-                              <td className="py-2.5 px-3">
-                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${isPos ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"}`}>
-                                  {tx.type || "—"}
-                                </span>
-                              </td>
-                              <td className={`py-2.5 px-3 font-semibold font-mono ${isPos ? "text-emerald-400" : "text-rose-400"}`}>
-                                {isPos ? "+" : ""}R$ {fmtM(tx.amount)}
-                              </td>
-                              <td className="py-2.5 px-3 text-slate-500">{tx.cash_account || "—"}</td>
-                              <td className="py-2.5 px-3 text-slate-500 max-w-[200px] truncate">{tx.obs || "—"}</td>
-                            </tr>
-                          );
-                        })}
+                      {[...navRows].reverse().slice(0, 10).map((row, i) => (
+                        <tr key={i} className="border-b border-slate-800/40 hover:bg-slate-800/20 transition-colors">
+                          <td className="py-2.5 px-3 text-slate-300 font-mono">{fmtDate(row.date)}</td>
+                          <td className="py-2.5 px-3 text-slate-400">{row.fund || "—"}</td>
+                          <td className="py-2.5 px-3 text-slate-200 font-mono">{row.nav != null ? `R$ ${fmtM(row.nav)}` : "—"}</td>
+                          <td className="py-2.5 px-3 text-slate-200 font-mono">{row.shares != null ? fmtM(row.shares) : "—"}</td>
+                          <td className="py-2.5 px-3 text-blue-300 font-mono font-semibold">{row.nav_per_share != null ? fmt(row.nav_per_share, 6) : "—"}</td>
+                          <td className="py-2.5 px-3 text-emerald-400 font-mono">{row.subscription_d0 != null && row.subscription_d0 !== 0 ? `R$ ${fmtM(row.subscription_d0)}` : "—"}</td>
+                          <td className="py-2.5 px-3 text-rose-400 font-mono">{row.redemption_d0 != null && row.redemption_d0 !== 0 ? `R$ ${fmtM(row.redemption_d0)}` : "—"}</td>
+                          <td className="py-2.5 px-3 text-rose-400 font-mono">{row.redemption_d1 != null && row.redemption_d1 !== 0 ? `R$ ${fmtM(row.redemption_d1)}` : "—"}</td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
@@ -682,25 +573,16 @@ export default function IgfTrPage() {
           </>
         )}
 
-        {/* Empty state when no data at all */}
-        {!loading && !error && data && !data.index_prices.length && !data.cash_transactions.length && !data.nav_history.length && (
+        {!loading && !error && data && !data.nav_positions.length && (
           <div className="rounded-2xl border border-slate-700/40 bg-[#0c1528]/60 p-12 text-center">
             <ArrowUpDown className="w-10 h-10 text-slate-600 mx-auto mb-4" />
             <p className="text-slate-300 font-semibold text-base mb-1">Nenhum dado encontrado</p>
-            <p className="text-slate-500 text-sm">
-              Faça upload das tabelas históricas usando o macro Excel UploadTables para começar.
+            <p className="text-slate-500 text-sm max-w-sm mx-auto">
+              Faça upload da tabela <code className="text-blue-400">RefTableAuxNAVPosition</code> usando o macro Excel UploadTables para começar.
             </p>
           </div>
         )}
       </div>
-    </div>
-  );
-}
-
-function EmptyState({ message }: { message: string }) {
-  return (
-    <div className="flex items-center justify-center h-40 rounded-xl border border-slate-800/40 bg-slate-800/10">
-      <p className="text-xs text-slate-500 text-center max-w-xs">{message}</p>
     </div>
   );
 }
