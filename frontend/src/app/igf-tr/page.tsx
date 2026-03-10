@@ -40,7 +40,7 @@ interface IgfData {
 }
 
 // One entry per date; each asset_group is a dynamic key with a number value
-type BreakdownRow = { date: string; total?: number; [group: string]: number | string | undefined };
+type BreakdownRow = { date: string; total?: number } & { [group: string]: number | string | undefined };
 
 interface AssetBreakdownData {
   allocation_history: BreakdownRow[];
