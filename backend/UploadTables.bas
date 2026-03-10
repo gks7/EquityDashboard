@@ -13,7 +13,7 @@
 
 Option Explicit
 
-Const API_BASE_URL As String = "http://localhost:8000/api"
+Const API_BASE_URL As String = "https://satisfied-mercy-production.up.railway.app/api"
 Const CHUNK_SIZE As Long = 500   ' rows per HTTP request
 
 ' ---- Main entry point ----------------------------------------
@@ -254,7 +254,7 @@ Sub PostInChunks(url As String, rows As Collection, label As String)
         If chunkNum > 1 Then endpoint = url & "?append=1"
 
         Dim http As Object
-        Set http = CreateObject("WinHttp.WinHttpRequest.5.1")
+        Set http = CreateObject("MSXML2.ServerXMLHTTP.6.0")
         http.Open "POST", endpoint, False
         http.SetRequestHeader "Content-Type", "application/json"
         http.Send jsonBody
