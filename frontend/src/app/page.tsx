@@ -260,6 +260,20 @@ export default function DashboardPage() {
   const eqPct = totalValue > 0 ? ((eqValue / totalValue) * 100).toFixed(1) : "0";
   const fiPct = totalValue > 0 ? ((fiValue / totalValue) * 100).toFixed(1) : "0";
 
+  const eqDailyPL = equities.reduce((s, h) => s + (h.pnl_1d || 0), 0);
+  const eqPrevValue = equities.reduce((s, h) => {
+    const prev = h.stock_details?.previous_close || h.stock_details?.current_price;
+    return prev ? s + prev * h.quantity : s;
+  }, 0);
+  const eqDailyPLPct = eqPrevValue > 0 ? (eqDailyPL / eqPrevValue) * 100 : 0;
+
+  const eqWithPnl = useMemo(
+    () => equities.filter((h) => h.pnl_1d != null).sort((a, b) => (b.pnl_1d ?? 0) - (a.pnl_1d ?? 0)),
+    [equities]
+  );
+  const top3 = eqWithPnl.slice(0, 3);
+  const bottom3 = eqWithPnl.slice(-3).reverse();
+
   // ─── Sort logic ────────────────────────────────────────────────────
   const toggleSort = (key: string) => {
     setSortCfg((prev) =>
@@ -524,6 +538,76 @@ export default function DashboardPage() {
       {/* ─── EQUITIES TAB ─────────────────────────────────────── */}
       {activeTab === "equities" && (
         <div className="space-y-6">
+
+          {/* ── Equity PnL + Top/Bottom 3 ─────────────────────────── */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+            {/* Equity PnL do Dia */}
+            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm p-5 flex flex-col justify-between">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-3">
+                PnL do Dia — Equities
+              </p>
+              <div>
+                <p className={`text-2xl font-bold tabular-nums ${eqDailyPL >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                  {eqDailyPL >= 0 ? "+" : ""}${fmt(eqDailyPL)}
+                </p>
+                <p className={`text-sm font-semibold mt-1 ${eqDailyPLPct >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
+                  {eqDailyPLPct >= 0 ? "+" : ""}{eqDailyPLPct.toFixed(2)}%
+                </p>
+              </div>
+            </div>
+
+            {/* Top 3 */}
+            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm p-5">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-3">
+                Top 3 do Dia
+              </p>
+              <div className="space-y-2.5">
+                {top3.length === 0 && <p className="text-xs text-slate-400">Sem dados</p>}
+                {top3.map((h) => (
+                  <div key={h.id} className="flex items-center justify-between">
+                    <div>
+                      <span className="text-sm font-bold text-slate-800 dark:text-white">{h.ticker ?? h.isin}</span>
+                      {h.chg_pct_1d != null && (
+                        <span className="ml-2 text-xs font-semibold text-emerald-500">
+                          +{h.chg_pct_1d.toFixed(2)}%
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                      +${fmt(h.pnl_1d!)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Bottom 3 */}
+            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm p-5">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-3">
+                Bottom 3 do Dia
+              </p>
+              <div className="space-y-2.5">
+                {bottom3.length === 0 && <p className="text-xs text-slate-400">Sem dados</p>}
+                {bottom3.map((h) => (
+                  <div key={h.id} className="flex items-center justify-between">
+                    <div>
+                      <span className="text-sm font-bold text-slate-800 dark:text-white">{h.ticker ?? h.isin}</span>
+                      {h.chg_pct_1d != null && (
+                        <span className="ml-2 text-xs font-semibold text-rose-500">
+                          {h.chg_pct_1d.toFixed(2)}%
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-sm font-semibold text-rose-600 dark:text-rose-400 tabular-nums">
+                      ${fmt(h.pnl_1d!)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
           {/* Equities table */}
           <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
