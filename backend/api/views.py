@@ -3,7 +3,7 @@ from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from finance.models import Stock, InvestmentThesis, Estimate5Y, PortfolioItem, ValuationModel, PortfolioSnapshot
+from finance.models import Stock, InvestmentThesis, Estimate5Y, PortfolioItem, ValuationModel, PortfolioSnapshot, HistCashTransaction, HistIndexPrice, AssetPositionHistOfficial
 from .serializers import StockSerializer, InvestmentThesisSerializer, Estimate5YSerializer, PortfolioItemSerializer, PortfolioSnapshotSerializer
 from finance.services import update_stock_price, bloomberg_to_yfinance
 import pandas as pd
@@ -519,3 +519,72 @@ class AssetPositionHistOfficialViewSet(viewsets.ViewSet):
             return Response({'message': f'{len(objs)} asset positions uploaded.'}, status=status.HTTP_201_CREATED)
         except Exception as e:
             return Response({'error': str(e), 'traceback': traceback.format_exc()}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class IgfTrView(APIView):
+    """
+    GET /api/igf-tr/
+    Returns all data needed for the IGF TR dashboard:
+      - index_prices: HistIndexPrice rows (cota, benchmarks, NAV)
+      - cash_transactions: HistCashTransaction rows (subscriptions/redemptions)
+      - available_funds: distinct fund values across tables
+      - available_assets: distinct asset values in HistIndexPrice
+      - available_tx_types: distinct type values in HistCashTransaction
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        fund_filter = request.query_params.get('fund', None)
+
+        ip_qs = HistIndexPrice.objects.filter(flt_value__isnull=False).order_by('date')
+        tx_qs = HistCashTransaction.objects.filter(amount__isnull=False).order_by('date')
+        pos_qs = AssetPositionHistOfficial.objects.filter(amount_close__isnull=False).order_by('date')
+
+        if fund_filter:
+            ip_qs = ip_qs.filter(fund__icontains=fund_filter)
+            tx_qs = tx_qs.filter(fund__icontains=fund_filter)
+            pos_qs = pos_qs.filter(fund__icontains=fund_filter)
+
+        index_prices = list(ip_qs.values('date', 'fund', 'asset', 'info', 'flt_value', 'st_value'))
+        for row in index_prices:
+            if row['date']:
+                row['date'] = row['date'].isoformat()
+
+        cash_transactions = list(tx_qs.values('date', 'fund', 'amount', 'type', 'cash_account', 'obs'))
+        for row in cash_transactions:
+            if row['date']:
+                row['date'] = row['date'].isoformat()
+
+        # Daily total NAV: sum amount_close across all assets per date per fund
+        from collections import defaultdict
+        nav_by_date = defaultdict(float)
+        for row in pos_qs.values('date', 'fund', 'amount_close'):
+            key = row['date'].isoformat() if row['date'] else None
+            if key:
+                nav_by_date[key] += (row['amount_close'] or 0)
+
+        nav_history = [{'date': d, 'nav': v} for d, v in sorted(nav_by_date.items())]
+
+        available_funds = sorted(set(
+            list(HistIndexPrice.objects.exclude(fund=None).values_list('fund', flat=True).distinct()) +
+            list(HistCashTransaction.objects.exclude(fund=None).values_list('fund', flat=True).distinct())
+        ))
+        available_assets = sorted(
+            HistIndexPrice.objects.exclude(asset=None).values_list('asset', flat=True).distinct()
+        )
+        available_infos = sorted(
+            HistIndexPrice.objects.exclude(info=None).values_list('info', flat=True).distinct()
+        )
+        available_tx_types = sorted(
+            HistCashTransaction.objects.exclude(type=None).values_list('type', flat=True).distinct()
+        )
+
+        return Response({
+            'index_prices': index_prices,
+            'cash_transactions': cash_transactions,
+            'nav_history': nav_history,
+            'available_funds': available_funds,
+            'available_assets': available_assets,
+            'available_infos': available_infos,
+            'available_tx_types': available_tx_types,
+        })

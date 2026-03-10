@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
-import { LayoutDashboard, List, LineChart, Users, Settings, Sun, Moon, Shield, LogOut } from "lucide-react";
+import { LayoutDashboard, List, LineChart, Users, Settings, Sun, Moon, Shield, LogOut, TrendingUp } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/watchlist", label: "Watchlist", icon: List },
   { href: "/portfolio", label: "Portfolio", icon: LineChart },
+  { href: "/igf-tr", label: "IGF TR", icon: TrendingUp },
   { href: "/moats", label: "Moats", icon: Shield },
   { href: "/analysts", label: "Analysts", icon: Users },
 ];
