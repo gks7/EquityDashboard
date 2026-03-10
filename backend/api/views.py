@@ -601,3 +601,88 @@ class IgfTrView(APIView):
             'available_assets': available_assets,
             'available_infos': available_infos,
         })
+
+
+class AssetBreakdownView(APIView):
+    """
+    GET /api/igf-tr/asset-breakdown/
+
+    Groups finance_assetpositionhistofficial by (date, asset_group) and returns:
+      - allocation_history : daily % of portfolio per asset_group
+      - synthetic_cotas    : time-weighted return index (base=100) per asset_group
+      - available_groups   : sorted list of distinct asset_group values
+
+    TWR per group:
+        daily_return_t = pnl_total_t / amount_open_t
+        index_t        = index_{t-1} * (1 + daily_return_t)
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        from django.db.models import Sum
+
+        fund_filter = request.query_params.get('fund', None)
+
+        qs = AssetPositionHistOfficial.objects.filter(
+            asset_group__isnull=False,
+        ).exclude(asset_group='').order_by('date')
+
+        if fund_filter:
+            qs = qs.filter(fund__icontains=fund_filter)
+
+        daily = (
+            qs.values('date', 'asset_group')
+            .annotate(
+                amt_close=Sum('amount_close'),
+                amt_open=Sum('amount_open'),
+                pnl=Sum('pnl_total'),
+            )
+            .order_by('date', 'asset_group')
+        )
+
+        # Organise into {date: {asset_group: {amt_close, amt_open, pnl}}}
+        by_date: dict = {}
+        for row in daily:
+            d = row['date'].isoformat() if row['date'] else None
+            if not d:
+                continue
+            by_date.setdefault(d, {})[row['asset_group']] = {
+                'amt_close': row['amt_close'] or 0.0,
+                'amt_open':  row['amt_open']  or 0.0,
+                'pnl':       row['pnl']       or 0.0,
+            }
+
+        sorted_dates = sorted(by_date.keys())
+        all_groups = sorted({g for d in by_date.values() for g in d})
+
+        # ── 1. Allocation history (% of total amt_close) ───────────────────────
+        allocation_history = []
+        for date in sorted_dates:
+            groups = by_date[date]
+            total = sum(v['amt_close'] for v in groups.values())
+            entry: dict = {'date': date, 'total': round(total, 2)}
+            for g in all_groups:
+                val = groups.get(g, {}).get('amt_close', 0.0)
+                entry[g] = round((val / total * 100) if total else 0.0, 2)
+            allocation_history.append(entry)
+
+        # ── 2. Synthetic TWR cota indices (base = 100) ────────────────────────
+        cota_idx = {g: 100.0 for g in all_groups}
+        synthetic_cotas = []
+        for date in sorted_dates:
+            groups = by_date[date]
+            entry = {'date': date}
+            for g in all_groups:
+                if g in groups:
+                    amt_open = groups[g]['amt_open']
+                    pnl      = groups[g]['pnl']
+                    if amt_open and abs(amt_open) > 1e-9:
+                        cota_idx[g] = round(cota_idx[g] * (1.0 + pnl / amt_open), 4)
+                entry[g] = cota_idx[g]
+            synthetic_cotas.append(entry)
+
+        return Response({
+            'allocation_history': allocation_history,
+            'synthetic_cotas':    synthetic_cotas,
+            'available_groups':   all_groups,
+        })
