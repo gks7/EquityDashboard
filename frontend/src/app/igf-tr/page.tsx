@@ -68,6 +68,48 @@ const fmtMonthYear = (d: string) => {
 };
 
 
+// ─── Index name mapping ───────────────────────────────────────────────────────
+
+const INDEX_NAMES: Record<string, string> = {
+  // Brasil — Renda Variável
+  "IBOV Index": "Ibovespa",       "IBOVESPA": "Ibovespa",       "IBOV": "Ibovespa",
+  "IBX Index": "IBX-100",         "IBX": "IBX-100",
+  "IBX50 Index": "IBX-50",        "IBX50": "IBX-50",
+  "SMLL Index": "Small Cap (SMLL)", "SMLL": "Small Cap (SMLL)",
+  "MLCX Index": "Mid-Large Cap",
+  "IDIV Index": "Dividendos (IDIV)", "IDIV": "Dividendos (IDIV)",
+  "IFIX Index": "IFIX (FIIs)",    "IFIX": "IFIX (FIIs)",
+  // Brasil — Renda Fixa / Taxas
+  "BZDIOVER Index": "CDI Over",
+  "BZDIOVRA Index": "CDI Acumulado",
+  "CDI Index": "CDI",             "CDI": "CDI",
+  "SELIC": "Taxa Selic",          "SELIC Index": "Taxa Selic",
+  "IPCA": "IPCA",                 "IPCA Index": "IPCA",
+  "IMABTOT Index": "IMA-B Total", "IMABTOT": "IMA-B Total",
+  "IMAB5 Index": "IMA-B 5",       "IMAB5P Index": "IMA-B 5+",
+  "IRFM Index": "IRF-M",          "IRFM": "IRF-M",
+  "IDA Index": "IDA Geral",
+  // Câmbio
+  "USDBRL Curncy": "Dólar (USD/BRL)", "USDBRL": "Dólar (USD/BRL)",
+  "PTAX": "PTAX",                 "PTAX Index": "PTAX",
+  "EURUSD Curncy": "Euro (EUR/USD)",
+  // Global — Ações
+  "SPX Index": "S&P 500",         "SPX": "S&P 500",
+  "NDX Index": "Nasdaq 100",      "NDX": "Nasdaq 100",
+  "MXBR Index": "MSCI Brasil",    "MXBR": "MSCI Brasil",
+  "MXEF Index": "MSCI Emergentes","MXEF": "MSCI Emergentes",
+  "MXWD Index": "MSCI Mundo",     "MXWD": "MSCI Mundo",
+  "SX5E Index": "Euro Stoxx 50",
+  "NKY Index": "Nikkei 225",
+  // Commodities / Renda Fixa Global
+  "SPGSCITR Index": "S&P GSCI Commodities",
+  "LEGATRUU Index": "Bloomberg Global Agg",
+  "XAU Curncy": "Ouro (XAU/USD)",
+  "CL1 Comdty": "Petróleo WTI",
+};
+
+const indexDisplayName = (asset: string) => INDEX_NAMES[asset] ?? asset;
+
 // ─── Range filter ─────────────────────────────────────────────────────────────
 
 const RANGES = ["1M", "3M", "6M", "YTD", "1A", "3A", "Máx"] as const;
@@ -228,6 +270,7 @@ export default function IgfTrPage() {
 
   const [selectedFund, setSelectedFund] = useState("");
   const [cotaRange, setCotaRange] = useState<Range>("Máx");
+  const [compareIndex, setCompareIndex] = useState<string | null>(null);
   const [navRange, setNavRange] = useState<Range>("Máx");
   const [flowsRange, setFlowsRange] = useState<Range>("Máx");
 
@@ -262,17 +305,49 @@ export default function IgfTrPage() {
   );
 
   const cotaChartData = useMemo(() => {
-    return filterByRange(cotaSeries, cotaRange).map((p) => ({ date: fmtDate(p.date), cota: p.value }));
-  }, [cotaSeries, cotaRange]);
+    const filtered = filterByRange(cotaSeries, cotaRange);
+    if (!filtered.length) return [];
+
+    const indexRows = compareIndex
+      ? (data?.index_prices ?? []).filter((r) => r.asset === compareIndex && r.flt_value != null).sort((a, b) => a.date.localeCompare(b.date))
+      : [];
+
+    if (!compareIndex || !indexRows.length) {
+      return filtered.map((p) => ({ date: fmtDate(p.date), fundo: p.value, indice: undefined as number | undefined }));
+    }
+
+    // Rebase both to 100 at the start of the selected range
+    const cotaBase = filtered[0].value;
+    const idxAtStart = indexRows.find((r) => r.date >= filtered[0].date);
+    if (!idxAtStart) {
+      return filtered.map((p) => ({ date: fmtDate(p.date), fundo: p.value, indice: undefined as number | undefined }));
+    }
+    const idxBase = idxAtStart.flt_value;
+    const idxMap = new Map(indexRows.map((r) => [r.date, r.flt_value]));
+
+    return filtered.map((p) => {
+      const idxVal = idxMap.get(p.date);
+      return {
+        date: fmtDate(p.date),
+        fundo: parseFloat(((p.value / cotaBase) * 100).toFixed(4)),
+        indice: idxVal != null ? parseFloat(((idxVal / idxBase) * 100).toFixed(4)) : undefined,
+      };
+    });
+  }, [cotaSeries, cotaRange, compareIndex, data]);
+
+  const isCompareMode = compareIndex != null && cotaChartData.some((p) => p.indice != null);
 
   const cotaDomain = useMemo((): [number, number] => {
-    const values = cotaChartData.map((p) => p.cota);
+    const values = cotaChartData.flatMap((p) =>
+      isCompareMode ? [p.fundo, p.indice].filter((v): v is number => v != null) : [p.fundo]
+    );
     if (!values.length) return [0, 1];
     const min = Math.min(...values);
     const max = Math.max(...values);
     const pad = (max - min) * 0.05 || 0.01;
+    if (isCompareMode) return [parseFloat((min - pad).toFixed(2)), parseFloat((max + pad).toFixed(2))];
     return [parseFloat((min - pad).toFixed(6)), parseFloat((max + pad).toFixed(6))];
-  }, [cotaChartData]);
+  }, [cotaChartData, isCompareMode]);
 
   // ── Flows chart data (monthly aggregation) ─────────────────────────────────
   const flowsChartData = useMemo(() => {
@@ -413,10 +488,41 @@ export default function IgfTrPage() {
               <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
                 <SectionHeader
                   title="Histórico de Cotas"
-                  subtitle="Valor diário da cota (NAV/Cota) — finance_navposition"
+                  subtitle={isCompareMode ? "Base 100 — performance relativa desde o início do período" : "Valor diário da cota (NAV/Cota) — finance_navposition"}
                 />
-                <RangeBar value={cotaRange} onChange={setCotaRange} color="blue" />
+                <div className="flex items-center gap-3 flex-wrap">
+                  {/* Compare index dropdown */}
+                  <div className="relative">
+                    <select
+                      value={compareIndex ?? ""}
+                      onChange={(e) => setCompareIndex(e.target.value || null)}
+                      className="appearance-none pl-3 pr-8 py-1.5 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                    >
+                      <option value="">Comparar com…</option>
+                      {(data?.available_assets ?? []).map((asset) => (
+                        <option key={asset} value={asset}>{indexDisplayName(asset)}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                  </div>
+                  <RangeBar value={cotaRange} onChange={setCotaRange} color="blue" />
+                </div>
               </div>
+
+              {/* Legend when comparing */}
+              {isCompareMode && (
+                <div className="flex items-center gap-5 mb-4">
+                  <span className="flex items-center gap-1.5 text-xs text-slate-500">
+                    <span className="w-5 h-0.5 rounded bg-blue-500 inline-block" />
+                    IGF TR
+                  </span>
+                  <span className="flex items-center gap-1.5 text-xs text-slate-500">
+                    <span className="w-5 h-0.5 rounded bg-orange-400 inline-block" style={{ borderTop: "2px dashed #fb923c" }} />
+                    {indexDisplayName(compareIndex!)}
+                  </span>
+                </div>
+              )}
+
               {cotaChartData.length === 0 ? (
                 <EmptyState message="Nenhum dado de cota disponível. Faça upload da tabela RefTableAuxNAVPosition." />
               ) : (
@@ -435,11 +541,23 @@ export default function IgfTrPage() {
                       tick={{ fill: "#94a3b8", fontSize: 10 }}
                       tickLine={false}
                       axisLine={false}
-                      tickFormatter={(v) => v.toFixed(4)}
-                      width={68}
+                      tickFormatter={isCompareMode ? (v) => `${(v - 100).toFixed(1)}%` : (v) => v.toFixed(4)}
+                      width={72}
                     />
-                    <Tooltip content={<ChartTooltip formatter={(v: number) => fmt(v, 6)} />} />
-                    <Line type="monotone" dataKey="cota" name="Cota" stroke="url(#cotaGrad)" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: "#3b82f6" }} />
+                    <Tooltip
+                      content={
+                        <ChartTooltip
+                          formatter={isCompareMode
+                            ? (v: number) => `${v.toFixed(2)} (${(v - 100) >= 0 ? "+" : ""}${(v - 100).toFixed(2)}%)`
+                            : (v: number) => fmt(v, 6)
+                          }
+                        />
+                      }
+                    />
+                    <Line type="monotone" dataKey="fundo" name="IGF TR" stroke="url(#cotaGrad)" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: "#3b82f6" }} />
+                    {isCompareMode && (
+                      <Line type="monotone" dataKey="indice" name={indexDisplayName(compareIndex!)} stroke="#fb923c" strokeWidth={1.5} strokeDasharray="5 3" dot={false} activeDot={{ r: 4, fill: "#fb923c" }} connectNulls />
+                    )}
                   </LineChart>
                 </ResponsiveContainer>
               )}
