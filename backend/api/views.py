@@ -116,7 +116,10 @@ class PortfolioSnapshotViewSet(viewsets.ModelViewSet):
         try:
             import traceback
             try:
-                df = pd.read_excel(file)
+                # Try reading the "Data" sheet first (where Bloomberg data lives)
+                xl = pd.ExcelFile(file)
+                sheet = "Data" if "Data" in xl.sheet_names else xl.sheet_names[0]
+                df = xl.parse(sheet)
             except Exception as e:
                 # Fallback: VBA might send it with a weird mimetype or encoding
                 return Response({"error": f"Failed to read file as Excel. {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
