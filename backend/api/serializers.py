@@ -64,7 +64,26 @@ class PortfolioItemSerializer(serializers.ModelSerializer):
         model = PortfolioItem
         fields = '__all__'
 
-from finance.models import MoatScore, MoatRanking
+from finance.models import MoatScore, MoatRanking, HistCashTransaction, HistIndexPrice, AssetPositionHistOfficial
+
+
+class HistCashTransactionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HistCashTransaction
+        fields = '__all__'
+
+
+class HistIndexPriceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HistIndexPrice
+        fields = '__all__'
+
+
+class AssetPositionHistOfficialSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AssetPositionHistOfficial
+        fields = '__all__'
+
 
 class MoatScoreSerializer(serializers.ModelSerializer):
     analyst_name = serializers.CharField(source='analyst.username', read_only=True)

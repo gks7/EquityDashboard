@@ -224,6 +224,87 @@ class MoatScore(models.Model):
     def total_score(self):
         return self.scale + self.switch_costs + self.physical_assets + self.ip + self.network_effects
 
+class HistCashTransaction(models.Model):
+    excel_id = models.IntegerField(blank=True, null=True)
+    date = models.DateField(blank=True, null=True)
+    settlement_date = models.DateField(blank=True, null=True)
+    fund = models.CharField(max_length=255, blank=True, null=True)
+    cash_account = models.CharField(max_length=255, blank=True, null=True)
+    amount = models.FloatField(blank=True, null=True)
+    type = models.CharField(max_length=100, blank=True, null=True)
+    counterparty_account = models.CharField(max_length=255, blank=True, null=True)
+    is_manual = models.BooleanField(blank=True, null=True)
+    obs = models.TextField(blank=True, null=True)
+    cmd = models.CharField(max_length=100, blank=True, null=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"CashTx {self.date} {self.fund} {self.amount}"
+
+
+class HistIndexPrice(models.Model):
+    pk_asset_info_id = models.IntegerField(blank=True, null=True)
+    date = models.DateField(blank=True, null=True)
+    fund = models.CharField(max_length=255, blank=True, null=True)
+    asset = models.CharField(max_length=255, blank=True, null=True)
+    info = models.CharField(max_length=255, blank=True, null=True)
+    st_value = models.CharField(max_length=255, blank=True, null=True)
+    flt_value = models.FloatField(blank=True, null=True)
+    bln_value = models.BooleanField(blank=True, null=True)
+    dte_value = models.DateField(blank=True, null=True)
+    column1 = models.TextField(blank=True, null=True)
+    column2 = models.TextField(blank=True, null=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"IndexPrice {self.date} {self.asset}"
+
+
+class AssetPositionHistOfficial(models.Model):
+    date = models.DateField(blank=True, null=True)
+    fund = models.CharField(max_length=255, blank=True, null=True)
+    portfolio = models.CharField(max_length=255, blank=True, null=True)
+    asset_group = models.CharField(max_length=255, blank=True, null=True)
+    broker = models.CharField(max_length=255, blank=True, null=True)
+    asset_market = models.CharField(max_length=255, blank=True, null=True)
+    asset = models.CharField(max_length=255, blank=True, null=True)
+    is_leveraged_product = models.BooleanField(blank=True, null=True)
+    units_open = models.FloatField(blank=True, null=True)
+    units_close = models.FloatField(blank=True, null=True)
+    units_transaction = models.FloatField(blank=True, null=True)
+    units_lending = models.FloatField(blank=True, null=True)
+    units_margin = models.FloatField(blank=True, null=True)
+    currency = models.CharField(max_length=10, blank=True, null=True)
+    avg_cost = models.FloatField(blank=True, null=True)
+    price_open = models.FloatField(blank=True, null=True)
+    price_close = models.FloatField(blank=True, null=True)
+    price_open_source = models.CharField(max_length=100, blank=True, null=True)
+    price_close_source = models.CharField(max_length=100, blank=True, null=True)
+    price_open_date = models.DateField(blank=True, null=True)
+    price_close_date = models.DateField(blank=True, null=True)
+    price_opens_official = models.FloatField(blank=True, null=True)
+    price_closes_official = models.FloatField(blank=True, null=True)
+    delta_open = models.FloatField(blank=True, null=True)
+    delta_close = models.FloatField(blank=True, null=True)
+    underlying_price_open = models.FloatField(blank=True, null=True)
+    underlying_price_close = models.FloatField(blank=True, null=True)
+    contract_size = models.FloatField(blank=True, null=True)
+    avg_price_transaction = models.FloatField(blank=True, null=True)
+    amount_open = models.FloatField(blank=True, null=True)
+    amount_close = models.FloatField(blank=True, null=True)
+    amount_transaction = models.FloatField(blank=True, null=True)
+    pnl_open_position = models.FloatField(blank=True, null=True)
+    pnl_transaction = models.FloatField(blank=True, null=True)
+    pnl_transaction_fee = models.FloatField(blank=True, null=True)
+    pnl_dividend = models.FloatField(blank=True, null=True)
+    pnl_lending = models.FloatField(blank=True, null=True)
+    pnl_total = models.FloatField(blank=True, null=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Position {self.date} {self.fund} {self.asset}"
+
+
 class MoatRanking(models.Model):
     """
     Stores an ordered ranking (1 to N) of stocks by moat strength, as determined by an analyst.
