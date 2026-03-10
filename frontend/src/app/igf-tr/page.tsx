@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import {
-  ResponsiveContainer, AreaChart, Area,
+  ResponsiveContainer, LineChart, Line, AreaChart, Area,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
 } from "recharts";
 import { TrendingUp, TrendingDown, Activity, DollarSign, RefreshCcw, ChevronDown, ArrowUpDown } from "lucide-react";
@@ -227,10 +227,9 @@ export default function IgfTrPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [selectedFund, setSelectedFund] = useState("");
+  const [cotaRange, setCotaRange] = useState<Range>("Máx");
   const [navRange, setNavRange] = useState<Range>("Máx");
   const [flowsRange, setFlowsRange] = useState<Range>("Máx");
-  const [cotaPage, setCotaPage] = useState(0);
-  const PAGE_SIZE = 20;
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -256,11 +255,24 @@ export default function IgfTrPage() {
     [data]
   );
 
-  // ── Cota series (for KPI stats only) ──────────────────────────────────────
+  // ── Cota series ────────────────────────────────────────────────────────────
   const cotaSeries = useMemo(
     () => navRows.filter((r) => r.nav_per_share != null).map((r) => ({ date: r.date, value: r.nav_per_share! })),
     [navRows]
   );
+
+  const cotaChartData = useMemo(() => {
+    return filterByRange(cotaSeries, cotaRange).map((p) => ({ date: fmtDate(p.date), cota: p.value }));
+  }, [cotaSeries, cotaRange]);
+
+  const cotaDomain = useMemo((): [number, number] => {
+    const values = cotaChartData.map((p) => p.cota);
+    if (!values.length) return [0, 1];
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const pad = (max - min) * 0.05 || 0.01;
+    return [parseFloat((min - pad).toFixed(6)), parseFloat((max + pad).toFixed(6))];
+  }, [cotaChartData]);
 
   // ── Flows chart data (monthly aggregation) ─────────────────────────────────
   const flowsChartData = useMemo(() => {
@@ -308,11 +320,6 @@ export default function IgfTrPage() {
 
 
   const fundOptions = useMemo(() => (data?.available_funds ?? []).map((f) => ({ value: f, label: f })), [data]);
-
-  // ── Table rows (desc) ──────────────────────────────────────────────────────
-  const cotaRows = useMemo(() => [...navRows].reverse(), [navRows]);
-  const cotaTotalPages = Math.ceil(cotaRows.length / PAGE_SIZE);
-  const cotaSlice = cotaRows.slice(cotaPage * PAGE_SIZE, (cotaPage + 1) * PAGE_SIZE);
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
@@ -401,55 +408,42 @@ export default function IgfTrPage() {
             </div>
 
 
-            {/* Tabela de Cotas */}
-            {cotaRows.length > 0 && (
-              <div className={`${cardCls} p-6`}>
-                <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
-                  <SectionHeader
-                    title="Histórico de Cotas"
-                    subtitle="Valor diário da cota (NAV/Cota) — finance_navposition"
-                  />
-                  <span className="text-[10px] text-slate-400 font-medium self-end">{cotaRows.length} registros</span>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="border-b border-slate-200 dark:border-slate-800/80">
-                        {["Data", "Fundo", "Cota (NAV/Cota)", "Var. Dia", "Var. %"].map((h) => (
-                          <th key={h} className="text-left py-2.5 px-3 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {cotaSlice.map((row, i) => {
-                        const globalIdx = cotaRows.indexOf(row);
-                        const prevRow = cotaRows[globalIdx + 1];
-                        const varDia = row.nav_per_share != null && prevRow?.nav_per_share != null
-                          ? row.nav_per_share - prevRow.nav_per_share : null;
-                        const varPct = varDia != null && prevRow?.nav_per_share
-                          ? (varDia / prevRow.nav_per_share) * 100 : null;
-                        return (
-                          <tr key={i} className="border-b border-slate-100 dark:border-slate-800/40 hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-colors">
-                            <td className="py-2.5 px-3 text-slate-600 dark:text-slate-300 font-mono">{fmtDate(row.date)}</td>
-                            <td className="py-2.5 px-3 text-slate-500 dark:text-slate-400">{row.fund || "—"}</td>
-                            <td className="py-2.5 px-3 text-blue-600 dark:text-blue-300 font-mono font-semibold">
-                              {row.nav_per_share != null ? fmt(row.nav_per_share, 6) : "—"}
-                            </td>
-                            <td className={`py-2.5 px-3 font-mono ${varDia == null ? "text-slate-400" : varDia >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
-                              {varDia != null ? `${varDia >= 0 ? "+" : ""}${fmt(varDia, 6)}` : "—"}
-                            </td>
-                            <td className={`py-2.5 px-3 font-mono ${varPct == null ? "text-slate-400" : varPct >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
-                              {varPct != null ? `${varPct >= 0 ? "+" : ""}${varPct.toFixed(4)}%` : "—"}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-                <PaginationBar page={cotaPage} total={cotaTotalPages} onChange={setCotaPage} />
+            {/* Histórico de Cotas — large line chart */}
+            <div className={`${cardCls} p-6`}>
+              <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
+                <SectionHeader
+                  title="Histórico de Cotas"
+                  subtitle="Valor diário da cota (NAV/Cota) — finance_navposition"
+                />
+                <RangeBar value={cotaRange} onChange={setCotaRange} color="blue" />
               </div>
-            )}
+              {cotaChartData.length === 0 ? (
+                <EmptyState message="Nenhum dado de cota disponível. Faça upload da tabela RefTableAuxNAVPosition." />
+              ) : (
+                <ResponsiveContainer width="100%" height={380}>
+                  <LineChart data={cotaChartData} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="cotaGrad" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stopColor="#3b82f6" />
+                        <stop offset="100%" stopColor="#8b5cf6" />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" className="dark:[stroke:#1e293b]" />
+                    <XAxis dataKey="date" tick={{ fill: "#94a3b8", fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                    <YAxis
+                      domain={cotaDomain}
+                      tick={{ fill: "#94a3b8", fontSize: 10 }}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(v) => v.toFixed(4)}
+                      width={68}
+                    />
+                    <Tooltip content={<ChartTooltip formatter={(v: number) => fmt(v, 6)} />} />
+                    <Line type="monotone" dataKey="cota" name="Cota" stroke="url(#cotaGrad)" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: "#3b82f6" }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </div>
 
             {/* NAV Table + Subscriptions Bar Chart */}
             <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
