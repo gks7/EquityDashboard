@@ -5,6 +5,7 @@ from api.views import (
     PortfolioItemViewSet, PortfolioSnapshotViewSet,
     MoatScoreViewSet, MoatRankingViewSet, MeView,
     HistCashTransactionViewSet, HistIndexPriceViewSet, AssetPositionHistOfficialViewSet,
+    IgfTrView,
 )
 
 router = DefaultRouter()
@@ -22,4 +23,5 @@ router.register(r'hist/asset-positions', AssetPositionHistOfficialViewSet, basen
 urlpatterns = [
     path('', include(router.urls)),
     path('auth/me/', MeView.as_view(), name='auth-me'),
+    path('igf-tr/', IgfTrView.as_view(), name='igf-tr'),
 ]
