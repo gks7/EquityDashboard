@@ -133,7 +133,13 @@ Sub UploadNAVPositions()
         obj = "{"
         For i = 1 To nCols
             Dim cellVal As String
-            cellVal = Trim(CStr(rng.Cells(rowIdx, i).Value))
+            Dim rawVal As Variant
+            rawVal = rng.Cells(rowIdx, i).Value
+            If VarType(rawVal) = vbDate Then
+                cellVal = Format(rawVal, "YYYY-MM-DD")
+            Else
+                cellVal = Trim(CStr(rawVal))
+            End If
             obj = obj & """" & EscapeJson(headers(i)) & """:" & JsonStr(cellVal)
             If i < nCols Then obj = obj & ","
         Next i
@@ -181,7 +187,13 @@ Sub UploadAssetPositions()
         obj = "{"
         For i = 1 To nCols
             Dim cellVal As String
-            cellVal = Trim(CStr(rng.Cells(rowIdx, i).Value))
+            Dim rawVal As Variant
+            rawVal = rng.Cells(rowIdx, i).Value
+            If VarType(rawVal) = vbDate Then
+                cellVal = Format(rawVal, "YYYY-MM-DD")
+            Else
+                cellVal = Trim(CStr(rawVal))
+            End If
             obj = obj & """" & EscapeJson(headers(i)) & """:" & JsonStr(cellVal)
             If i < nCols Then obj = obj & ","
         Next i
@@ -225,7 +237,13 @@ End Function
 
 Function CellVal(r As ListRow, cols As Object, colName As String) As String
     If cols.Exists(colName) Then
-        CellVal = Trim(CStr(r.Range.Cells(1, cols(colName)).Value))
+        Dim v As Variant
+        v = r.Range.Cells(1, cols(colName)).Value
+        If VarType(v) = vbDate Then
+            CellVal = Format(v, "YYYY-MM-DD")
+        Else
+            CellVal = Trim(CStr(v))
+        End If
     Else
         CellVal = ""
     End If

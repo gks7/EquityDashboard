@@ -2,9 +2,8 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import {
-  ResponsiveContainer, LineChart, Line,
+  ResponsiveContainer, AreaChart, Area,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  Legend, ReferenceLine,
 } from "recharts";
 import { TrendingUp, TrendingDown, Activity, DollarSign, RefreshCcw, ChevronDown, ArrowUpDown } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
@@ -68,14 +67,6 @@ const fmtMonthYear = (d: string) => {
   return `${months[parseInt(m) - 1]}/${y.slice(2)}`;
 };
 
-const reindex = (
-  series: { date: string; value: number }[]
-): { date: string; value: number; indexed: number }[] => {
-  if (!series.length) return [];
-  const base = series[0].value;
-  if (!base) return series.map((p) => ({ ...p, indexed: p.value }));
-  return series.map((p) => ({ ...p, indexed: parseFloat(((p.value / base) * 100).toFixed(4)) }));
-};
 
 // ─── Range filter ─────────────────────────────────────────────────────────────
 
@@ -236,12 +227,9 @@ export default function IgfTrPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [selectedFund, setSelectedFund] = useState("");
-  const [compareAsset, setCompareAsset] = useState("");
-  const [compareInfo, setCompareInfo] = useState("");
-  const [cotaRange, setCotaRange] = useState<Range>("Máx");
+  const [navRange, setNavRange] = useState<Range>("Máx");
   const [flowsRange, setFlowsRange] = useState<Range>("Máx");
   const [cotaPage, setCotaPage] = useState(0);
-  const [navPage, setNavPage] = useState(0);
   const PAGE_SIZE = 20;
 
   const fetchData = useCallback(async () => {
@@ -268,42 +256,11 @@ export default function IgfTrPage() {
     [data]
   );
 
-  // ── Cota Histórica (NAV/Share) series ──────────────────────────────────────
+  // ── Cota series (for KPI stats only) ──────────────────────────────────────
   const cotaSeries = useMemo(
     () => navRows.filter((r) => r.nav_per_share != null).map((r) => ({ date: r.date, value: r.nav_per_share! })),
     [navRows]
   );
-
-  // ── Compare series from HistIndexPrice ─────────────────────────────────────
-  const compareSeries = useMemo(() => {
-    if (!data || !compareAsset) return [];
-    let rows = data.index_prices.filter((r) => r.asset === compareAsset);
-    if (compareInfo) rows = rows.filter((r) => r.info === compareInfo);
-    return rows
-      .filter((r) => r.flt_value != null)
-      .map((r) => ({ date: r.date, value: r.flt_value }))
-      .sort((a, b) => a.date.localeCompare(b.date));
-  }, [data, compareAsset, compareInfo]);
-
-  // ── Cota chart data ─────────────────────────────────────────────────────────
-  // Without comparison: show actual nav_per_share values from finance_navposition
-  // With comparison: index both series to 100 for a fair comparison
-  const cotaChartData = useMemo(() => {
-    const ranged = filterByRange(cotaSeries, cotaRange);
-    if (!compareAsset || !compareSeries.length) {
-      return ranged.map((p) => ({ date: fmtDate(p.date), rawDate: p.date, cota: p.value }));
-    }
-    const indexed = reindex(ranged);
-    const minDate = ranged.length ? ranged[0].date : "";
-    const compFiltered = compareSeries.filter((p) => p.date >= minDate);
-    const compIndexed = reindex(compFiltered);
-    const compMap = new Map(compIndexed.map((p) => [p.date, p.indexed]));
-    return indexed.map((p) => ({
-      date: fmtDate(p.date), rawDate: p.date,
-      cota: p.indexed,
-      compare: compMap.get(p.date) ?? null,
-    }));
-  }, [cotaSeries, compareSeries, cotaRange, compareAsset]);
 
   // ── Flows chart data (monthly aggregation) ─────────────────────────────────
   const flowsChartData = useMemo(() => {
@@ -324,6 +281,12 @@ export default function IgfTrPage() {
     return filterByRange(sorted, flowsRange);
   }, [navRows, flowsRange]);
 
+  // ── NAV chart data ─────────────────────────────────────────────────────────
+  const navChartData = useMemo(() => {
+    const series = navRows.filter((r) => r.nav != null).map((r) => ({ date: r.date, nav: r.nav! }));
+    return filterByRange(series, navRange).map((p) => ({ date: fmtDate(p.date), nav: p.nav }));
+  }, [navRows, navRange]);
+
   // ── KPI stats ──────────────────────────────────────────────────────────────
   const latest = navRows[navRows.length - 1] ?? null;
   const prev = navRows[navRows.length - 2] ?? null;
@@ -343,18 +306,13 @@ export default function IgfTrPage() {
 
   const totalSubs = useMemo(() => flowsChartData.reduce((s, r) => s + r.subscriptions, 0), [flowsChartData]);
 
-  const assetOptions = useMemo(() => (data?.available_assets ?? []).map((a) => ({ value: a, label: a })), [data]);
-  const infoOptions = useMemo(() => (data?.available_infos ?? []).map((i) => ({ value: i, label: i })), [data]);
+
   const fundOptions = useMemo(() => (data?.available_funds ?? []).map((f) => ({ value: f, label: f })), [data]);
 
   // ── Table rows (desc) ──────────────────────────────────────────────────────
   const cotaRows = useMemo(() => [...navRows].reverse(), [navRows]);
   const cotaTotalPages = Math.ceil(cotaRows.length / PAGE_SIZE);
   const cotaSlice = cotaRows.slice(cotaPage * PAGE_SIZE, (cotaPage + 1) * PAGE_SIZE);
-
-  const navTableRows = useMemo(() => [...navRows].reverse(), [navRows]);
-  const navTotalPages = Math.ceil(navTableRows.length / PAGE_SIZE);
-  const navSlice = navTableRows.slice(navPage * PAGE_SIZE, (navPage + 1) * PAGE_SIZE);
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
@@ -442,56 +400,6 @@ export default function IgfTrPage() {
               />
             </div>
 
-            {/* Cota Histórica chart */}
-            <div className={`${cardCls} p-6`}>
-              <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
-                <SectionHeader
-                  title="Cota Histórica"
-                  subtitle={compareAsset ? "Indexado à base 100 para comparação" : "Valor da cota (NAV/Cota) — finance_navposition"}
-                />
-                <div className="flex items-center gap-2 flex-wrap">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-slate-500 uppercase tracking-wider font-medium">Comparar:</span>
-                    <Dropdown value={compareAsset} options={assetOptions} onChange={setCompareAsset} placeholder="Índice" />
-                    {compareAsset && (
-                      <Dropdown value={compareInfo} options={infoOptions} onChange={setCompareInfo} placeholder="Tipo" />
-                    )}
-                  </div>
-                  <RangeBar value={cotaRange} onChange={setCotaRange} color="blue" />
-                </div>
-              </div>
-
-              {cotaChartData.length === 0 ? (
-                <EmptyState message="Nenhum dado de cota disponível. Faça upload da tabela RefTableAuxNAVPosition." />
-              ) : (
-                <ResponsiveContainer width="100%" height={320}>
-                  <LineChart data={cotaChartData} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="cotaGrad" x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="0%" stopColor="#3b82f6" />
-                        <stop offset="100%" stopColor="#8b5cf6" />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" className="dark:[stroke:#1e293b]" />
-                    <XAxis dataKey="date" tick={{ fill: "#94a3b8", fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-                    <YAxis
-                      tick={{ fill: "#94a3b8", fontSize: 10 }}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(v) => compareAsset ? v.toFixed(1) : v.toFixed(4)}
-                      width={compareAsset ? 44 : 64}
-                    />
-                    <Tooltip content={<ChartTooltip formatter={(v: number) => compareAsset ? v.toFixed(2) : fmt(v, 6)} />} />
-                    {compareAsset && <ReferenceLine y={100} stroke="#94a3b8" strokeDasharray="4 4" />}
-                    <Line type="monotone" dataKey="cota" name="IGF TR" stroke="url(#cotaGrad)" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: "#3b82f6" }} />
-                    {compareAsset && (
-                      <Line type="monotone" dataKey="compare" name={compareAsset} stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="4 3" dot={false} activeDot={{ r: 3, fill: "#f59e0b" }} />
-                    )}
-                    {compareAsset && <Legend wrapperStyle={{ fontSize: 11, color: "#94a3b8" }} />}
-                  </LineChart>
-                </ResponsiveContainer>
-              )}
-            </div>
 
             {/* Tabela de Cotas */}
             {cotaRows.length > 0 && (
@@ -546,53 +454,35 @@ export default function IgfTrPage() {
             {/* NAV Table + Subscriptions Bar Chart */}
             <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
 
-              {/* NAV Table */}
-              {navTableRows.length > 0 && (
-                <div className={`xl:col-span-3 ${cardCls} p-6 flex flex-col`}>
-                  <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
-                    <SectionHeader
-                      title="Patrimônio Líquido (NAV)"
-                      subtitle="NAV total do fundo, cotas e fluxos diários"
-                    />
-                    <span className="text-[10px] text-slate-400 font-medium self-end">{navTableRows.length} registros</span>
-                  </div>
-                  <div className="overflow-x-auto flex-1">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="border-b border-slate-200 dark:border-slate-800/80">
-                          {["Data", "Fundo", "NAV", "Cotas", "Captação D0", "Resgate D0+D1"].map((h) => (
-                            <th key={h} className="text-left py-2.5 px-3 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {navSlice.map((row, i) => {
-                          const totalRed = (row.redemption_d0 ?? 0) + (row.redemption_d1 ?? 0);
-                          return (
-                            <tr key={i} className="border-b border-slate-100 dark:border-slate-800/40 hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-colors">
-                              <td className="py-2.5 px-3 text-slate-600 dark:text-slate-300 font-mono">{fmtDate(row.date)}</td>
-                              <td className="py-2.5 px-3 text-slate-500 dark:text-slate-400">{row.fund || "—"}</td>
-                              <td className="py-2.5 px-3 text-violet-600 dark:text-violet-300 font-mono font-semibold">
-                                {row.nav != null ? `R$ ${fmtM(row.nav)}` : "—"}
-                              </td>
-                              <td className="py-2.5 px-3 text-slate-600 dark:text-slate-200 font-mono">
-                                {row.shares != null ? fmtM(row.shares) : "—"}
-                              </td>
-                              <td className={`py-2.5 px-3 font-mono ${row.subscription_d0 && row.subscription_d0 > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400"}`}>
-                                {row.subscription_d0 != null && row.subscription_d0 !== 0 ? `R$ ${fmtM(row.subscription_d0)}` : "—"}
-                              </td>
-                              <td className={`py-2.5 px-3 font-mono ${totalRed !== 0 ? "text-rose-600 dark:text-rose-400" : "text-slate-400"}`}>
-                                {totalRed !== 0 ? `R$ ${fmtM(Math.abs(totalRed))}` : "—"}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                  <PaginationBar page={navPage} total={navTotalPages} onChange={setNavPage} />
+              {/* NAV Line Chart */}
+              <div className={`xl:col-span-3 ${cardCls} p-6`}>
+                <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
+                  <SectionHeader
+                    title="Patrimônio Líquido (NAV)"
+                    subtitle="Evolução do patrimônio total do fundo"
+                  />
+                  <RangeBar value={navRange} onChange={setNavRange} color="violet" />
                 </div>
-              )}
+                {navChartData.length === 0 ? (
+                  <EmptyState message="Nenhum dado de patrimônio disponível." />
+                ) : (
+                  <ResponsiveContainer width="100%" height={260}>
+                    <AreaChart data={navChartData} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="navGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                          <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.02} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" className="dark:[stroke:#1e293b]" />
+                      <XAxis dataKey="date" tick={{ fill: "#94a3b8", fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                      <YAxis tick={{ fill: "#94a3b8", fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(v) => `R$ ${fmtM(v)}`} width={72} />
+                      <Tooltip content={<ChartTooltip formatter={(v: number) => `R$ ${fmtM(v)}`} />} />
+                      <Area type="monotone" dataKey="nav" name="Patrimônio" stroke="#8b5cf6" strokeWidth={2} fill="url(#navGrad)" dot={false} activeDot={{ r: 4, fill: "#8b5cf6" }} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
 
               {/* Monthly Subscriptions Bar Chart */}
               <div className={`xl:col-span-2 ${cardCls} p-6 flex flex-col`}>
