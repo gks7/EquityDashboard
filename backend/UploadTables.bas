@@ -26,6 +26,7 @@ Sub UploadAllTables()
     UploadCashTransactions
     UploadIndexPrices
     UploadAssetPositions
+    UploadNAVPositions
 
     MsgBox "All tables uploaded in " & Format(Timer - t, "0.0") & "s", vbInformation
 End Sub
@@ -98,6 +99,38 @@ Sub UploadIndexPrices()
     Next r
 
     PostInChunks API_BASE_URL & "/hist/index-prices/upload/", rows, "Index Prices"
+End Sub
+
+' ---- NAV Positions -------------------------------------------
+Sub UploadNAVPositions()
+    Dim tbl As ListObject
+    Set tbl = FindTable("RefTableAuxNAVPosition")
+    If tbl Is Nothing Then
+        MsgBox "Table RefTableAuxNAVPosition not found!", vbCritical
+        Exit Sub
+    End If
+
+    Dim cols As Object
+    Set cols = BuildColIndex(tbl)
+
+    Dim rows As New Collection
+    Dim r As ListRow
+    For Each r In tbl.ListRows
+        Dim obj As String
+        obj = "{"
+        obj = obj & """Fund"":" & JsonStr(CellVal(r, cols, "Fund")) & ","
+        obj = obj & """Date"":" & JsonStr(CellVal(r, cols, "Date")) & ","
+        obj = obj & """NAV"":" & JsonVal(CellVal(r, cols, "NAV")) & ","
+        obj = obj & """Shares"":" & JsonVal(CellVal(r, cols, "Shares")) & ","
+        obj = obj & """NAV/Shares"":" & JsonVal(CellVal(r, cols, "NAV/Shares")) & ","
+        obj = obj & """Subscription D0"":" & JsonVal(CellVal(r, cols, "Subscription D0")) & ","
+        obj = obj & """Redemption D0"":" & JsonVal(CellVal(r, cols, "Redemption D0")) & ","
+        obj = obj & """Redemption D1"":" & JsonVal(CellVal(r, cols, "Redemption D1"))
+        obj = obj & "}"
+        rows.Add obj
+    Next r
+
+    PostInChunks API_BASE_URL & "/hist/nav-positions/upload/", rows, "NAV Positions"
 End Sub
 
 ' ---- Asset Positions (Named Range) ---------------------------

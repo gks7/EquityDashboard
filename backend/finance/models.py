@@ -224,6 +224,25 @@ class MoatScore(models.Model):
     def total_score(self):
         return self.scale + self.switch_costs + self.physical_assets + self.ip + self.network_effects
 
+class NAVPosition(models.Model):
+    """Daily NAV, share count and cash flow data per fund — from RefTableAuxNAVPosition."""
+    fund = models.CharField(max_length=255, blank=True, null=True)
+    date = models.DateField(blank=True, null=True)
+    nav = models.FloatField(blank=True, null=True)
+    shares = models.FloatField(blank=True, null=True)
+    nav_per_share = models.FloatField(blank=True, null=True)
+    subscription_d0 = models.FloatField(blank=True, null=True)
+    redemption_d0 = models.FloatField(blank=True, null=True)
+    redemption_d1 = models.FloatField(blank=True, null=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['date']
+
+    def __str__(self):
+        return f"NAV {self.fund} {self.date}"
+
+
 class HistCashTransaction(models.Model):
     excel_id = models.IntegerField(blank=True, null=True)
     date = models.DateField(blank=True, null=True)
