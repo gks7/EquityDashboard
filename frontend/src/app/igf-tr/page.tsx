@@ -125,8 +125,8 @@ const INDEX_NAMES: Record<string, string> = {
   "SX5E Index": "Euro Stoxx 50",
   "NKY Index": "Nikkei 225",
   // Renda Fixa Global
-  "B500T Index": "Bloomberg US Agg (B500T)",
-  "LBUSTRUU Index": "Bloomberg US Treasury (LBUSTRUU)",
+  "BMA3070 Index": "Bloomberg US Treasury (BMA3070)",
+  "LBUSTRUU Index": "Bloomberg US Agg (LBUSTRUU)",
   // Commodities / Renda Fixa Global
   "SPGSCITR Index": "S&P GSCI Commodities",
   "LEGATRUU Index": "Bloomberg Global Agg",
@@ -137,9 +137,9 @@ const INDEX_NAMES: Record<string, string> = {
 // ─── Indices available for overlay in the Cota Sintética chart ───────────────
 
 const COTA_AC_INDICES: { key: string; label: string; color: string }[] = [
-  { key: "SPX Index",      label: "S&P 500",              color: "#f97316" },
-  { key: "B500T Index",    label: "Bloomberg US Agg",     color: "#a78bfa" },
-  { key: "LBUSTRUU Index", label: "Bloomberg US Treasury", color: "#ec4899" },
+  { key: "SPX Index",      label: "S&P 500",                     color: "#f97316" },
+  { key: "BMA3070 Index",  label: "Bloomberg US Treasury",       color: "#a78bfa" },
+  { key: "LBUSTRUU Index", label: "Bloomberg US Agg (LBUSTRUU)", color: "#ec4899" },
 ];
 
 const indexDisplayName = (asset: string) => INDEX_NAMES[asset] ?? asset;
