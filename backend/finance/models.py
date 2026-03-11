@@ -19,6 +19,7 @@ class Stock(models.Model):
     previous_close = models.FloatField(blank=True, null=True) # Previous day's close
     forward_pe = models.FloatField(blank=True, null=True) # Cached from yfinance
     financials = models.JSONField(blank=True, null=True) # Historical income statement data
+    dashboard_url = models.URLField(max_length=2000, blank=True, null=True)
     last_updated = models.DateTimeField(auto_now=True)
     
     def __str__(self):

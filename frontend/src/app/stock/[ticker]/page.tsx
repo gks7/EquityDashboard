@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, use, useEffect, useMemo } from "react";
+import { useState, use, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
-import { ArrowLeft, Save, TrendingUp, TrendingDown, RefreshCcw } from "lucide-react";
+import { ArrowLeft, Save, TrendingUp, TrendingDown, RefreshCcw, ExternalLink, Pencil, Check, X } from "lucide-react";
 import ModelingTab from "@/components/ModelingTab";
 import { authFetch } from "@/lib/authFetch";
 import {
@@ -20,6 +20,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
         company_name: string;
         sector?: string;
         forward_pe?: number | null;
+        dashboard_url?: string | null;
         financials?: {
             date: string;
             revenue: number;
@@ -42,6 +43,12 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
+    // Dashboard URL state
+    const [dashboardUrl, setDashboardUrl] = useState<string>("");
+    const [editingUrl, setEditingUrl] = useState(false);
+    const [urlDraft, setUrlDraft] = useState("");
+    const urlInputRef = useRef<HTMLInputElement>(null);
+
     // Form State
     const [peMultiple, setPeMultiple] = useState<number>(0);
     const [eps, setEps] = useState<number>(0);
@@ -55,6 +62,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
                 const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/stocks/${ticker}/`);
                 const data = await res.json();
                 setStock(data);
+                setDashboardUrl(data.dashboard_url || "");
 
                 // If there's already a thesis (assuming first one is the current user's for now)
                 if (data.theses && data.theses.length > 0) {
@@ -122,6 +130,25 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
         }
     };
 
+    const handleSaveDashboardUrl = async (url: string) => {
+        const trimmed = url.trim();
+        try {
+            await authFetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/stocks/${ticker}/`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ dashboard_url: trimmed || null }),
+            });
+            setDashboardUrl(trimmed);
+        } catch {}
+        setEditingUrl(false);
+    };
+
+    const openUrlEdit = () => {
+        setUrlDraft(dashboardUrl);
+        setEditingUrl(true);
+        setTimeout(() => urlInputRef.current?.focus(), 0);
+    };
+
     if (loading) {
         return <div className="max-w-5xl mx-auto py-20 text-center text-slate-500">Loading stock details...</div>;
     }
@@ -159,6 +186,55 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
                         </span>
                     </div>
                     <p className="text-lg text-slate-600 dark:text-slate-300">{companyName}</p>
+
+                    {/* Dashboard URL */}
+                    <div className="mt-2 flex items-center gap-2">
+                        {editingUrl ? (
+                            <>
+                                <input
+                                    ref={urlInputRef}
+                                    type="url"
+                                    value={urlDraft}
+                                    onChange={(e) => setUrlDraft(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleSaveDashboardUrl(urlDraft);
+                                        if (e.key === 'Escape') setEditingUrl(false);
+                                    }}
+                                    placeholder="https://..."
+                                    className="text-sm border border-slate-300 dark:border-slate-600 rounded-md px-2 py-1 bg-white dark:bg-slate-800 text-slate-900 dark:text-white w-72 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                                <button onClick={() => handleSaveDashboardUrl(urlDraft)} className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400" title="Save">
+                                    <Check className="w-4 h-4" />
+                                </button>
+                                <button onClick={() => setEditingUrl(false)} className="text-slate-400 hover:text-slate-600" title="Cancel">
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </>
+                        ) : dashboardUrl ? (
+                            <>
+                                <a
+                                    href={dashboardUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                                >
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                    Dashboard
+                                </a>
+                                <button onClick={openUrlEdit} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300" title="Edit URL">
+                                    <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                            </>
+                        ) : (
+                            <button
+                                onClick={openUrlEdit}
+                                className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                            >
+                                <Pencil className="w-3 h-3" />
+                                Add dashboard URL
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-6 py-4 shadow-sm flex items-center gap-6">
