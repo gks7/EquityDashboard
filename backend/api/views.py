@@ -607,10 +607,12 @@ class AssetBreakdownView(APIView):
     """
     GET /api/igf-tr/asset-breakdown/
 
-    Groups finance_assetpositionhistofficial by (date, asset_group) and returns:
-      - allocation_history : daily % of portfolio per asset_group
-      - synthetic_cotas    : time-weighted return index (base=100) per asset_group
-      - available_groups   : sorted list of distinct asset_group values
+    Groups finance_assetpositionhistofficial by (date, asset_market) and returns:
+      - allocation_history : daily % of portfolio per asset_market
+      - synthetic_cotas    : time-weighted return index (base=100) per asset_market
+      - available_groups   : sorted list of distinct asset_market values
+
+    "global bond" and "treasury" asset_market values are normalised to "Fixed Income".
 
     TWR per group:
         daily_return_t = pnl_total_t / amount_open_t
@@ -618,39 +620,52 @@ class AssetBreakdownView(APIView):
     """
     permission_classes = [AllowAny]
 
+    # asset_market values that should be merged into "Fixed Income"
+    FIXED_INCOME_MARKETS = {'global bond', 'treasury'}
+
+    def _normalise_market(self, raw: str) -> str:
+        if raw.lower() in self.FIXED_INCOME_MARKETS:
+            return 'Fixed Income'
+        return raw
+
     def get(self, request):
         from django.db.models import Sum
 
         fund_filter = request.query_params.get('fund', None)
 
         qs = AssetPositionHistOfficial.objects.filter(
-            asset_group__isnull=False,
-        ).exclude(asset_group='').order_by('date')
+            asset_market__isnull=False,
+        ).exclude(asset_market='').order_by('date')
 
         if fund_filter:
             qs = qs.filter(fund__icontains=fund_filter)
 
         daily = (
-            qs.values('date', 'asset_group')
+            qs.values('date', 'asset_market')
             .annotate(
                 amt_close=Sum('amount_close'),
                 amt_open=Sum('amount_open'),
                 pnl=Sum('pnl_total'),
             )
-            .order_by('date', 'asset_group')
+            .order_by('date', 'asset_market')
         )
 
-        # Organise into {date: {asset_group: {amt_close, amt_open, pnl}}}
+        # Organise into {date: {market: {amt_close, amt_open, pnl}}}
+        # Rows sharing the same normalised market are summed together.
         by_date: dict = {}
         for row in daily:
             d = row['date'].isoformat() if row['date'] else None
             if not d:
                 continue
-            by_date.setdefault(d, {})[row['asset_group']] = {
-                'amt_close': row['amt_close'] or 0.0,
-                'amt_open':  row['amt_open']  or 0.0,
-                'pnl':       row['pnl']       or 0.0,
-            }
+            market = self._normalise_market(row['asset_market'])
+            bucket = by_date.setdefault(d, {}).setdefault(market, {
+                'amt_close': 0.0,
+                'amt_open':  0.0,
+                'pnl':       0.0,
+            })
+            bucket['amt_close'] += row['amt_close'] or 0.0
+            bucket['amt_open']  += row['amt_open']  or 0.0
+            bucket['pnl']       += row['pnl']       or 0.0
 
         sorted_dates = sorted(by_date.keys())
         all_groups = sorted({g for d in by_date.values() for g in d})
