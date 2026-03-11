@@ -453,16 +453,21 @@ export default function IgfTrPage() {
       .map((row) => ({ ...row, date: fmtDate(row.date as string) }));
   }, [breakdownData, cotaAcRange]);
 
+  const cotaAcGroups = useMemo(
+    () => availableGroups.filter((g) => g.toLowerCase() !== 'cash' && g.toLowerCase() !== 'caixa'),
+    [availableGroups]
+  );
+
   const cotaAcDomain = useMemo((): [number, number] => {
     const values = cotaAcChartData.flatMap((row) =>
-      availableGroups.map((g) => row[g] as number).filter((v) => v != null && isFinite(v))
+      cotaAcGroups.map((g) => row[g] as number).filter((v) => v != null && isFinite(v))
     );
     if (!values.length) return [90, 110];
     const min = Math.min(...values);
     const max = Math.max(...values);
     const pad = (max - min) * 0.05 || 1;
     return [parseFloat((min - pad).toFixed(2)), parseFloat((max + pad).toFixed(2))];
-  }, [cotaAcChartData, availableGroups]);
+  }, [cotaAcChartData, cotaAcGroups]);
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
@@ -808,15 +813,15 @@ export default function IgfTrPage() {
                 <div className={`${cardCls} p-6`}>
                   <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
                     <SectionHeader
-                      title="Cota Sintética por Asset Class"
-                      subtitle="Retorno acumulado base 100 por classe (TWR diário: PnL total / valor de abertura)"
+                      title="Cota Sintética por Asset Class (Bruto)"
+                      subtitle="Retorno acumulado bruto base 100 por classe, excl. Caixa (TWR diário: PnL total / valor de abertura)"
                     />
                     <RangeBar value={cotaAcRange} onChange={setCotaAcRange} color="blue" />
                   </div>
 
                   {/* Legend with latest value */}
                   <div className="flex flex-wrap gap-5 mb-4">
-                    {availableGroups.map((g, i) => {
+                    {cotaAcGroups.map((g, i) => {
                       const last = cotaAcChartData[cotaAcChartData.length - 1];
                       const val = last ? (last[g] as number) : null;
                       const ret = val != null ? val - 100 : null;
@@ -873,7 +878,7 @@ export default function IgfTrPage() {
                             );
                           }}
                         />
-                        {availableGroups.map((g, i) => (
+                        {cotaAcGroups.map((g, i) => (
                           <Line
                             key={g}
                             type="monotone"
