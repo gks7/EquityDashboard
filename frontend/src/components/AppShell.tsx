@@ -3,19 +3,33 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { Sidebar } from "@/components/Sidebar";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-    const { user, loading } = useAuth();
+    const { user, loading, authFetch } = useAuth();
     const pathname = usePathname();
     const router = useRouter();
     const isLoginPage = pathname === "/login";
+    const lastTrackedPath = useRef<string | null>(null);
 
     useEffect(() => {
         if (!loading && !user && !isLoginPage) {
             router.push("/login");
         }
     }, [loading, user, isLoginPage, router]);
+
+    // Track page views for authenticated users (fire-and-forget)
+    useEffect(() => {
+        if (!user || isLoginPage || pathname === lastTrackedPath.current) return;
+        lastTrackedPath.current = pathname;
+        authFetch(`${API_BASE}/api/admin/track/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ page: pathname }),
+        }).catch(() => { /* silent — tracking is best-effort */ });
+    }, [pathname, user, isLoginPage, authFetch]);
 
     // Login page — no sidebar, no loading gate
     if (isLoginPage) {

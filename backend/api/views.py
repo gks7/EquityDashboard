@@ -701,3 +701,119 @@ class AssetBreakdownView(APIView):
             'synthetic_cotas':    synthetic_cotas,
             'available_groups':   all_groups,
         })
+
+
+# ── Admin / tracking views ─────────────────────────────────────────────────────
+
+ADMIN_EMAIL = 'gabriel@igfwm.com'
+
+
+from rest_framework_simplejwt.views import TokenObtainPairView
+
+
+class LoggingTokenObtainPairView(TokenObtainPairView):
+    """JWT login endpoint that records a UserEvent on successful authentication."""
+
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        if response.status_code == 200:
+            from .models import UserEvent
+            username = request.data.get('username', '')
+            try:
+                user_obj = User.objects.get(username=username)
+                ip = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR'))
+                if ip:
+                    ip = ip.split(',')[0].strip()
+                UserEvent.objects.create(
+                    user=user_obj,
+                    action=UserEvent.ACTION_LOGIN,
+                    page='',
+                    ip_address=ip or None,
+                )
+            except User.DoesNotExist:
+                pass
+        return response
+
+
+class TrackEventView(APIView):
+    """POST /api/admin/track/ — record a page-view event for the authenticated user."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        from .models import UserEvent
+        page = request.data.get('page', '')
+        ip = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR'))
+        if ip:
+            ip = ip.split(',')[0].strip()
+        UserEvent.objects.create(
+            user=request.user,
+            action=UserEvent.ACTION_PAGE_VIEW,
+            page=page,
+            ip_address=ip or None,
+        )
+        return Response({'ok': True})
+
+
+class AdminOverviewView(APIView):
+    """GET /api/admin/overview/ — site-wide usage stats. Only for ADMIN_EMAIL."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.email != ADMIN_EMAIL:
+            return Response({'error': 'Forbidden'}, status=status.HTTP_403_FORBIDDEN)
+
+        from .models import UserEvent
+        from django.db.models import Count
+
+        all_users = User.objects.all().order_by('username')
+
+        user_data = []
+        for u in all_users:
+            events = list(
+                UserEvent.objects.filter(user=u).order_by('-timestamp').values(
+                    'action', 'page', 'timestamp', 'ip_address'
+                )[:200]
+            )
+            login_count = sum(1 for e in events if e['action'] == 'login')
+            pv_events = [e for e in events if e['action'] == 'page_view']
+            last_event = events[0] if events else None
+
+            # Page view counts
+            page_counts: dict = {}
+            for e in pv_events:
+                pg = e['page'] or '/'
+                page_counts[pg] = page_counts.get(pg, 0) + 1
+
+            user_data.append({
+                'id': u.id,
+                'username': u.username,
+                'email': u.email,
+                'full_name': f'{u.first_name} {u.last_name}'.strip() or u.username,
+                'is_active': u.is_active,
+                'date_joined': u.date_joined.isoformat() if u.date_joined else None,
+                'last_activity': last_event['timestamp'].isoformat() if last_event else None,
+                'last_action': last_event['action'] if last_event else None,
+                'last_page': last_event['page'] if last_event and last_event['action'] == 'page_view' else (
+                    next((e['page'] for e in events if e['action'] == 'page_view'), None)
+                ),
+                'login_count': login_count,
+                'page_view_count': len(pv_events),
+                'page_counts': page_counts,
+            })
+
+        # Last 100 events across all users
+        recent_activity = []
+        for ev in UserEvent.objects.select_related('user').order_by('-timestamp')[:100]:
+            recent_activity.append({
+                'user': ev.user.username,
+                'full_name': f'{ev.user.first_name} {ev.user.last_name}'.strip() or ev.user.username,
+                'action': ev.action,
+                'page': ev.page,
+                'timestamp': ev.timestamp.isoformat(),
+                'ip_address': ev.ip_address,
+            })
+
+        return Response({
+            'users': user_data,
+            'recent_activity': recent_activity,
+        })

@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
-import { LayoutDashboard, List, LineChart, Users, Settings, Sun, Moon, Shield, LogOut, TrendingUp } from "lucide-react";
+import { LayoutDashboard, List, LineChart, Users, Settings, Sun, Moon, Shield, LogOut, TrendingUp, Activity } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+
+const ADMIN_EMAIL = "gabriel@igfwm.com";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -78,6 +80,24 @@ export function Sidebar() {
             </Link>
           );
         })}
+
+        {/* Admin-only link */}
+        {user?.email === ADMIN_EMAIL && (() => {
+          const isActive = pathname === "/admin";
+          return (
+            <Link
+              href="/admin"
+              className={`flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${isActive
+                ? "bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-white/[0.03]"
+              }`}
+              style={isActive ? { borderLeft: '2px solid #8b5cf6', paddingLeft: '10px' } : {}}
+            >
+              <Activity className={`w-4 h-4 ${isActive ? "text-violet-600 dark:text-violet-400" : ""}`} />
+              Admin
+            </Link>
+          );
+        })()}
       </nav>
 
       {/* Bottom */}
