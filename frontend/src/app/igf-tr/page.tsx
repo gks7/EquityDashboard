@@ -345,29 +345,22 @@ export default function IgfTrPage() {
     const filtered = filterByRange(cotaSeries, cotaRange);
     if (!filtered.length) return [];
 
+    // Always normalise fundo to 0% at start of selected range
+    const cotaBase = filtered[0].value;
+
     const indexRows = compareIndex
       ? (data?.index_prices ?? []).filter((r) => r.asset === compareIndex && r.flt_value != null).sort((a, b) => a.date.localeCompare(b.date))
       : [];
-
-    if (!compareIndex || !indexRows.length) {
-      return filtered.map((p) => ({ date: fmtDate(p.date), fundo: p.value, indice: undefined as number | undefined }));
-    }
-
-    // Rebase both to 100 at the start of the selected range
-    const cotaBase = filtered[0].value;
     const idxAtStart = indexRows.find((r) => r.date >= filtered[0].date);
-    if (!idxAtStart) {
-      return filtered.map((p) => ({ date: fmtDate(p.date), fundo: p.value, indice: undefined as number | undefined }));
-    }
-    const idxBase = idxAtStart.flt_value;
+    const idxBase = idxAtStart?.flt_value ?? null;
     const idxMap = new Map(indexRows.map((r) => [r.date, r.flt_value]));
 
     return filtered.map((p) => {
-      const idxVal = idxMap.get(p.date);
+      const idxVal = idxBase != null ? idxMap.get(p.date) : undefined;
       return {
         date: fmtDate(p.date),
-        fundo: parseFloat(((p.value / cotaBase) * 100).toFixed(4)),
-        indice: idxVal != null ? parseFloat(((idxVal / idxBase) * 100).toFixed(4)) : undefined,
+        fundo: parseFloat(((p.value / cotaBase - 1) * 100).toFixed(4)),
+        indice: idxVal != null && idxBase != null ? parseFloat(((idxVal / idxBase - 1) * 100).toFixed(4)) : undefined,
       };
     });
   }, [cotaSeries, cotaRange, compareIndex, data]);
@@ -376,15 +369,14 @@ export default function IgfTrPage() {
 
   const cotaDomain = useMemo((): [number, number] => {
     const values = cotaChartData.flatMap((p) =>
-      isCompareMode ? [p.fundo, p.indice].filter((v): v is number => v != null) : [p.fundo]
+      [p.fundo, p.indice].filter((v): v is number => v != null)
     );
-    if (!values.length) return [0, 1];
+    if (!values.length) return [-1, 1];
     const min = Math.min(...values);
     const max = Math.max(...values);
-    const pad = (max - min) * 0.05 || 0.01;
-    if (isCompareMode) return [parseFloat((min - pad).toFixed(2)), parseFloat((max + pad).toFixed(2))];
-    return [parseFloat((min - pad).toFixed(6)), parseFloat((max + pad).toFixed(6))];
-  }, [cotaChartData, isCompareMode]);
+    const pad = (max - min) * 0.05 || 0.5;
+    return [parseFloat((min - pad).toFixed(2)), parseFloat((max + pad).toFixed(2))];
+  }, [cotaChartData]);
 
   // ── Flows chart data (monthly aggregation) ─────────────────────────────────
   const flowsChartData = useMemo(() => {
@@ -449,8 +441,25 @@ export default function IgfTrPage() {
 
   const cotaAcChartData = useMemo((): BreakdownRow[] => {
     if (!breakdownData?.synthetic_cotas.length) return [];
-    return filterByRange(breakdownData.synthetic_cotas, cotaAcRange)
-      .map((row) => ({ ...row, date: fmtDate(row.date as string) }));
+    const filtered = filterByRange(breakdownData.synthetic_cotas, cotaAcRange);
+    if (!filtered.length) return [];
+    // Build per-group base values from the first row in the range
+    const firstRow = filtered[0] as Record<string, unknown>;
+    const base: Record<string, number> = {};
+    for (const key of Object.keys(firstRow)) {
+      if (key === 'date' || key === 'total') continue;
+      const v = firstRow[key] as number;
+      if (v != null && v !== 0) base[key] = v;
+    }
+    return filtered.map((row) => {
+      const rawRow = row as Record<string, unknown>;
+      const updates: Record<string, number> = {};
+      for (const [g, b] of Object.entries(base)) {
+        const v = rawRow[g] as number | undefined;
+        updates[g] = v != null ? parseFloat(((v / b - 1) * 100).toFixed(4)) : 0;
+      }
+      return { date: fmtDate(row.date as string), ...updates } as BreakdownRow;
+    });
   }, [breakdownData, cotaAcRange]);
 
   const cotaAcGroups = useMemo(
@@ -561,7 +570,7 @@ export default function IgfTrPage() {
               <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
                 <SectionHeader
                   title="Histórico de Cotas"
-                  subtitle={isCompareMode ? "Base 100 — performance relativa desde o início do período" : "Valor diário da cota (NAV/Cota) — finance_navposition"}
+                  subtitle="Retorno acumulado no período — normalizado a 0% no início do intervalo seleccionado"
                 />
                 <div className="flex items-center gap-3 flex-wrap">
                   {/* Compare index dropdown */}
@@ -614,16 +623,13 @@ export default function IgfTrPage() {
                       tick={{ fill: "#94a3b8", fontSize: 10 }}
                       tickLine={false}
                       axisLine={false}
-                      tickFormatter={isCompareMode ? (v) => `${(v - 100).toFixed(1)}%` : (v) => v.toFixed(4)}
+                      tickFormatter={(v) => `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`}
                       width={72}
                     />
                     <Tooltip
                       content={
                         <ChartTooltip
-                          formatter={isCompareMode
-                            ? (v: number) => `${v.toFixed(2)} (${(v - 100) >= 0 ? "+" : ""}${(v - 100).toFixed(2)}%)`
-                            : (v: number) => fmt(v, 6)
-                          }
+                          formatter={(v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`}
                         />
                       }
                     />
@@ -814,7 +820,7 @@ export default function IgfTrPage() {
                   <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
                     <SectionHeader
                       title="Cota Sintética por Asset Class (Bruto)"
-                      subtitle="Retorno acumulado bruto base 100 por classe, excl. Caixa (TWR diário: PnL total / valor de abertura)"
+                      subtitle="Retorno acumulado bruto no período, excl. Caixa — normalizado a 0% no início do intervalo seleccionado"
                     />
                     <RangeBar value={cotaAcRange} onChange={setCotaAcRange} color="blue" />
                   </div>
@@ -824,14 +830,13 @@ export default function IgfTrPage() {
                     {cotaAcGroups.map((g, i) => {
                       const last = cotaAcChartData[cotaAcChartData.length - 1];
                       const val = last ? (last[g] as number) : null;
-                      const ret = val != null ? val - 100 : null;
                       return (
                         <div key={g} className="flex items-center gap-2">
                           <span className="w-4 h-0.5 rounded inline-block" style={{ background: groupColor(g, i) }} />
                           <span className="text-xs text-slate-500 dark:text-slate-400">{g}</span>
                           {val != null && (
-                            <span className={`text-xs font-semibold tabular-nums ${ret! >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
-                              {ret! >= 0 ? "+" : ""}{ret!.toFixed(2)}%
+                            <span className={`text-xs font-semibold tabular-nums ${val >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
+                              {val >= 0 ? "+" : ""}{val.toFixed(2)}%
                             </span>
                           )}
                         </div>
@@ -851,7 +856,7 @@ export default function IgfTrPage() {
                           tick={{ fill: "#94a3b8", fontSize: 10 }}
                           tickLine={false}
                           axisLine={false}
-                          tickFormatter={(v) => `${(v - 100).toFixed(1)}%`}
+                          tickFormatter={(v) => `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`}
                           width={52}
                         />
                         <Tooltip
@@ -861,7 +866,7 @@ export default function IgfTrPage() {
                               <div className="bg-slate-900 border border-slate-700/60 rounded-xl px-4 py-3 shadow-2xl text-xs min-w-[180px]">
                                 <p className="text-slate-400 mb-2 font-medium">{label}</p>
                                 {payload.map((p: any, i: number) => {
-                                  const ret = (p.value as number) - 100;
+                                  const ret = p.value as number;
                                   return (
                                     <div key={i} className="flex items-center justify-between gap-4 py-0.5">
                                       <span className="flex items-center gap-1.5">
