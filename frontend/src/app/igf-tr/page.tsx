@@ -125,7 +125,7 @@ const INDEX_NAMES: Record<string, string> = {
   "SX5E Index": "Euro Stoxx 50",
   "NKY Index": "Nikkei 225",
   // Renda Fixa Global
-  "BMA3070 Index": "Bloomberg US Treasury (BMA3070)",
+  "BMA 3070 Index": "Bloomberg US Treasury (BMA 3070)",
   "LBUSTRUU Index": "Bloomberg US Agg (LBUSTRUU)",
   // Commodities / Renda Fixa Global
   "SPGSCITR Index": "S&P GSCI Commodities",
@@ -138,7 +138,7 @@ const INDEX_NAMES: Record<string, string> = {
 
 const COTA_AC_INDICES: { key: string; label: string; color: string }[] = [
   { key: "SPX Index",      label: "S&P 500",                     color: "#f97316" },
-  { key: "BMA3070 Index",  label: "Bloomberg US Treasury",       color: "#a78bfa" },
+  { key: "BMA 3070 Index", label: "Bloomberg US Treasury",       color: "#a78bfa" },
   { key: "LBUSTRUU Index", label: "Bloomberg US Agg (LBUSTRUU)", color: "#ec4899" },
 ];
 
