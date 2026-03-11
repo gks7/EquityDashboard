@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   ResponsiveContainer, LineChart, Line, AreaChart, Area,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
@@ -124,12 +124,23 @@ const INDEX_NAMES: Record<string, string> = {
   "MXWD Index": "MSCI Mundo",     "MXWD": "MSCI Mundo",
   "SX5E Index": "Euro Stoxx 50",
   "NKY Index": "Nikkei 225",
+  // Renda Fixa Global
+  "B500T Index": "Bloomberg US Agg (B500T)",
+  "LBUSTRUU Index": "Bloomberg US Treasury (LBUSTRUU)",
   // Commodities / Renda Fixa Global
   "SPGSCITR Index": "S&P GSCI Commodities",
   "LEGATRUU Index": "Bloomberg Global Agg",
   "XAU Curncy": "Ouro (XAU/USD)",
   "CL1 Comdty": "Petróleo WTI",
 };
+
+// ─── Indices available for overlay in the Cota Sintética chart ───────────────
+
+const COTA_AC_INDICES: { key: string; label: string; color: string }[] = [
+  { key: "SPX Index",      label: "S&P 500",              color: "#f97316" },
+  { key: "B500T Index",    label: "Bloomberg US Agg",     color: "#a78bfa" },
+  { key: "LBUSTRUU Index", label: "Bloomberg US Treasury", color: "#ec4899" },
+];
 
 const indexDisplayName = (asset: string) => INDEX_NAMES[asset] ?? asset;
 
@@ -298,6 +309,10 @@ export default function IgfTrPage() {
   const [flowsRange, setFlowsRange] = useState<Range>("Máx");
   const [allocRange, setAllocRange] = useState<Range>("Máx");
   const [cotaAcRange, setCotaAcRange] = useState<Range>("Máx");
+  const [cotaAcSelectedIndices, setCotaAcSelectedIndices] = useState<string[]>([]);
+  const [cotaAcHiddenGroups, setCotaAcHiddenGroups] = useState<Set<string>>(new Set());
+  const [cotaAcDropdownOpen, setCotaAcDropdownOpen] = useState(false);
+  const cotaAcDropdownRef = useRef<HTMLDivElement>(null);
 
   const [breakdownData, setBreakdownData] = useState<AssetBreakdownData | null>(null);
 
@@ -318,6 +333,17 @@ export default function IgfTrPage() {
   }, [selectedFund]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Close index-overlay dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (cotaAcDropdownRef.current && !cotaAcDropdownRef.current.contains(e.target as Node)) {
+        setCotaAcDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -443,7 +469,8 @@ export default function IgfTrPage() {
     if (!breakdownData?.synthetic_cotas.length) return [];
     const filtered = filterByRange(breakdownData.synthetic_cotas, cotaAcRange);
     if (!filtered.length) return [];
-    // Build per-group base values from the first row in the range
+
+    // Per-group base values from the first row in the filtered range
     const firstRow = filtered[0] as Record<string, unknown>;
     const base: Record<string, number> = {};
     for (const key of Object.keys(firstRow)) {
@@ -451,16 +478,41 @@ export default function IgfTrPage() {
       const v = firstRow[key] as number;
       if (v != null && v !== 0) base[key] = v;
     }
+
+    // Pre-build maps for each selected index overlay
+    const idxMaps: Record<string, { map: Map<string, number>; base: number | null }> = {};
+    const firstRawDate = filtered[0].date as string;
+    for (const idxKey of cotaAcSelectedIndices) {
+      const rows = (data?.index_prices ?? [])
+        .filter((r) => r.asset === idxKey && r.flt_value != null)
+        .sort((a, b) => a.date.localeCompare(b.date));
+      const firstIdxRow = rows.find((r) => r.date >= firstRawDate);
+      idxMaps[idxKey] = {
+        map: new Map(rows.map((r) => [r.date, r.flt_value as number])),
+        base: firstIdxRow?.flt_value ?? null,
+      };
+    }
+
     return filtered.map((row) => {
+      const rawDate = row.date as string;
       const rawRow = row as Record<string, unknown>;
-      const updates: Record<string, number> = {};
+      const updates: Record<string, number | undefined> = {};
+
       for (const [g, b] of Object.entries(base)) {
         const v = rawRow[g] as number | undefined;
         updates[g] = v != null ? parseFloat(((v / b - 1) * 100).toFixed(4)) : 0;
       }
-      return { date: fmtDate(row.date as string), ...updates } as BreakdownRow;
+      for (const idxKey of cotaAcSelectedIndices) {
+        const { map: idxMap, base: idxBase } = idxMaps[idxKey];
+        if (idxBase == null) continue;
+        const idxVal = idxMap.get(rawDate);
+        updates[`__idx_${idxKey}`] = idxVal != null
+          ? parseFloat(((idxVal / idxBase - 1) * 100).toFixed(4))
+          : undefined;
+      }
+      return { date: fmtDate(rawDate), ...updates } as BreakdownRow;
     });
-  }, [breakdownData, cotaAcRange]);
+  }, [breakdownData, cotaAcRange, cotaAcSelectedIndices, data]);
 
   const cotaAcGroups = useMemo(
     () => availableGroups.filter((g) => g.toLowerCase() !== 'cash' && g.toLowerCase() !== 'caixa'),
@@ -468,15 +520,18 @@ export default function IgfTrPage() {
   );
 
   const cotaAcDomain = useMemo((): [number, number] => {
+    const visibleGroups = cotaAcGroups.filter((g) => !cotaAcHiddenGroups.has(g));
+    const idxKeys = cotaAcSelectedIndices.map((k) => `__idx_${k}`);
+    const allKeys = [...visibleGroups, ...idxKeys];
     const values = cotaAcChartData.flatMap((row) =>
-      cotaAcGroups.map((g) => row[g] as number).filter((v) => v != null && isFinite(v))
+      allKeys.map((g) => row[g] as number).filter((v) => v != null && isFinite(v))
     );
-    if (!values.length) return [90, 110];
+    if (!values.length) return [-5, 5];
     const min = Math.min(...values);
     const max = Math.max(...values);
     const pad = (max - min) * 0.05 || 1;
     return [parseFloat((min - pad).toFixed(2)), parseFloat((max + pad).toFixed(2))];
-  }, [cotaAcChartData, cotaAcGroups]);
+  }, [cotaAcChartData, cotaAcGroups, cotaAcHiddenGroups, cotaAcSelectedIndices]);
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
@@ -822,18 +877,86 @@ export default function IgfTrPage() {
                       title="Cota Sintética por Asset Class (Bruto)"
                       subtitle="Retorno acumulado bruto no período, excl. Caixa — normalizado a 0% no início do intervalo seleccionado"
                     />
-                    <RangeBar value={cotaAcRange} onChange={setCotaAcRange} color="blue" />
+                    <div className="flex items-center gap-3 flex-wrap">
+                      {/* Index overlay multi-select dropdown */}
+                      <div ref={cotaAcDropdownRef} className="relative">
+                        <button
+                          onClick={() => setCotaAcDropdownOpen((o) => !o)}
+                          className="flex items-center gap-2 pl-3 pr-2.5 py-1.5 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/60 transition-colors"
+                        >
+                          <span>Comparar índices</span>
+                          {cotaAcSelectedIndices.length > 0 && (
+                            <span className="w-4 h-4 rounded-full bg-blue-500 text-white text-[10px] flex items-center justify-center font-bold">
+                              {cotaAcSelectedIndices.length}
+                            </span>
+                          )}
+                          <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${cotaAcDropdownOpen ? "rotate-180" : ""}`} />
+                        </button>
+
+                        {cotaAcDropdownOpen && (
+                          <div className="absolute right-0 top-full mt-1.5 z-30 w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl py-1.5">
+                            {COTA_AC_INDICES.map(({ key, label, color }) => {
+                              const selected = cotaAcSelectedIndices.includes(key);
+                              return (
+                                <button
+                                  key={key}
+                                  onClick={() => setCotaAcSelectedIndices((prev) =>
+                                    selected ? prev.filter((k) => k !== key) : [...prev, key]
+                                  )}
+                                  className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-left transition-colors"
+                                >
+                                  <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${selected ? "border-blue-500 bg-blue-500" : "border-slate-300 dark:border-slate-600"}`}>
+                                    {selected && <span className="w-2 h-2 rounded-sm bg-white" />}
+                                  </div>
+                                  <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: color }} />
+                                  <span className="text-xs text-slate-700 dark:text-slate-300 leading-tight">{label}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      <RangeBar value={cotaAcRange} onChange={setCotaAcRange} color="blue" />
+                    </div>
                   </div>
 
-                  {/* Legend with latest value */}
-                  <div className="flex flex-wrap gap-5 mb-4">
+                  {/* Legend — asset class groups (clickable to hide) + index overlays */}
+                  <div className="flex flex-wrap gap-x-5 gap-y-2 mb-4">
                     {cotaAcGroups.map((g, i) => {
                       const last = cotaAcChartData[cotaAcChartData.length - 1];
                       const val = last ? (last[g] as number) : null;
+                      const hidden = cotaAcHiddenGroups.has(g);
                       return (
-                        <div key={g} className="flex items-center gap-2">
+                        <button
+                          key={g}
+                          onClick={() => setCotaAcHiddenGroups((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(g)) next.delete(g); else next.add(g);
+                            return next;
+                          })}
+                          title={hidden ? "Mostrar" : "Ocultar"}
+                          className={`flex items-center gap-2 transition-opacity ${hidden ? "opacity-35" : ""}`}
+                        >
                           <span className="w-4 h-0.5 rounded inline-block" style={{ background: groupColor(g, i) }} />
                           <span className="text-xs text-slate-500 dark:text-slate-400">{g}</span>
+                          {val != null && !hidden && (
+                            <span className={`text-xs font-semibold tabular-nums ${val >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
+                              {val >= 0 ? "+" : ""}{val.toFixed(2)}%
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+
+                    {/* Index overlay legend entries */}
+                    {COTA_AC_INDICES.filter(({ key }) => cotaAcSelectedIndices.includes(key)).map(({ key, label, color }) => {
+                      const last = cotaAcChartData[cotaAcChartData.length - 1];
+                      const val = last ? (last[`__idx_${key}`] as number | undefined) : null;
+                      return (
+                        <div key={key} className="flex items-center gap-2">
+                          <span className="inline-block w-4" style={{ borderTop: `2px dashed ${color}`, marginTop: "1px" }} />
+                          <span className="text-xs text-slate-500 dark:text-slate-400">{label}</span>
                           {val != null && (
                             <span className={`text-xs font-semibold tabular-nums ${val >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
                               {val >= 0 ? "+" : ""}{val.toFixed(2)}%
@@ -862,10 +985,14 @@ export default function IgfTrPage() {
                         <Tooltip
                           content={({ active, payload, label }) => {
                             if (!active || !payload?.length) return null;
+                            const visible = payload.filter((p: any) => {
+                              const dk = p.dataKey as string;
+                              return dk.startsWith("__idx_") || !cotaAcHiddenGroups.has(dk);
+                            });
                             return (
-                              <div className="bg-slate-900 border border-slate-700/60 rounded-xl px-4 py-3 shadow-2xl text-xs min-w-[180px]">
+                              <div className="bg-slate-900 border border-slate-700/60 rounded-xl px-4 py-3 shadow-2xl text-xs min-w-[200px]">
                                 <p className="text-slate-400 mb-2 font-medium">{label}</p>
-                                {payload.map((p: any, i: number) => {
+                                {visible.map((p: any, i: number) => {
                                   const ret = p.value as number;
                                   return (
                                     <div key={i} className="flex items-center justify-between gap-4 py-0.5">
@@ -883,6 +1010,8 @@ export default function IgfTrPage() {
                             );
                           }}
                         />
+
+                        {/* Asset-class group lines — hide prop controls visibility */}
                         {cotaAcGroups.map((g, i) => (
                           <Line
                             key={g}
@@ -893,6 +1022,23 @@ export default function IgfTrPage() {
                             strokeWidth={2}
                             dot={false}
                             activeDot={{ r: 4 }}
+                            connectNulls
+                            hide={cotaAcHiddenGroups.has(g)}
+                          />
+                        ))}
+
+                        {/* Selected index overlay lines */}
+                        {COTA_AC_INDICES.filter(({ key }) => cotaAcSelectedIndices.includes(key)).map(({ key, label, color }) => (
+                          <Line
+                            key={key}
+                            type="monotone"
+                            dataKey={`__idx_${key}`}
+                            name={label}
+                            stroke={color}
+                            strokeWidth={1.5}
+                            strokeDasharray="5 3"
+                            dot={false}
+                            activeDot={{ r: 3, fill: color }}
                             connectNulls
                           />
                         ))}
