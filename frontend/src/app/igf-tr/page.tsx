@@ -138,7 +138,6 @@ const INDEX_NAMES: Record<string, string> = {
 
 const COTA_AC_INDICES: { key: string; label: string; color: string }[] = [
   { key: "SPX Index",      label: "S&P 500",                     color: "#f97316" },
-  { key: "BMA 3070 Index", label: "Bloomberg US Treasury",       color: "#a78bfa" },
   { key: "LBUSTRUU Index", label: "Bloomberg US Agg (LBUSTRUU)", color: "#ec4899" },
 ];
 
