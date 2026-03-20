@@ -1,22 +1,23 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Search,
-  Plus,
   Users,
   CalendarDays,
   Filter,
   Flame,
   Sparkles,
-  Clock,
-  ArrowUpDown,
   Trash2,
   X,
   UserPlus,
   CalendarPlus,
   ChevronDown,
+  RefreshCcw,
 } from "lucide-react";
+import { authFetch } from "@/lib/authFetch";
+
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -26,87 +27,30 @@ type ProspectTemp = "hot" | "warm" | "new" | "";
 type MeetingType = "group" | "one-on-one" | "follow-up";
 
 interface Contact {
-  id: string;
+  id: number;
   name: string;
   role: string;
   company: string;
-  type: ContactType;
-  stage?: ProspectStage;
-  temperature?: ProspectTemp;
-  value: number;
-  health?: number; // 0–100, only for clients
-  lastMeeting?: string; // ISO date string
+  contact_type: ContactType;
+  stage: ProspectStage | "";
+  temperature: ProspectTemp;
+  value: string;
+  health: number | null;
+  last_meeting: string | null;
+  next_meeting: string | null;
 }
 
 interface Meeting {
-  id: string;
+  id: number;
   title: string;
   description: string;
-  date: string; // ISO date string
+  date: string;
   time: string;
-  type: MeetingType;
-  attendeeIds: string[];
+  meeting_type: MeetingType;
+  attendees_detail: Contact[];
 }
-
-// ── Seed data ────────────────────────────────────────────────────────────────
-
-const SEED_CONTACTS: Contact[] = [
-  { id: "c1", name: "Sarah Mitchell", role: "VP Product", company: "Helix Corp", type: "client", value: 8200, health: 92, lastMeeting: "2026-03-20" },
-  { id: "c2", name: "Laura Chen", role: "Dir. Eng", company: "Stratos Inc", type: "client", value: 12000, health: 64, lastMeeting: "2026-03-17" },
-  { id: "c3", name: "Karen Wu", role: "Partner", company: "Orbit Ventures", type: "client", value: 9800, health: 88, lastMeeting: "2026-03-18" },
-  { id: "c4", name: "Diana Reeves", role: "COO", company: "Apex Solutions", type: "client", value: 6300, health: 90, lastMeeting: "2026-03-20" },
-  { id: "c5", name: "Tom Harris", role: "CEO", company: "Prism Digital", type: "client", value: 4500, health: 85, lastMeeting: "2026-03-12" },
-  { id: "c6", name: "Alex Petrov", role: "VP Eng", company: "Nimbus Cloud", type: "client", value: 4600, health: 70, lastMeeting: "2026-03-12" },
-  { id: "c7", name: "Mike Yoon", role: "CTO", company: "Quantum Labs", type: "client", value: 1800, health: 38, lastMeeting: "2026-02-28" },
-  { id: "p1", name: "David Kim", role: "CEO", company: "Evergreen Systems", type: "prospect", stage: "closing", temperature: "hot", value: 30000, lastMeeting: "2026-03-22" },
-  { id: "p2", name: "Marco Ruiz", role: "VP Ops", company: "Atlas Logistics", type: "prospect", stage: "proposal", temperature: "hot", value: 18000, lastMeeting: "2026-03-10" },
-  { id: "p3", name: "Aisha Okafor", role: "COO", company: "Northstar Robotics", type: "prospect", stage: "qualified", temperature: "hot", value: 22000, lastMeeting: "2026-03-21" },
-  { id: "p4", name: "Yuki Tanaka", role: "CTO", company: "Pinnacle AI", type: "prospect", stage: "proposal", temperature: "", value: 25000, lastMeeting: "2026-03-07" },
-  { id: "p5", name: "Elena Vogt", role: "CPO", company: "Solstice Energy", type: "prospect", stage: "qualified", temperature: "warm", value: 15000, lastMeeting: "2026-03-27" },
-  { id: "p6", name: "Anna Lindqvist", role: "CRO", company: "Coastal Dynamics", type: "prospect", stage: "closing", temperature: "", value: 14000, lastMeeting: "2026-02-05" },
-  { id: "p7", name: "Sofia Chen", role: "Head of Ops", company: "Meridian Analytics", type: "prospect", stage: "lead", temperature: "new", value: 8000, lastMeeting: "2026-03-14" },
-  { id: "p8", name: "Leo Brunetti", role: "Dir. Marketing", company: "Tidewater Media", type: "prospect", stage: "qualified", temperature: "", value: 7000, lastMeeting: "2026-02-28" },
-  { id: "p9", name: "James Park", role: "CTO", company: "Vortex Labs", type: "prospect", stage: "lead", temperature: "warm", value: 5000 },
-  { id: "p10", name: "Nina Torres", role: "CEO", company: "Bloom Health", type: "prospect", stage: "lead", temperature: "", value: 12000 },
-  { id: "p11", name: "Raj Malhotra", role: "VP Eng", company: "Canopy Finance", type: "prospect", stage: "lead", temperature: "", value: 3000 },
-  { id: "p12", name: "Claire Dupont", role: "MD", company: "Redwood Partners", type: "prospect", stage: "proposal", temperature: "", value: 10000, lastMeeting: "2026-02-15" },
-];
-
-const SEED_MEETINGS: Meeting[] = [
-  { id: "m1", title: "Q2 planning alignment", description: "Roadmap priorities across key accounts", date: "2026-03-20", time: "14:00", type: "group", attendeeIds: ["c1", "c2", "c4"] },
-  { id: "m2", title: "Product demo — Northstar Robotics", description: "Demo automation features for Aisha", date: "2026-03-21", time: "10:30", type: "one-on-one", attendeeIds: ["p3"] },
-  { id: "m3", title: "Contract review — Evergreen Systems", description: "Final terms before signing", date: "2026-03-22", time: "15:00", type: "one-on-one", attendeeIds: ["p1"] },
-  { id: "m4", title: "New feature onboarding v3.2", description: "Enterprise client walkthrough", date: "2026-03-24", time: "11:00", type: "group", attendeeIds: ["c1", "c5", "c6", "c3", "c4"] },
-  { id: "m5", title: "Health check — Quantum Labs", description: "Churn risk, review support tickets", date: "2026-03-25", time: "09:00", type: "follow-up", attendeeIds: ["c7"] },
-  { id: "m6", title: "Scoping call — Solstice Energy", description: "Technical requirements deep-dive", date: "2026-03-27", time: "14:00", type: "one-on-one", attendeeIds: ["p5"] },
-  { id: "m7", title: "Quarterly business review", description: "APAC expansion discussion", date: "2026-03-18", time: "10:00", type: "group", attendeeIds: ["c1", "c3", "c4"] },
-  { id: "m8", title: "Renewal discussion — Stratos Inc", description: "Laura flagged pricing concerns", date: "2026-03-17", time: "16:00", type: "one-on-one", attendeeIds: ["c2"] },
-  { id: "m9", title: "Intro call — Meridian Analytics", description: "Strong interest in ops platform", date: "2026-03-14", time: "11:00", type: "one-on-one", attendeeIds: ["p7"] },
-  { id: "m10", title: "Product feedback roundtable", description: "Feature requests for v3.2", date: "2026-03-12", time: "14:00", type: "group", attendeeIds: ["c5", "c6"] },
-  { id: "m11", title: "Proposal walkthrough — Atlas Logistics", description: "Positive reception, sent revised SOW", date: "2026-03-10", time: "13:00", type: "one-on-one", attendeeIds: ["p2"] },
-  { id: "m12", title: "Technical deep-dive — Pinnacle AI", description: "API integration requirements", date: "2026-03-07", time: "15:30", type: "one-on-one", attendeeIds: ["p4"] },
-  { id: "m13", title: "Escalation call — Quantum Labs", description: "Discussed downgrade vs. remediation plan", date: "2026-02-28", time: "10:00", type: "follow-up", attendeeIds: ["c7"] },
-  { id: "m14", title: "Q1 wrap-up & Q2 kickoff", description: "All-hands with enterprise clients", date: "2026-02-20", time: "11:00", type: "group", attendeeIds: ["c1", "c2", "c3", "c4", "c5", "c6"] },
-];
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
-const LS_CONTACTS = "crm_contacts";
-const LS_MEETINGS = "crm_meetings";
-
-function loadState<T>(key: string, seed: T): T {
-  if (typeof window === "undefined") return seed;
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : seed;
-  } catch {
-    return seed;
-  }
-}
-function saveState<T>(key: string, data: T) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(key, JSON.stringify(data));
-}
 
 function getInitials(name: string) {
   return name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
@@ -114,14 +58,14 @@ function getInitials(name: string) {
 
 const today = new Date().toISOString().slice(0, 10);
 
-function formatDateLabel(iso?: string): string {
+function formatDateLabel(iso: string | null): string {
   if (!iso) return "Never";
   if (iso === today) return "Today";
   const d = new Date(iso + "T00:00:00");
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function daysSince(iso?: string): number {
+function daysSince(iso: string | null): number {
   if (!iso) return 9999;
   const then = new Date(iso + "T00:00:00").getTime();
   const now = new Date(today + "T00:00:00").getTime();
@@ -132,23 +76,25 @@ function isFutureOrToday(iso: string): boolean {
   return iso >= today;
 }
 
-const avatarColors: Record<string, { bg: string; text: string }> = {
-  c1: { bg: "bg-emerald-100 dark:bg-emerald-900/30", text: "text-emerald-700 dark:text-emerald-400" },
-  c2: { bg: "bg-amber-100 dark:bg-amber-900/30", text: "text-amber-700 dark:text-amber-400" },
-  c3: { bg: "bg-pink-100 dark:bg-pink-900/30", text: "text-pink-700 dark:text-pink-400" },
-  c4: { bg: "bg-teal-100 dark:bg-teal-900/30", text: "text-teal-700 dark:text-teal-400" },
-  c5: { bg: "bg-violet-100 dark:bg-violet-900/30", text: "text-violet-700 dark:text-violet-400" },
-  c6: { bg: "bg-sky-100 dark:bg-sky-900/30", text: "text-sky-700 dark:text-sky-400" },
-  c7: { bg: "bg-blue-100 dark:bg-blue-900/30", text: "text-blue-700 dark:text-blue-400" },
-};
-function getAvatarColor(id: string) {
-  if (avatarColors[id]) return avatarColors[id];
-  return { bg: "bg-indigo-100 dark:bg-indigo-900/30", text: "text-indigo-700 dark:text-indigo-400" };
+const AVATAR_COLORS = [
+  { bg: "bg-emerald-100 dark:bg-emerald-900/30", text: "text-emerald-700 dark:text-emerald-400" },
+  { bg: "bg-amber-100 dark:bg-amber-900/30", text: "text-amber-700 dark:text-amber-400" },
+  { bg: "bg-pink-100 dark:bg-pink-900/30", text: "text-pink-700 dark:text-pink-400" },
+  { bg: "bg-teal-100 dark:bg-teal-900/30", text: "text-teal-700 dark:text-teal-400" },
+  { bg: "bg-violet-100 dark:bg-violet-900/30", text: "text-violet-700 dark:text-violet-400" },
+  { bg: "bg-sky-100 dark:bg-sky-900/30", text: "text-sky-700 dark:text-sky-400" },
+  { bg: "bg-blue-100 dark:bg-blue-900/30", text: "text-blue-700 dark:text-blue-400" },
+  { bg: "bg-indigo-100 dark:bg-indigo-900/30", text: "text-indigo-700 dark:text-indigo-400" },
+  { bg: "bg-rose-100 dark:bg-rose-900/30", text: "text-rose-700 dark:text-rose-400" },
+];
+
+function getAvatarColor(id: number) {
+  return AVATAR_COLORS[id % AVATAR_COLORS.length];
 }
 
 // ── Components ───────────────────────────────────────────────────────────────
 
-function TagBadge({ label, variant }: { label: string; variant: "client" | "prospect" | "hot" | "warm" | "new" | "closing" | "group" | "one-on-one" | "follow-up" }) {
+function TagBadge({ label, variant }: { label: string; variant: string }) {
   const styles: Record<string, string> = {
     client: "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400",
     prospect: "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400",
@@ -178,7 +124,7 @@ function HealthBar({ value }: { value: number }) {
 
 // ── Add Contact Modal ────────────────────────────────────────────────────────
 
-function AddContactModal({ onClose, onSave }: { onClose: () => void; onSave: (c: Contact) => void }) {
+function AddContactModal({ onClose, onSave }: { onClose: () => void; onSave: (data: Record<string, unknown>) => void }) {
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
   const [company, setCompany] = useState("");
@@ -187,20 +133,22 @@ function AddContactModal({ onClose, onSave }: { onClose: () => void; onSave: (c:
   const [temp, setTemp] = useState<ProspectTemp>("");
   const [value, setValue] = useState("");
   const [health, setHealth] = useState("80");
+  const [saving, setSaving] = useState(false);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!name.trim() || !company.trim()) return;
-    onSave({
-      id: "c_" + Date.now(),
+    setSaving(true);
+    await onSave({
       name: name.trim(),
       role: role.trim(),
       company: company.trim(),
-      type,
-      stage: type === "prospect" ? stage : undefined,
-      temperature: type === "prospect" ? temp : undefined,
+      contact_type: type,
+      stage: type === "prospect" ? stage : "",
+      temperature: type === "prospect" ? temp : "",
       value: Number(value) || 0,
-      health: type === "client" ? Number(health) || 80 : undefined,
+      health: type === "client" ? Number(health) || 80 : null,
     });
+    setSaving(false);
     onClose();
   };
 
@@ -222,9 +170,9 @@ function AddContactModal({ onClose, onSave }: { onClose: () => void; onSave: (c:
             <input value={company} onChange={e => setCompany(e.target.value)} placeholder="Company" className="px-3 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 dark:text-white" />
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <input value={value} onChange={e => setValue(e.target.value.replace(/\D/g, ""))} placeholder={type === "client" ? "MRR ($)" : "Pipeline value ($)"} className="px-3 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 dark:text-white" />
+            <input value={value} onChange={e => setValue(e.target.value.replace(/[^\d.]/g, ""))} placeholder={type === "client" ? "MRR ($)" : "Pipeline value ($)"} className="px-3 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 dark:text-white" />
             {type === "client" && (
-              <input value={health} onChange={e => setHealth(e.target.value.replace(/\D/g, ""))} placeholder="Health (0–100)" className="px-3 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 dark:text-white" />
+              <input value={health} onChange={e => setHealth(e.target.value.replace(/\D/g, ""))} placeholder="Health (0-100)" className="px-3 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 dark:text-white" />
             )}
             {type === "prospect" && (
               <select value={stage} onChange={e => setStage(e.target.value as ProspectStage)} className="px-3 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 dark:text-white">
@@ -247,7 +195,9 @@ function AddContactModal({ onClose, onSave }: { onClose: () => void; onSave: (c:
         </div>
         <div className="flex justify-end gap-3 mt-6">
           <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">Cancel</button>
-          <button onClick={handleSubmit} disabled={!name.trim() || !company.trim()} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-40">Add contact</button>
+          <button onClick={handleSubmit} disabled={!name.trim() || !company.trim() || saving} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-40">
+            {saving ? "Adding..." : "Add contact"}
+          </button>
         </div>
       </div>
     </div>
@@ -256,30 +206,32 @@ function AddContactModal({ onClose, onSave }: { onClose: () => void; onSave: (c:
 
 // ── Add Meeting Modal ────────────────────────────────────────────────────────
 
-function AddMeetingModal({ contacts, onClose, onSave }: { contacts: Contact[]; onClose: () => void; onSave: (m: Meeting) => void }) {
+function AddMeetingModal({ contacts, onClose, onSave }: { contacts: Contact[]; onClose: () => void; onSave: (data: Record<string, unknown>) => void }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(today);
   const [time, setTime] = useState("10:00");
   const [type, setType] = useState<MeetingType>("one-on-one");
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const toggleAttendee = (id: string) => {
+  const toggleAttendee = (id: number) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!title.trim() || selectedIds.length === 0) return;
-    onSave({
-      id: "m_" + Date.now(),
+    setSaving(true);
+    await onSave({
       title: title.trim(),
       description: description.trim(),
       date,
-      time,
-      type,
-      attendeeIds: selectedIds,
+      time: time + ":00",
+      meeting_type: type,
+      attendee_ids: selectedIds,
     });
+    setSaving(false);
     onClose();
   };
 
@@ -304,7 +256,6 @@ function AddMeetingModal({ contacts, onClose, onSave }: { contacts: Contact[]; o
               </button>
             ))}
           </div>
-          {/* Attendee picker */}
           <div className="relative">
             <button onClick={() => setShowDropdown(!showDropdown)} className="w-full flex items-center justify-between px-3 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-500 dark:text-slate-400">
               <span>{selectedIds.length === 0 ? "Select attendees..." : `${selectedIds.length} selected`}</span>
@@ -339,7 +290,9 @@ function AddMeetingModal({ contacts, onClose, onSave }: { contacts: Contact[]; o
         </div>
         <div className="flex justify-end gap-3 mt-6">
           <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">Cancel</button>
-          <button onClick={handleSubmit} disabled={!title.trim() || selectedIds.length === 0} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-40">Schedule</button>
+          <button onClick={handleSubmit} disabled={!title.trim() || selectedIds.length === 0 || saving} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-40">
+            {saving ? "Scheduling..." : "Schedule"}
+          </button>
         </div>
       </div>
     </div>
@@ -355,53 +308,38 @@ type MeetingFilter = "all" | "group" | "one-on-one" | "follow-up";
 export default function CRMPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("contacts");
   const [search, setSearch] = useState("");
   const [contactFilter, setContactFilter] = useState<ContactFilter>("all");
   const [meetingFilter, setMeetingFilter] = useState<MeetingFilter>("all");
   const [showAddContact, setShowAddContact] = useState(false);
   const [showAddMeeting, setShowAddMeeting] = useState(false);
-  const [loaded, setLoaded] = useState(false);
 
-  useEffect(() => {
-    setContacts(loadState(LS_CONTACTS, SEED_CONTACTS));
-    setMeetings(loadState(LS_MEETINGS, SEED_MEETINGS));
-    setLoaded(true);
+  const fetchContacts = useCallback(async () => {
+    try {
+      const res = await authFetch(`${API}/api/crm/contacts/`);
+      if (res.ok) setContacts(await res.json());
+    } catch (e) { console.error("Failed to fetch contacts:", e); }
   }, []);
 
-  useEffect(() => { if (loaded) saveState(LS_CONTACTS, contacts); }, [contacts, loaded]);
-  useEffect(() => { if (loaded) saveState(LS_MEETINGS, meetings); }, [meetings, loaded]);
+  const fetchMeetings = useCallback(async () => {
+    try {
+      const res = await authFetch(`${API}/api/crm/meetings/`);
+      if (res.ok) setMeetings(await res.json());
+    } catch (e) { console.error("Failed to fetch meetings:", e); }
+  }, []);
 
-  const contactMap = useMemo(() => Object.fromEntries(contacts.map(c => [c.id, c])), [contacts]);
+  useEffect(() => {
+    Promise.all([fetchContacts(), fetchMeetings()]).finally(() => setLoading(false));
+  }, [fetchContacts, fetchMeetings]);
 
-  // Compute last meeting per contact from meetings data
-  const lastMeetingMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    const pastMeetings = meetings.filter(m => m.date <= today).sort((a, b) => b.date.localeCompare(a.date));
-    for (const m of pastMeetings) {
-      for (const id of m.attendeeIds) {
-        if (!map[id]) map[id] = m.date;
-      }
-    }
-    return map;
-  }, [meetings]);
-
-  // Next scheduled meeting per contact
-  const nextMeetingMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    const futureMeetings = meetings.filter(m => m.date > today).sort((a, b) => a.date.localeCompare(b.date));
-    for (const m of futureMeetings) {
-      for (const id of m.attendeeIds) {
-        if (!map[id]) map[id] = m.date;
-      }
-    }
-    return map;
-  }, [meetings]);
+  // ── Filtered data ──
 
   const filteredContacts = useMemo(() => {
     let list = contacts;
-    if (contactFilter === "client") list = list.filter(c => c.type === "client");
-    else if (contactFilter === "prospect") list = list.filter(c => c.type === "prospect");
+    if (contactFilter === "client") list = list.filter(c => c.contact_type === "client");
+    else if (contactFilter === "prospect") list = list.filter(c => c.contact_type === "prospect");
     else if (contactFilter === "hot") list = list.filter(c => c.temperature === "hot");
     if (search) {
       const q = search.toLowerCase();
@@ -412,32 +350,74 @@ export default function CRMPage() {
 
   const filteredMeetings = useMemo(() => {
     let list = [...meetings].sort((a, b) => {
-      const aFuture = isFutureOrToday(a.date);
-      const bFuture = isFutureOrToday(b.date);
-      if (aFuture && !bFuture) return -1;
-      if (!aFuture && bFuture) return 1;
-      if (aFuture && bFuture) return a.date.localeCompare(b.date) || a.time.localeCompare(b.time);
+      const aF = isFutureOrToday(a.date), bF = isFutureOrToday(b.date);
+      if (aF && !bF) return -1;
+      if (!aF && bF) return 1;
+      if (aF && bF) return a.date.localeCompare(b.date) || a.time.localeCompare(b.time);
       return b.date.localeCompare(a.date) || b.time.localeCompare(a.time);
     });
-    if (meetingFilter !== "all") list = list.filter(m => m.type === meetingFilter);
+    if (meetingFilter !== "all") list = list.filter(m => m.meeting_type === meetingFilter);
     if (search) {
       const q = search.toLowerCase();
-      list = list.filter(m => m.title.toLowerCase().includes(q) || m.description.toLowerCase().includes(q) || m.attendeeIds.some(id => contactMap[id]?.name.toLowerCase().includes(q)));
+      list = list.filter(m =>
+        m.title.toLowerCase().includes(q) ||
+        m.description.toLowerCase().includes(q) ||
+        m.attendees_detail?.some(a => a.name.toLowerCase().includes(q))
+      );
     }
     return list;
-  }, [meetings, meetingFilter, search, contactMap]);
+  }, [meetings, meetingFilter, search]);
 
-  const handleDeleteContact = (id: string) => {
+  // ── CRUD ──
+
+  const handleAddContact = async (data: Record<string, unknown>) => {
+    try {
+      const res = await authFetch(`${API}/api/crm/contacts/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (res.ok) await fetchContacts();
+      else alert("Failed to add contact");
+    } catch (e) { console.error(e); }
+  };
+
+  const handleDeleteContact = async (id: number) => {
     if (!confirm("Remove this contact?")) return;
-    setContacts(prev => prev.filter(c => c.id !== id));
-  };
-  const handleDeleteMeeting = (id: string) => {
-    if (!confirm("Delete this meeting?")) return;
-    setMeetings(prev => prev.filter(m => m.id !== id));
+    try {
+      const res = await authFetch(`${API}/api/crm/contacts/${id}/`, { method: "DELETE" });
+      if (res.ok) setContacts(prev => prev.filter(c => c.id !== id));
+    } catch (e) { console.error(e); }
   };
 
-  const totalClients = contacts.filter(c => c.type === "client").length;
-  const totalProspects = contacts.filter(c => c.type === "prospect").length;
+  const handleAddMeeting = async (data: Record<string, unknown>) => {
+    try {
+      const res = await authFetch(`${API}/api/crm/meetings/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (res.ok) {
+        await fetchMeetings();
+        await fetchContacts();
+      } else alert("Failed to schedule meeting");
+    } catch (e) { console.error(e); }
+  };
+
+  const handleDeleteMeeting = async (id: number) => {
+    if (!confirm("Delete this meeting?")) return;
+    try {
+      const res = await authFetch(`${API}/api/crm/meetings/${id}/`, { method: "DELETE" });
+      if (res.ok) {
+        setMeetings(prev => prev.filter(m => m.id !== id));
+        await fetchContacts();
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const totalClients = contacts.filter(c => c.contact_type === "client").length;
+  const totalProspects = contacts.filter(c => c.contact_type === "prospect").length;
+  const upcomingMeetings = meetings.filter(m => isFutureOrToday(m.date)).length;
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -446,7 +426,7 @@ export default function CRMPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">CRM</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            {totalClients} clients · {totalProspects} prospects · {meetings.filter(m => isFutureOrToday(m.date)).length} upcoming meetings
+            {totalClients} clients · {totalProspects} prospects · {upcomingMeetings} upcoming meetings
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -501,8 +481,16 @@ export default function CRMPage() {
         )}
       </div>
 
-      {/* ── CONTACTS TABLE ──────────────────────────────────────────────── */}
-      {tab === "contacts" && (
+      {/* Loading */}
+      {loading && (
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-12 text-center">
+          <RefreshCcw className="w-6 h-6 animate-spin mx-auto mb-2 text-slate-400" />
+          <p className="text-sm text-slate-500">Loading CRM data...</p>
+        </div>
+      )}
+
+      {/* ── CONTACTS TABLE ── */}
+      {!loading && tab === "contacts" && (
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
@@ -519,9 +507,7 @@ export default function CRMPage() {
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                 {filteredContacts.map(c => {
-                  const lastMet = lastMeetingMap[c.id];
-                  const nextMet = nextMeetingMap[c.id];
-                  const ds = daysSince(lastMet);
+                  const ds = daysSince(c.last_meeting);
                   const staleClass = ds > 21 ? "text-rose-600 dark:text-rose-400 font-semibold" : ds > 10 ? "text-amber-600 dark:text-amber-400 font-medium" : "text-slate-500 dark:text-slate-400";
                   const color = getAvatarColor(c.id);
                   return (
@@ -539,33 +525,33 @@ export default function CRMPage() {
                       </td>
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <TagBadge label={c.type} variant={c.type} />
+                          <TagBadge label={c.contact_type} variant={c.contact_type} />
                           {c.temperature && <TagBadge label={c.temperature} variant={c.temperature} />}
                         </div>
                       </td>
                       <td className="px-5 py-3 text-xs text-slate-500 dark:text-slate-400">
-                        {c.type === "client"
-                          ? (c.health && c.health < 50 ? <span className="text-rose-600 dark:text-rose-400 font-medium">At risk</span> : "Active")
+                        {c.contact_type === "client"
+                          ? (c.health !== null && c.health < 50 ? <span className="text-rose-600 dark:text-rose-400 font-medium">At risk</span> : "Active")
                           : c.stage ? c.stage.charAt(0).toUpperCase() + c.stage.slice(1) : "—"
                         }
                       </td>
                       <td className="px-5 py-3 text-right font-medium text-slate-900 dark:text-white">
-                        <span className={c.type === "prospect" ? "text-indigo-600 dark:text-indigo-400" : ""}>
-                          ${c.value.toLocaleString()}
+                        <span className={c.contact_type === "prospect" ? "text-indigo-600 dark:text-indigo-400" : ""}>
+                          ${Number(c.value).toLocaleString()}
                         </span>
                       </td>
                       <td className="px-5 py-3">
-                        {c.type === "client" && c.health != null ? <HealthBar value={c.health} /> : <span className="text-xs text-slate-400">—</span>}
+                        {c.contact_type === "client" && c.health != null ? <HealthBar value={c.health} /> : <span className="text-xs text-slate-400">—</span>}
                       </td>
                       <td className="px-5 py-3">
                         <div className={`text-xs ${staleClass}`}>
-                          {lastMet ? formatDateLabel(lastMet) : "Never"}
+                          {c.last_meeting ? formatDateLabel(c.last_meeting) : "Never"}
                         </div>
-                        {!lastMet && nextMet && (
-                          <div className="text-[10px] text-slate-400">sched {formatDateLabel(nextMet)}</div>
+                        {!c.last_meeting && c.next_meeting && (
+                          <div className="text-[10px] text-slate-400">sched {formatDateLabel(c.next_meeting)}</div>
                         )}
-                        {lastMet && nextMet && (
-                          <div className="text-[10px] text-slate-400">next {formatDateLabel(nextMet)}</div>
+                        {c.last_meeting && c.next_meeting && (
+                          <div className="text-[10px] text-slate-400">next {formatDateLabel(c.next_meeting)}</div>
                         )}
                       </td>
                       <td className="px-5 py-3">
@@ -589,8 +575,8 @@ export default function CRMPage() {
         </div>
       )}
 
-      {/* ── MEETINGS TABLE ──────────────────────────────────────────────── */}
-      {tab === "meetings" && (
+      {/* ── MEETINGS TABLE ── */}
+      {!loading && tab === "meetings" && (
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
@@ -613,7 +599,7 @@ export default function CRMPage() {
                         <div className={`text-xs font-medium ${isToday ? "text-indigo-600 dark:text-indigo-400" : "text-slate-500 dark:text-slate-400"}`}>
                           {isToday ? "Today" : formatDateLabel(m.date)}
                         </div>
-                        <div className="text-[11px] text-slate-400">{m.time}</div>
+                        <div className="text-[11px] text-slate-400">{m.time?.slice(0, 5)}</div>
                       </td>
                       <td className="px-5 py-3">
                         <div className="font-medium text-slate-900 dark:text-white">{m.title}</div>
@@ -621,26 +607,24 @@ export default function CRMPage() {
                       </td>
                       <td className="px-5 py-3">
                         <div className="flex items-center">
-                          {m.attendeeIds.slice(0, 4).map((id, i) => {
-                            const c = contactMap[id];
-                            if (!c) return null;
-                            const color = getAvatarColor(id);
+                          {(m.attendees_detail || []).slice(0, 4).map((a, i) => {
+                            const color = getAvatarColor(a.id);
                             return (
-                              <div key={id} className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold border-2 border-white dark:border-slate-900 ${color.bg} ${color.text}`} style={{ marginLeft: i > 0 ? "-6px" : "0", zIndex: 10 - i }}>
-                                {getInitials(c.name)}
+                              <div key={a.id} className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold border-2 border-white dark:border-slate-900 ${color.bg} ${color.text}`} style={{ marginLeft: i > 0 ? "-6px" : "0", zIndex: 10 - i }}>
+                                {getInitials(a.name)}
                               </div>
                             );
                           })}
-                          {m.attendeeIds.length > 4 && (
-                            <span className="ml-1.5 text-[11px] text-slate-400">+{m.attendeeIds.length - 4}</span>
+                          {(m.attendees_detail || []).length > 4 && (
+                            <span className="ml-1.5 text-[11px] text-slate-400">+{m.attendees_detail.length - 4}</span>
                           )}
-                          {m.attendeeIds.length <= 2 && (
-                            <span className="ml-2 text-[11px] text-slate-400">{m.attendeeIds.map(id => contactMap[id]?.name.split(" ")[0]).filter(Boolean).join(", ")}</span>
+                          {(m.attendees_detail || []).length <= 2 && (
+                            <span className="ml-2 text-[11px] text-slate-400">{m.attendees_detail?.map(a => a.name.split(" ")[0]).join(", ")}</span>
                           )}
                         </div>
                       </td>
                       <td className="px-5 py-3">
-                        <TagBadge label={m.type} variant={m.type} />
+                        <TagBadge label={m.meeting_type} variant={m.meeting_type} />
                       </td>
                       <td className="px-5 py-3">
                         <button onClick={() => handleDeleteMeeting(m.id)} className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-all rounded hover:bg-rose-50 dark:hover:bg-rose-900/20" title="Delete meeting">
@@ -664,8 +648,8 @@ export default function CRMPage() {
       )}
 
       {/* Modals */}
-      {showAddContact && <AddContactModal onClose={() => setShowAddContact(false)} onSave={c => setContacts(prev => [...prev, c])} />}
-      {showAddMeeting && <AddMeetingModal contacts={contacts} onClose={() => setShowAddMeeting(false)} onSave={m => setMeetings(prev => [...prev, m])} />}
+      {showAddContact && <AddContactModal onClose={() => setShowAddContact(false)} onSave={handleAddContact} />}
+      {showAddMeeting && <AddMeetingModal contacts={contacts} onClose={() => setShowAddMeeting(false)} onSave={handleAddMeeting} />}
     </div>
   );
 }

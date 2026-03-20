@@ -7,6 +7,7 @@ from api.views import (
     HistCashTransactionViewSet, HistIndexPriceViewSet, AssetPositionHistOfficialViewSet,
     NAVPositionViewSet, IgfTrView, AssetBreakdownView,
     TrackEventView, AdminOverviewView,
+    CRMContactViewSet, CRMMeetingViewSet,
 )
 
 router = DefaultRouter()
@@ -21,6 +22,8 @@ router.register(r'hist/cash-transactions', HistCashTransactionViewSet, basename=
 router.register(r'hist/index-prices', HistIndexPriceViewSet, basename='hist-index-prices')
 router.register(r'hist/asset-positions', AssetPositionHistOfficialViewSet, basename='hist-asset-positions')
 router.register(r'hist/nav-positions', NAVPositionViewSet, basename='hist-nav-positions')
+router.register(r'crm/contacts', CRMContactViewSet, basename='crm-contacts')
+router.register(r'crm/meetings', CRMMeetingViewSet, basename='crm-meetings')
 
 urlpatterns = [
     path('', include(router.urls)),

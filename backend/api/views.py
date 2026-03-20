@@ -817,3 +817,51 @@ class AdminOverviewView(APIView):
             'users': user_data,
             'recent_activity': recent_activity,
         })
+
+
+# ── CRM Views ────────────────────────────────────────────────────────────────
+
+from api.models import CRMContact, CRMMeeting
+from api.serializers import CRMContactSerializer, CRMMeetingSerializer
+
+
+class CRMContactViewSet(viewsets.ModelViewSet):
+    queryset = CRMContact.objects.all()
+    serializer_class = CRMContactSerializer
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        contact_type = self.request.query_params.get('type')
+        if contact_type in ('client', 'prospect'):
+            qs = qs.filter(contact_type=contact_type)
+        temperature = self.request.query_params.get('temperature')
+        if temperature:
+            qs = qs.filter(temperature=temperature)
+        search = self.request.query_params.get('search')
+        if search:
+            from django.db.models import Q
+            qs = qs.filter(
+                Q(name__icontains=search) |
+                Q(company__icontains=search) |
+                Q(role__icontains=search)
+            )
+        return qs
+
+
+class CRMMeetingViewSet(viewsets.ModelViewSet):
+    queryset = CRMMeeting.objects.all()
+    serializer_class = CRMMeetingSerializer
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        meeting_type = self.request.query_params.get('type')
+        if meeting_type in ('group', 'one-on-one', 'follow-up'):
+            qs = qs.filter(meeting_type=meeting_type)
+        search = self.request.query_params.get('search')
+        if search:
+            from django.db.models import Q
+            qs = qs.filter(
+                Q(title__icontains=search) |
+                Q(description__icontains=search)
+            )
+        return qs

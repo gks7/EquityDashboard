@@ -105,3 +105,61 @@ class MoatRankingSerializer(serializers.ModelSerializer):
     class Meta:
         model = MoatRanking
         fields = '__all__'
+
+
+# ── CRM Serializers ──────────────────────────────────────────────────────────
+
+from api.models import CRMContact, CRMMeeting
+
+
+class CRMContactSerializer(serializers.ModelSerializer):
+    last_meeting = serializers.SerializerMethodField()
+    next_meeting = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CRMContact
+        fields = [
+            'id', 'name', 'role', 'company', 'contact_type', 'stage',
+            'temperature', 'value', 'health', 'created_at', 'updated_at',
+            'last_meeting', 'next_meeting',
+        ]
+
+    def get_last_meeting(self, obj):
+        from datetime import date
+        meeting = obj.meetings.filter(date__lte=date.today()).order_by('-date', '-time').first()
+        return meeting.date.isoformat() if meeting else None
+
+    def get_next_meeting(self, obj):
+        from datetime import date
+        meeting = obj.meetings.filter(date__gt=date.today()).order_by('date', 'time').first()
+        return meeting.date.isoformat() if meeting else None
+
+
+class CRMMeetingSerializer(serializers.ModelSerializer):
+    attendee_ids = serializers.PrimaryKeyRelatedField(
+        many=True, queryset=CRMContact.objects.all(),
+        source='attendees', write_only=True, required=False,
+    )
+    attendees_detail = CRMContactSerializer(source='attendees', many=True, read_only=True)
+
+    class Meta:
+        model = CRMMeeting
+        fields = [
+            'id', 'title', 'description', 'date', 'time', 'meeting_type',
+            'attendee_ids', 'attendees_detail', 'created_at', 'updated_at',
+        ]
+
+    def create(self, validated_data):
+        attendees = validated_data.pop('attendees', [])
+        meeting = CRMMeeting.objects.create(**validated_data)
+        meeting.attendees.set(attendees)
+        return meeting
+
+    def update(self, instance, validated_data):
+        attendees = validated_data.pop('attendees', None)
+        for attr, val in validated_data.items():
+            setattr(instance, attr, val)
+        instance.save()
+        if attendees is not None:
+            instance.attendees.set(attendees)
+        return instance
