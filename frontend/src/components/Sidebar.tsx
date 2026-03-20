@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
-import { LayoutDashboard, List, LineChart, Users, Settings, Sun, Moon, Shield, LogOut, TrendingUp, Activity } from "lucide-react";
+import { LayoutDashboard, List, LineChart, Users, Settings, Sun, Moon, Shield, LogOut, TrendingUp, Activity, Handshake } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 const ADMIN_EMAIL = "gabriel@igfwm.com";
@@ -14,6 +14,7 @@ const navItems = [
   { href: "/portfolio", label: "Portfolio", icon: LineChart },
   { href: "/igf-tr", label: "IGF TR", icon: TrendingUp },
   { href: "/moats", label: "Moats", icon: Shield },
+  { href: "/crm", label: "CRM", icon: Handshake },
   { href: "/analysts", label: "Analysts", icon: Users },
 ];
 
