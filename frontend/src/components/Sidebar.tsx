@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
-import { LayoutDashboard, List, LineChart, Users, Settings, Sun, Moon, Shield, LogOut, TrendingUp, Activity, Handshake, Database, ArrowLeftRight, ClipboardList } from "lucide-react";
+import { LayoutDashboard, List, LineChart, Users, Settings, Sun, Moon, Shield, LogOut, TrendingUp, Activity, Handshake, Database, ArrowLeftRight, ClipboardList, Wallet } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 const ADMIN_EMAIL = "gabriel@igfwm.com";
@@ -19,6 +19,7 @@ const navItems = [
   // BBG Integration — remove these 2 lines to revert
   { href: "/bbg-monitor", label: "BBG Monitor", icon: Database },
   { href: "/trades", label: "Trades", icon: ArrowLeftRight },
+  { href: "/positions", label: "Positions", icon: Wallet },
   { href: "/asset-register", label: "Asset Register", icon: ClipboardList },
 ];
 
