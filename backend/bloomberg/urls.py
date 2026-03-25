@@ -5,13 +5,22 @@ from bloomberg.views import (
     QuotaIncrementView, GapsView,
     DataStatusView, QuotaListView, FetchLogListView, DataPointView,
     TradeViewSet, InternalNAVViewSet, CalculateNAVView, AssetSearchView,
+    AssetRegisterViewSet, AssetRegistrationRequestViewSet, AssetRiskProxyViewSet,
+    PositionSnapshotViewSet,
 )
 
 router = DefaultRouter()
 router.register(r'trades', TradeViewSet, basename='bbg-trades')
 router.register(r'internal-nav', InternalNAVViewSet, basename='bbg-internal-nav')
+router.register(r'assets', AssetRegisterViewSet, basename='bbg-assets')
+router.register(r'asset-requests', AssetRegistrationRequestViewSet, basename='bbg-asset-requests')
+router.register(r'risk-proxies', AssetRiskProxyViewSet, basename='bbg-risk-proxies')
+router.register(r'positions', PositionSnapshotViewSet, basename='bbg-positions')
 
 urlpatterns = [
+    # Asset search must come before router to avoid conflict with assets/ ViewSet
+    path('assets/search/', AssetSearchView.as_view(), name='bbg-asset-search'),
+
     # ViewSet routes
     path('', include(router.urls)),
 
@@ -30,7 +39,4 @@ urlpatterns = [
 
     # NAV calculation
     path('internal-nav/calculate/', CalculateNAVView.as_view(), name='bbg-nav-calculate'),
-
-    # Asset search
-    path('assets/search/', AssetSearchView.as_view(), name='bbg-asset-search'),
 ]

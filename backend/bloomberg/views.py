@@ -7,10 +7,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from rest_framework.permissions import IsAdminUser
+
 from bloomberg.models import (
     BloombergAsset, BloombergField, BloombergFieldGroup,
     BloombergAssetException, BloombergDataPoint, BloombergFetchLog,
-    BloombergApiQuota, Trade, InternalNAV,
+    BloombergApiQuota, Trade, InternalNAV, AssetRiskProxy,
+    AssetRegistrationRequest, PositionSnapshot,
 )
 from bloomberg.serializers import (
     BloombergAssetSerializer, BloombergFieldSerializer,
@@ -19,6 +22,8 @@ from bloomberg.serializers import (
     FetchLogCreateSerializer, QuotaIncrementSerializer,
     BloombergDataPointSerializer, BloombergFetchLogSerializer,
     BloombergApiQuotaSerializer, TradeSerializer, InternalNAVSerializer,
+    BloombergAssetFullSerializer, AssetRiskProxySerializer,
+    AssetRegistrationRequestSerializer, PositionSnapshotSerializer,
 )
 from bloomberg.services import detect_gaps, get_data_freshness, calculate_nav
 
@@ -229,12 +234,191 @@ class TradeViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = Trade.objects.select_related('asset', 'entered_by')
         fund = self.request.query_params.get('fund')
+        portfolio = self.request.query_params.get('portfolio')
+        trade_status = self.request.query_params.get('trade_status')
+        date_from = self.request.query_params.get('date_from')
+        date_to = self.request.query_params.get('date_to')
         if fund:
             qs = qs.filter(fund=fund)
+        if portfolio:
+            qs = qs.filter(portfolio=portfolio)
+        if trade_status:
+            qs = qs.filter(trade_status=trade_status)
+        if date_from:
+            qs = qs.filter(trade_date__gte=date_from)
+        if date_to:
+            qs = qs.filter(trade_date__lte=date_to)
         return qs
 
     def perform_create(self, serializer):
-        serializer.save(entered_by=self.request.user)
+        trade = serializer.save(entered_by=self.request.user)
+        # If asset is not set but ticker_raw is provided, create registration request
+        if not trade.asset and trade.asset_ticker_raw:
+            # Check if a pending request already exists for this ticker
+            existing = AssetRegistrationRequest.objects.filter(
+                ticker_raw=trade.asset_ticker_raw,
+                status__in=['pending', 'in_progress'],
+            ).first()
+            if not existing:
+                AssetRegistrationRequest.objects.create(
+                    ticker_raw=trade.asset_ticker_raw,
+                    requested_by=self.request.user,
+                    requested_from_trade=trade,
+                )
+
+    @action(detail=False, methods=['get'])
+    def portfolios(self, request):
+        """GET /api/bbg/trades/portfolios/ — distinct portfolio values for dropdown."""
+        values = Trade.objects.exclude(portfolio='').values_list(
+            'portfolio', flat=True
+        ).distinct().order_by('portfolio')
+        return Response(list(values))
+
+
+# =========================================================================
+# Asset Register Endpoints
+# =========================================================================
+
+class AssetRegisterViewSet(viewsets.ModelViewSet):
+    """Full CRUD for BloombergAsset. Read for all authenticated users, write for admin only."""
+    serializer_class = BloombergAssetFullSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = BloombergAsset.objects.prefetch_related('risk_proxies')
+        q = self.request.query_params.get('q')
+        asset_group = self.request.query_params.get('asset_group')
+        is_active = self.request.query_params.get('is_active')
+        if q:
+            from django.db.models import Q as DBQ
+            qs = qs.filter(DBQ(code_bbg__icontains=q) | DBQ(name__icontains=q))
+        if asset_group:
+            qs = qs.filter(asset_group=asset_group)
+        if is_active is not None:
+            qs = qs.filter(is_active=is_active.lower() == 'true')
+        return qs
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAdminUser()]
+        return [IsAuthenticated()]
+
+
+class AssetRegistrationRequestViewSet(viewsets.ModelViewSet):
+    """CRUD + complete action for asset registration requests."""
+    serializer_class = AssetRegistrationRequestSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = AssetRegistrationRequest.objects.select_related(
+            'asset', 'requested_by', 'completed_by', 'requested_from_trade'
+        )
+        req_status = self.request.query_params.get('status')
+        if req_status:
+            qs = qs.filter(status=req_status)
+        return qs
+
+    def perform_create(self, serializer):
+        serializer.save(requested_by=self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def complete(self, request, pk=None):
+        """POST /api/bbg/asset-requests/{id}/complete/
+        Body: { asset_id: <id> }
+        Links the asset to the request and to all trades with matching ticker_raw.
+        """
+        from django.utils import timezone
+        reg_request = self.get_object()
+        asset_id = request.data.get('asset_id')
+        if not asset_id:
+            return Response({'error': 'asset_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            asset = BloombergAsset.objects.get(pk=asset_id)
+        except BloombergAsset.DoesNotExist:
+            return Response({'error': 'Asset not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Update the registration request
+        reg_request.asset = asset
+        reg_request.status = 'completed'
+        reg_request.completed_by = request.user
+        reg_request.completed_at = timezone.now()
+        reg_request.save()
+
+        # Link all trades with this ticker_raw to the newly registered asset
+        linked = Trade.objects.filter(
+            asset__isnull=True,
+            asset_ticker_raw=reg_request.ticker_raw,
+        ).update(asset=asset)
+
+        serializer = self.get_serializer(reg_request)
+        return Response({
+            **serializer.data,
+            'trades_linked': linked,
+        })
+
+
+class AssetRiskProxyViewSet(viewsets.ModelViewSet):
+    """CRUD for risk proxy configurations."""
+    serializer_class = AssetRiskProxySerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = AssetRiskProxy.objects.select_related('asset')
+        asset_id = self.request.query_params.get('asset')
+        if asset_id:
+            qs = qs.filter(asset_id=asset_id)
+        return qs
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAdminUser()]
+        return [IsAuthenticated()]
+
+
+# =========================================================================
+# Position Snapshot Endpoints
+# =========================================================================
+
+class PositionSnapshotViewSet(viewsets.ReadOnlyModelViewSet):
+    """Read-only position snapshots with filters."""
+    serializer_class = PositionSnapshotSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = PositionSnapshot.objects.select_related('asset')
+        fund = self.request.query_params.get('fund')
+        dt = self.request.query_params.get('date')
+        portfolio = self.request.query_params.get('portfolio')
+        asset_group = self.request.query_params.get('asset_group')
+        if fund:
+            qs = qs.filter(fund=fund)
+        if dt:
+            qs = qs.filter(date=dt)
+        if portfolio:
+            qs = qs.filter(portfolio=portfolio)
+        if asset_group:
+            qs = qs.filter(asset_group=asset_group)
+        return qs
+
+    @action(detail=False, methods=['get'])
+    def dates(self, request):
+        """GET /api/bbg/positions/dates/ -- available snapshot dates."""
+        dates = PositionSnapshot.objects.values_list('date', flat=True).distinct().order_by('-date')
+        return Response(list(dates))
+
+    @action(detail=False, methods=['get'])
+    def latest(self, request):
+        """GET /api/bbg/positions/latest/ -- latest snapshot (current positions)."""
+        latest_date = PositionSnapshot.objects.order_by('-date').values_list('date', flat=True).first()
+        if not latest_date:
+            return Response([])
+        qs = PositionSnapshot.objects.filter(date=latest_date).select_related('asset')
+        fund = request.query_params.get('fund')
+        if fund:
+            qs = qs.filter(fund=fund)
+        serializer = self.get_serializer(qs, many=True)
+        return Response({'date': latest_date, 'positions': serializer.data})
 
 
 # =========================================================================

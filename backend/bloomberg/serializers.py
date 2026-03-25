@@ -2,7 +2,8 @@ from rest_framework import serializers
 from bloomberg.models import (
     BloombergAsset, BloombergField, BloombergFieldGroup,
     BloombergAssetException, BloombergDataPoint, BloombergFetchLog,
-    BloombergApiQuota, Trade, InternalNAV,
+    BloombergApiQuota, Trade, InternalNAV, AssetRiskProxy,
+    AssetRegistrationRequest, PositionSnapshot,
 )
 
 
@@ -113,19 +114,70 @@ class BloombergApiQuotaSerializer(serializers.ModelSerializer):
 # --- Trade serializers ---
 
 class TradeSerializer(serializers.ModelSerializer):
-    asset_code = serializers.CharField(source='asset.code_bbg', read_only=True)
-    asset_name = serializers.CharField(source='asset.name', read_only=True)
+    asset_code = serializers.CharField(source='asset.code_bbg', read_only=True, default='')
+    asset_name = serializers.CharField(source='asset.name', read_only=True, default='')
     entered_by_name = serializers.CharField(source='entered_by.username', read_only=True,
                                             default=None)
     notional = serializers.FloatField(read_only=True)
+    weekday = serializers.CharField(read_only=True)
+    display_ticker = serializers.CharField(read_only=True)
 
     class Meta:
         model = Trade
-        fields = ['id', 'fund', 'asset', 'asset_code', 'asset_name', 'side',
-                  'quantity', 'price', 'currency', 'trade_date', 'settlement_date',
-                  'broker', 'notes', 'entered_by', 'entered_by_name', 'notional',
+        fields = ['id', 'fund', 'asset', 'asset_code', 'asset_name', 'asset_ticker_raw',
+                  'side', 'quantity', 'price', 'clean_price', 'currency',
+                  'trade_date', 'scheduled_date', 'settlement_date',
+                  'portfolio', 'broker', 'trader',
+                  'fee_per_unit', 'fee_total', 'amount', 'cash_amount',
+                  'trade_status', 'cmd', 'notes',
+                  'entered_by', 'entered_by_name', 'notional', 'weekday', 'display_ticker',
                   'created_at', 'updated_at']
         read_only_fields = ['entered_by', 'created_at', 'updated_at']
+
+
+# --- Asset Register serializers ---
+
+class AssetRiskProxySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AssetRiskProxy
+        fields = '__all__'
+
+
+class BloombergAssetFullSerializer(serializers.ModelSerializer):
+    """Full serializer for Asset Register form with nested risk proxies."""
+    risk_proxies = AssetRiskProxySerializer(many=True, read_only=True)
+
+    class Meta:
+        model = BloombergAsset
+        fields = '__all__'
+
+
+class AssetRegistrationRequestSerializer(serializers.ModelSerializer):
+    requested_by_name = serializers.CharField(source='requested_by.username', read_only=True,
+                                              default=None)
+    completed_by_name = serializers.CharField(source='completed_by.username', read_only=True,
+                                              default=None)
+    asset_code_bbg = serializers.CharField(source='asset.code_bbg', read_only=True, default=None)
+    trade_display = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AssetRegistrationRequest
+        fields = '__all__'
+        read_only_fields = ['requested_by', 'completed_by', 'completed_at', 'created_at', 'updated_at']
+
+    def get_trade_display(self, obj):
+        if obj.requested_from_trade:
+            t = obj.requested_from_trade
+            return f"{t.side.upper()} {t.quantity} {t.asset_ticker_raw} @ {t.price}"
+        return None
+
+
+# --- Position Snapshot serializers ---
+
+class PositionSnapshotSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PositionSnapshot
+        fields = '__all__'
 
 
 # --- Internal NAV serializers ---
