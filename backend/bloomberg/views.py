@@ -27,6 +27,106 @@ from bloomberg.serializers import (
 )
 from bloomberg.services import detect_gaps, get_data_freshness, calculate_nav
 
+import logging
+logger = logging.getLogger(__name__)
+
+
+def _apply_trade_to_position(trade):
+    """Apply a confirmed trade to the PositionSnapshot for trade_date.
+
+    Logic:
+    - Get or create the position for (trade_date, fund, ticker, portfolio)
+    - BUY: increase units_close, increase amount_transaction
+    - SELL: decrease units_close, increase amount_transaction
+    - Update avg_cost on buys using weighted average
+    - Update transaction P&L fields
+    """
+    ticker = trade.asset.code_bbg if trade.asset else trade.asset_ticker_raw
+    if not ticker:
+        return
+
+    fund = trade.fund or 'IGFWM TOTAL RETURN'
+    portfolio = trade.portfolio or 'DISCRETIONARY'
+    trade_date = trade.trade_date
+
+    # Find the most recent position for this asset to get carry-forward data
+    prev_position = PositionSnapshot.objects.filter(
+        fund=fund,
+        asset_ticker=ticker,
+        portfolio=portfolio,
+        date__lt=trade_date,
+    ).order_by('-date').first()
+
+    # Get or create today's position
+    position, created = PositionSnapshot.objects.get_or_create(
+        date=trade_date,
+        fund=fund,
+        asset_ticker=ticker,
+        portfolio=portfolio,
+        defaults={
+            'asset_group': (trade.asset.asset_group if trade.asset else ''),
+            'broker': trade.broker,
+            'asset_market': (trade.asset.asset_market if trade.asset else ''),
+            'asset': trade.asset,
+            'currency': trade.currency,
+            'contract_size': (trade.asset.contract_size if trade.asset else 1),
+            # Carry forward from previous position
+            'units_open': prev_position.units_close if prev_position else 0,
+            'units_close': prev_position.units_close if prev_position else 0,
+            'avg_cost': prev_position.avg_cost if prev_position else 0,
+            'price_open': prev_position.price_close if prev_position else None,
+            'amount_open': prev_position.amount_close if prev_position else 0,
+            'units_transaction': 0,
+            'amount_transaction': 0,
+            'pnl_transaction': 0,
+            'pnl_transaction_fee': 0,
+            'pnl_total': 0,
+        }
+    )
+
+    # Apply the trade
+    trade_units = trade.quantity
+    trade_amount = trade.amount or (trade.quantity * trade.price)
+    fee = trade.fee_total or 0
+
+    if trade.side == 'buy':
+        # Weighted average cost
+        old_units = position.units_close or 0
+        old_cost = position.avg_cost or 0
+        new_units = old_units + trade_units
+        if new_units > 0:
+            position.avg_cost = ((old_cost * old_units) + (trade.price * trade_units)) / new_units
+        position.units_close = new_units
+        position.units_transaction = (position.units_transaction or 0) + trade_units
+        position.amount_transaction = (position.amount_transaction or 0) + trade_amount
+    elif trade.side == 'sell':
+        position.units_close = (position.units_close or 0) - trade_units
+        position.units_transaction = (position.units_transaction or 0) - trade_units
+        position.amount_transaction = (position.amount_transaction or 0) - trade_amount
+        # Realized P&L on sell
+        cost_basis = (position.avg_cost or 0) * trade_units
+        position.pnl_transaction = (position.pnl_transaction or 0) + (trade_amount - cost_basis)
+
+    # Fees
+    position.pnl_transaction_fee = (position.pnl_transaction_fee or 0) - fee
+
+    # Update amount_close (units * price, but price may not be known yet for today)
+    if position.price_close and position.units_close:
+        cs = position.contract_size or 1
+        position.amount_close = position.units_close * position.price_close * cs
+
+    # Recalc total P&L
+    position.pnl_total = (
+        (position.pnl_open_position or 0) +
+        (position.pnl_transaction or 0) +
+        (position.pnl_transaction_fee or 0) +
+        (position.pnl_dividend or 0) +
+        (position.pnl_lending or 0)
+    )
+
+    position.save()
+    logger.info(f"Applied trade {trade.side} {trade_units} {ticker} to position on {trade_date}")
+
 
 # =========================================================================
 # BBG Agent Endpoints — called by the local Python agent
@@ -254,7 +354,6 @@ class TradeViewSet(viewsets.ModelViewSet):
         trade = serializer.save(entered_by=self.request.user)
         # If asset is not set but ticker_raw is provided, create registration request
         if not trade.asset and trade.asset_ticker_raw:
-            # Check if a pending request already exists for this ticker
             existing = AssetRegistrationRequest.objects.filter(
                 ticker_raw=trade.asset_ticker_raw,
                 status__in=['pending', 'in_progress'],
@@ -265,6 +364,27 @@ class TradeViewSet(viewsets.ModelViewSet):
                     requested_by=self.request.user,
                     requested_from_trade=trade,
                 )
+        # Apply trade to position snapshot
+        if trade.trade_status == 'confirmed':
+            _apply_trade_to_position(trade)
+
+    def perform_update(self, serializer):
+        old_status = self.get_object().trade_status
+        trade = serializer.save()
+        # If trade just became confirmed, apply to position
+        if trade.trade_status == 'confirmed' and old_status != 'confirmed':
+            _apply_trade_to_position(trade)
+
+    @action(detail=True, methods=['post'])
+    def confirm(self, request, pk=None):
+        """POST /api/bbg/trades/{id}/confirm/ — confirm trade and apply to position."""
+        trade = self.get_object()
+        if trade.trade_status == 'confirmed':
+            return Response({'detail': 'Trade already confirmed.'}, status=status.HTTP_400_BAD_REQUEST)
+        trade.trade_status = 'confirmed'
+        trade.save(update_fields=['trade_status', 'updated_at'])
+        _apply_trade_to_position(trade)
+        return Response(TradeSerializer(trade).data)
 
     @action(detail=False, methods=['get'])
     def portfolios(self, request):
@@ -273,6 +393,72 @@ class TradeViewSet(viewsets.ModelViewSet):
             'portfolio', flat=True
         ).distinct().order_by('portfolio')
         return Response(list(values))
+
+    @action(detail=False, methods=['post'])
+    def roll_positions(self, request):
+        """POST /api/bbg/trades/roll_positions/ — Roll yesterday's positions to today.
+        Called once per day (can be automated or triggered manually).
+        Copies the latest position snapshot to today's date, then applies
+        all confirmed trades for today."""
+        today = date.today()
+        # Find the most recent position date
+        latest_date = PositionSnapshot.objects.order_by('-date').values_list('date', flat=True).first()
+        if not latest_date:
+            return Response({'detail': 'No positions exist yet.'}, status=status.HTTP_400_BAD_REQUEST)
+        if latest_date >= today:
+            return Response({'detail': f'Positions already exist for {today}.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Copy all positions from latest_date to today
+        latest_positions = PositionSnapshot.objects.filter(date=latest_date)
+        created = 0
+        for pos in latest_positions:
+            PositionSnapshot.objects.update_or_create(
+                date=today,
+                fund=pos.fund,
+                asset_ticker=pos.asset_ticker,
+                portfolio=pos.portfolio,
+                defaults={
+                    'asset_group': pos.asset_group,
+                    'broker': pos.broker,
+                    'asset_market': pos.asset_market,
+                    'asset': pos.asset,
+                    'is_leveraged': pos.is_leveraged,
+                    'units_open': pos.units_close,  # yesterday's close = today's open
+                    'units_close': pos.units_close,  # same until trades modify it
+                    'units_transaction': 0,
+                    'units_lending': pos.units_lending,
+                    'units_margin': pos.units_margin,
+                    'currency': pos.currency,
+                    'avg_cost': pos.avg_cost,
+                    'price_open': pos.price_close,  # yesterday's close = today's open
+                    'price_close': None,  # not known yet
+                    'contract_size': pos.contract_size,
+                    'amount_open': pos.amount_close,
+                    'amount_close': None,
+                    'amount_transaction': 0,
+                    'pnl_open_position': 0,
+                    'pnl_transaction': 0,
+                    'pnl_transaction_fee': 0,
+                    'pnl_dividend': 0,
+                    'pnl_lending': 0,
+                    'pnl_total': 0,
+                }
+            )
+            created += 1
+
+        # Now apply all confirmed trades for today
+        todays_trades = Trade.objects.filter(trade_date=today, trade_status='confirmed')
+        applied = 0
+        for trade in todays_trades:
+            _apply_trade_to_position(trade)
+            applied += 1
+
+        return Response({
+            'rolled_from': str(latest_date),
+            'rolled_to': str(today),
+            'positions_rolled': created,
+            'trades_applied': applied,
+        })
 
 
 # =========================================================================
