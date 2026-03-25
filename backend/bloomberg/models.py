@@ -61,7 +61,7 @@ class BloombergAsset(models.Model):
     risk_weight = models.FloatField(default=100, help_text="Market exposure weight %")
     asset_class = models.CharField(max_length=50, blank=True, default='',
                                    help_text='Equity, Fixed Income, Commodities, etc.')
-    country = models.CharField(max_length=10, blank=True, default='')
+    country = models.CharField(max_length=100, blank=True, default='')
     risk_currency = models.CharField(max_length=10, blank=True, default='')
     sector = models.CharField(max_length=100, blank=True, default='')
     risk_level = models.IntegerField(null=True, blank=True, help_text="1-5 scale")

@@ -1,9 +1,8 @@
 """
-Data migration: load Bloomberg data from fixture.
-Imports all assets, fields, field groups, data points, positions, and NAV entries.
+Data migration: widen country field, then load Bloomberg data from fixture.
 """
 import os
-from django.db import migrations
+from django.db import migrations, models
 from django.core.management import call_command
 
 
@@ -17,7 +16,6 @@ def load_fixture(apps, schema_editor):
 
 
 def reverse_load(apps, schema_editor):
-    # On reverse, clear the tables (optional — won't delete if data was modified)
     pass
 
 
@@ -27,5 +25,12 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        # Widen country field BEFORE loading data (South Korea = 11 chars > old max 10)
+        migrations.AlterField(
+            model_name='bloombergasset',
+            name='country',
+            field=models.CharField(blank=True, default='', max_length=100),
+        ),
+        # Now load the fixture
         migrations.RunPython(load_fixture, reverse_load),
     ]
