@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "finance",
     "api",
+    "bloomberg",  # BBG data integration — remove this line to revert
 ]
 
 MIDDLEWARE = [

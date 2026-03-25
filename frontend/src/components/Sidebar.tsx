@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
-import { LayoutDashboard, List, LineChart, Users, Settings, Sun, Moon, Shield, LogOut, TrendingUp, Activity, Handshake } from "lucide-react";
+import { LayoutDashboard, List, LineChart, Users, Settings, Sun, Moon, Shield, LogOut, TrendingUp, Activity, Handshake, Database, ArrowLeftRight } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 const ADMIN_EMAIL = "gabriel@igfwm.com";
@@ -16,6 +16,9 @@ const navItems = [
   { href: "/moats", label: "Moats", icon: Shield },
   { href: "/crm", label: "CRM", icon: Handshake },
   { href: "/analysts", label: "Analysts", icon: Users },
+  // BBG Integration — remove these 2 lines to revert
+  { href: "/bbg-monitor", label: "BBG Monitor", icon: Database },
+  { href: "/trades", label: "Trades", icon: ArrowLeftRight },
 ];
 
 export function Sidebar() {
