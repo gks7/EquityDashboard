@@ -138,7 +138,9 @@ class AgentConfigView(APIView):
 
     def get(self, request):
         data = {
-            'assets': BloombergAsset.objects.filter(is_active=True),
+            'assets': BloombergAsset.objects.filter(
+                is_active=True, is_bbg_ticker=True, request_bbg_data=True
+            ),
             'fields': BloombergField.objects.filter(is_active=True),
             'field_groups': BloombergFieldGroup.objects.filter(
                 field__is_active=True
