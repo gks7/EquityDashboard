@@ -6,7 +6,7 @@ from bloomberg.views import (
     DataStatusView, QuotaListView, FetchLogListView, DataPointView,
     TradeViewSet, InternalNAVViewSet, CalculateNAVView, AssetSearchView,
     AssetRegisterViewSet, AssetRegistrationRequestViewSet, AssetRiskProxyViewSet,
-    PositionSnapshotViewSet,
+    PositionSnapshotViewSet, FieldUpdateFrequenciesView, FieldGroupTrimView,
 )
 
 router = DefaultRouter()
@@ -39,4 +39,8 @@ urlpatterns = [
 
     # NAV calculation
     path('internal-nav/calculate/', CalculateNAVView.as_view(), name='bbg-nav-calculate'),
+
+    # Field management
+    path('fields/update_frequencies/', FieldUpdateFrequenciesView.as_view(), name='bbg-field-update-frequencies'),
+    path('field-groups/trim/', FieldGroupTrimView.as_view(), name='bbg-field-group-trim'),
 ]

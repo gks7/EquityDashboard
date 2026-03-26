@@ -755,6 +755,62 @@ class CalculateNAVView(APIView):
 # Asset search for frontend autocomplete
 # =========================================================================
 
+class FieldUpdateFrequenciesView(APIView):
+    """POST /api/bbg/fields/update_frequencies/ — Bulk update field frequencies."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        updates = request.data.get('updates', [])
+        if not updates:
+            return Response({'error': 'updates list is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        count = 0
+        for item in updates:
+            field_id = item.get('field_id')
+            frequency = item.get('frequency')
+            if not field_id or frequency is None:
+                continue
+            defaults = {'frequency': frequency}
+            if 'is_critical' in item:
+                defaults['is_critical'] = item['is_critical']
+            updated = BloombergField.objects.filter(pk=field_id).update(**defaults)
+            count += updated
+
+        return Response({'updated': count})
+
+
+class FieldGroupTrimView(APIView):
+    """POST /api/bbg/field-groups/trim/ — Delete field groups not in keep list.
+
+    Body: { "asset_group": "Stock", "keep_field_names": ["PxClose", "NetChg", ...] }
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        asset_group = request.data.get('asset_group')
+        keep_names = request.data.get('keep_field_names', [])
+        if not asset_group or not keep_names:
+            return Response(
+                {'error': 'asset_group and keep_field_names are required'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        to_delete = BloombergFieldGroup.objects.filter(
+            asset_group=asset_group,
+        ).exclude(
+            field__name__in=keep_names,
+        )
+        count = to_delete.count()
+        to_delete.delete()
+
+        remaining = BloombergFieldGroup.objects.filter(asset_group=asset_group).count()
+        return Response({
+            'deleted': count,
+            'remaining': remaining,
+            'asset_group': asset_group,
+        })
+
+
 class AssetSearchView(APIView):
     """GET /api/bbg/assets/search/?q=... — Autocomplete for asset selection."""
     permission_classes = [IsAuthenticated]
