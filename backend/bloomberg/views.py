@@ -617,6 +617,88 @@ class PositionSnapshotViewSet(viewsets.ReadOnlyModelViewSet):
         return Response({'date': latest_date, 'positions': serializer.data})
 
     @action(detail=False, methods=['post'])
+    def bulk_upload(self, request):
+        """POST /api/bbg/positions/bulk_upload/
+        Upload position snapshots from external source (e.g., Bloomberg_upload.xlsm).
+        Body: [{ "date": "2026-03-25", "fund": "...", "portfolio": "...", ... }, ...]
+        Uses update_or_create keyed on (date, fund, asset_ticker, portfolio).
+        """
+        rows = request.data
+        if not isinstance(rows, list):
+            return Response({'error': 'Expected a list of position objects'}, status=400)
+
+        # Build asset lookup: code_bbg -> BloombergAsset
+        asset_lookup = {}
+        for a in BloombergAsset.objects.filter(is_active=True):
+            asset_lookup[a.code_bbg] = a
+
+        created = 0
+        updated = 0
+        errors = []
+
+        for row in rows:
+            try:
+                ticker = row.get('asset_ticker', '')
+                key = {
+                    'date': row['date'],
+                    'fund': row['fund'],
+                    'asset_ticker': ticker,
+                    'portfolio': row.get('portfolio', ''),
+                }
+                defaults = {
+                    'asset_group': row.get('asset_group', ''),
+                    'broker': row.get('broker', ''),
+                    'asset_market': row.get('asset_market', ''),
+                    'asset': asset_lookup.get(ticker),
+                    'is_leveraged': row.get('is_leveraged', False),
+                    'units_open': row.get('units_open', 0),
+                    'units_close': row.get('units_close', 0),
+                    'units_transaction': row.get('units_transaction', 0),
+                    'units_lending': row.get('units_lending', 0),
+                    'units_margin': row.get('units_margin', 0),
+                    'currency': row.get('currency', 'USD'),
+                    'avg_cost': row.get('avg_cost'),
+                    'price_open': row.get('price_open'),
+                    'price_close': row.get('price_close'),
+                    'price_open_source': row.get('price_open_source', ''),
+                    'price_close_source': row.get('price_close_source', ''),
+                    'price_open_date': row.get('price_open_date') or None,
+                    'price_close_date': row.get('price_close_date') or None,
+                    'price_open_official': row.get('price_open_official', True),
+                    'price_close_official': row.get('price_close_official', True),
+                    'delta_open': row.get('delta_open'),
+                    'delta_close': row.get('delta_close'),
+                    'underlying_price_open': row.get('underlying_price_open'),
+                    'underlying_price_close': row.get('underlying_price_close'),
+                    'contract_size': row.get('contract_size', 1),
+                    'avg_price_transaction': row.get('avg_price_transaction'),
+                    'amount_open': row.get('amount_open'),
+                    'amount_close': row.get('amount_close'),
+                    'amount_transaction': row.get('amount_transaction'),
+                    'pnl_open_position': row.get('pnl_open_position'),
+                    'pnl_transaction': row.get('pnl_transaction'),
+                    'pnl_transaction_fee': row.get('pnl_transaction_fee'),
+                    'pnl_dividend': row.get('pnl_dividend'),
+                    'pnl_lending': row.get('pnl_lending'),
+                    'pnl_total': row.get('pnl_total'),
+                }
+                obj, was_created = PositionSnapshot.objects.update_or_create(
+                    **key, defaults=defaults
+                )
+                if was_created:
+                    created += 1
+                else:
+                    updated += 1
+            except Exception as e:
+                errors.append(f"{row.get('asset_ticker', '?')}: {str(e)}")
+
+        return Response({
+            'created': created,
+            'updated': updated,
+            'errors': errors[:20],
+        })
+
+    @action(detail=False, methods=['post'])
     def update_prices(self, request):
         """POST /api/bbg/positions/update_prices/
         Updates position prices from BloombergDataPoint and recalculates P&L.
