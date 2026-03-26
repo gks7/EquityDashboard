@@ -617,6 +617,18 @@ class PositionSnapshotViewSet(viewsets.ReadOnlyModelViewSet):
         return Response({'date': latest_date, 'positions': serializer.data})
 
     @action(detail=False, methods=['post'])
+    def clear_date(self, request):
+        """POST /api/bbg/positions/clear_date/
+        Delete all positions for a given date.
+        Body: { "date": "2026-03-26" }
+        """
+        target_date = request.data.get('date')
+        if not target_date:
+            return Response({'error': 'date is required'}, status=400)
+        count, _ = PositionSnapshot.objects.filter(date=target_date).delete()
+        return Response({'deleted': count, 'date': target_date})
+
+    @action(detail=False, methods=['post'])
     def bulk_upload(self, request):
         """POST /api/bbg/positions/bulk_upload/
         Upload position snapshots from external source (e.g., Bloomberg_upload.xlsm).
