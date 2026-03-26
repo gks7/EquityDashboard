@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -23,10 +24,38 @@ const navItems = [
   { href: "/asset-register", label: "Asset Register", icon: ClipboardList },
 ];
 
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 export function Sidebar() {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const { user, logout } = useAuth();
+  const [pendingCount, setPendingCount] = useState(0);
+
+  const fetchPendingCount = useCallback(async () => {
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("access") : null;
+      if (!token) return;
+      const res = await fetch(`${API}/api/bbg/asset-requests/pending_count/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPendingCount(data.count || 0);
+      }
+    } catch { /* silent */ }
+  }, []);
+
+  useEffect(() => {
+    fetchPendingCount();
+    const interval = setInterval(fetchPendingCount, 60_000);
+    return () => clearInterval(interval);
+  }, [fetchPendingCount]);
+
+  // Re-fetch on navigation
+  useEffect(() => {
+    fetchPendingCount();
+  }, [pathname, fetchPendingCount]);
 
   // Generate initials from user name
   const getInitials = () => {
@@ -83,6 +112,11 @@ export function Sidebar() {
             >
               <Icon className={`w-4 h-4 ${isActive ? "text-blue-600 dark:text-blue-400" : ""}`} />
               {label}
+              {href === "/asset-register" && pendingCount > 0 && (
+                <span className="ml-auto inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold text-white bg-red-500 rounded-full">
+                  {pendingCount > 99 ? "99+" : pendingCount}
+                </span>
+              )}
             </Link>
           );
         })}

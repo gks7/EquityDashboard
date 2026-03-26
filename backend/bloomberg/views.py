@@ -507,6 +507,14 @@ class AssetRegistrationRequestViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(requested_by=self.request.user)
 
+    @action(detail=False, methods=['get'])
+    def pending_count(self, request):
+        """GET /api/bbg/asset-requests/pending_count/ -- count of pending requests."""
+        count = AssetRegistrationRequest.objects.filter(
+            status__in=['pending', 'in_progress']
+        ).count()
+        return Response({'count': count})
+
     @action(detail=True, methods=['post'])
     def complete(self, request, pk=None):
         """POST /api/bbg/asset-requests/{id}/complete/
@@ -605,6 +613,81 @@ class PositionSnapshotViewSet(viewsets.ReadOnlyModelViewSet):
             qs = qs.filter(fund=fund)
         serializer = self.get_serializer(qs, many=True)
         return Response({'date': latest_date, 'positions': serializer.data})
+
+    @action(detail=False, methods=['post'])
+    def update_prices(self, request):
+        """POST /api/bbg/positions/update_prices/
+        Updates position prices from BloombergDataPoint and recalculates P&L.
+        Body: { "date": "2026-03-25" }
+        """
+        target_date = request.data.get('date', str(date.today()))
+
+        positions = PositionSnapshot.objects.filter(date=target_date).select_related('asset')
+        if not positions.exists():
+            return Response({'date': target_date, 'updated': 0, 'skipped': 0,
+                             'error': 'No positions found for this date'})
+
+        # Pre-fetch PxClose prices for all assets on this date
+        px_field = BloombergField.objects.filter(name='PxClose').first()
+        idx_field = BloombergField.objects.filter(name='IndexPxClose1D').first()
+
+        price_map = {}  # asset_id -> (value, date)
+        if px_field:
+            for dp in BloombergDataPoint.objects.filter(field=px_field, date=target_date):
+                price_map[dp.asset_id] = (dp.value, dp.date)
+        if idx_field:
+            for dp in BloombergDataPoint.objects.filter(field=idx_field, date=target_date):
+                if dp.asset_id not in price_map:
+                    price_map[dp.asset_id] = (dp.value, dp.date)
+
+        updated = 0
+        skipped = 0
+
+        for pos in positions:
+            if not pos.asset_id:
+                skipped += 1
+                continue
+
+            price_info = price_map.get(pos.asset_id)
+
+            # Fallback: most recent price before target_date
+            if not price_info:
+                fallback_fields = [f for f in [px_field, idx_field] if f]
+                latest_dp = BloombergDataPoint.objects.filter(
+                    asset_id=pos.asset_id,
+                    field__in=fallback_fields,
+                    date__lte=target_date,
+                    value__isnull=False,
+                ).order_by('-date').first()
+                if latest_dp:
+                    price_info = (latest_dp.value, latest_dp.date)
+
+            if not price_info or price_info[0] is None:
+                skipped += 1
+                continue
+
+            price_val, price_dt = price_info
+            pos.price_close = price_val
+            pos.price_close_source = 'BLOOMBERG'
+            pos.price_close_date = price_dt
+
+            contract = pos.contract_size or 1
+            units = pos.units_close or 0
+            avg_cost = pos.avg_cost or 0
+
+            pos.amount_close = units * price_val * contract
+            pos.pnl_open_position = (price_val - avg_cost) * units * contract
+            pos.pnl_total = (
+                (pos.pnl_open_position or 0) +
+                (pos.pnl_transaction or 0) +
+                (pos.pnl_transaction_fee or 0) +
+                (pos.pnl_dividend or 0) +
+                (pos.pnl_lending or 0)
+            )
+            pos.save()
+            updated += 1
+
+        return Response({'date': target_date, 'updated': updated, 'skipped': skipped})
 
 
 # =========================================================================
