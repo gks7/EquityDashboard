@@ -5,8 +5,9 @@ import { authFetch } from "@/lib/authFetch";
 import Link from "next/link";
 import {
   Plus, Trash2, ArrowUpRight, ArrowDownRight, Search,
-  AlertTriangle, ChevronDown, ChevronUp,
+  AlertTriangle, ChevronDown, ChevronUp, CheckCircle2,
 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -52,13 +53,16 @@ interface Trade {
 
 const STATUS_COLORS: Record<string, string> = {
   pending: "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300",
-  checked: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300",
+  confirmed: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300",
+  checked: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300",
   cancelled: "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400",
 };
 
 type SortKey = "trade_date" | "fund" | "portfolio" | "display_ticker" | "quantity" | "price" | "notional" | "trade_status";
 
 export default function TradesPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.is_staff === true;
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -75,7 +79,7 @@ export default function TradesPage() {
   const [sortAsc, setSortAsc] = useState(false);
 
   // Form state
-  const [fund, setFund] = useState("");
+  const [fund, setFund] = useState("IGFWM TOTAL RETURN");
   const [assetId, setAssetId] = useState<number | null>(null);
   const [assetSearch, setAssetSearch] = useState("");
   const [assetResults, setAssetResults] = useState<Asset[]>([]);
@@ -258,6 +262,15 @@ export default function TradesPage() {
       fetchTrades();
     } catch (e) {
       console.error("Failed to delete trade:", e);
+    }
+  };
+
+  const confirmTrade = async (id: number) => {
+    try {
+      const res = await authFetch(`${API}/api/bbg/trades/${id}/confirm/`, { method: "POST" });
+      if (res.ok) fetchTrades();
+    } catch (e) {
+      console.error("Failed to confirm trade:", e);
     }
   };
 
@@ -486,6 +499,7 @@ export default function TradesPage() {
               <label className={labelCls}>Status</label>
               <select value={tradeStatus} onChange={e => setTradeStatus(e.target.value)} className={inputCls}>
                 <option value="pending">Pending</option>
+                <option value="confirmed">Confirmed</option>
                 <option value="checked">Checked</option>
                 <option value="cancelled">Cancelled</option>
               </select>
@@ -534,6 +548,7 @@ export default function TradesPage() {
           {[
             { label: "All", value: "" },
             { label: "Pending", value: "pending" },
+            { label: "Confirmed", value: "confirmed" },
             { label: "Checked", value: "checked" },
             { label: "Cancelled", value: "cancelled" },
           ].map(s => (
@@ -662,10 +677,19 @@ export default function TradesPage() {
                   </td>
                   <td className="py-1.5 px-2 text-slate-400">{t.cmd || "—"}</td>
                   <td className="py-1.5 px-2">
-                    <button onClick={() => deleteTrade(t.id)}
-                      className="p-1 rounded text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition">
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      {isAdmin && t.trade_status === "pending" && (
+                        <button onClick={() => confirmTrade(t.id)}
+                          title="Confirm trade"
+                          className="p-1 rounded text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      <button onClick={() => deleteTrade(t.id)}
+                        className="p-1 rounded text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
