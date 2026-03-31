@@ -590,48 +590,51 @@ export default function DashboardPage() {
 
       {/* ─── Portfolio Breakdown ─────────────────────────────────── */}
       <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm overflow-hidden">
-        <table className="w-full text-xs sm:text-sm">
+        <table className="w-full text-[11px] sm:text-xs">
           <thead>
-            <tr className="border-b border-slate-200 dark:border-slate-700 text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-              <th className="text-left px-3 sm:px-4 py-2.5"></th>
-              <th className="text-right px-3 sm:px-4 py-2.5">Mkt Value</th>
-              <th className="text-right px-3 sm:px-4 py-2.5">1D P&L</th>
-              <th className="text-right px-3 sm:px-4 py-2.5 hidden sm:table-cell">1D Return</th>
-              <th className="text-right px-3 sm:px-4 py-2.5">% Portfolio</th>
+            <tr className="border-b border-slate-200 dark:border-slate-700 text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              <th className="text-left px-3 py-1.5"></th>
+              <th className="text-right px-3 py-1.5">Mkt Value</th>
+              <th className="text-right px-3 py-1.5">1D P&L</th>
+              <th className="text-right px-3 py-1.5 hidden sm:table-cell">1D Return</th>
+              <th className="text-right px-3 py-1.5">% Portfolio</th>
             </tr>
           </thead>
           <tbody>
             {breakdown.map((row, i) => {
               const isTotal = row.label === "Portfolio Total";
               const isGroup = row.bold && !isTotal;
+              const isSub = row.indent > 0;
               return (
                 <tr
                   key={`${row.label}-${row.indent}-${i}`}
                   className={`
-                    ${isTotal ? "bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700" : ""}
-                    ${isGroup ? "border-t border-slate-100 dark:border-slate-800" : ""}
+                    ${isTotal ? "bg-slate-50 dark:bg-slate-800/60" : ""}
+                    ${isGroup ? "bg-slate-50/60 dark:bg-slate-800/30" : ""}
+                    ${isSub && i % 2 === 0 ? "bg-slate-25 dark:bg-white/[0.015]" : ""}
+                    ${isTotal || isGroup ? "border-t border-slate-200/80 dark:border-slate-700/60" : ""}
                   `}
                 >
                   <td
-                    className={`px-3 sm:px-4 py-2 text-slate-900 dark:text-white ${row.bold ? "font-bold" : "font-medium text-slate-500 dark:text-slate-400"}`}
-                    style={{ paddingLeft: row.indent ? `${(row.indent * 20) + 16}px` : undefined }}
+                    className={`px-3 py-1 ${row.bold ? "font-bold text-slate-900 dark:text-white" : "font-medium text-slate-500 dark:text-slate-400"}`}
+                    style={{ paddingLeft: row.indent ? `${(row.indent * 16) + 12}px` : undefined }}
                   >
                     {row.label}
                   </td>
-                  <td className={`px-3 sm:px-4 py-2 text-right tabular-nums ${row.bold ? "font-bold text-slate-900 dark:text-white" : "text-slate-600 dark:text-slate-400"}`}>
+                  <td className={`px-3 py-1 text-right tabular-nums ${row.bold ? "font-bold text-slate-900 dark:text-white" : "text-slate-600 dark:text-slate-400"}`}>
                     {row.data.mv >= 1e6
                       ? `${(row.data.mv / 1e6).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}M`
                       : row.data.mv.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                   </td>
-                  <td className={`px-3 sm:px-4 py-2 text-right tabular-nums font-medium ${row.data.pnl >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                  <td className={`px-3 py-1 text-right tabular-nums font-medium ${row.data.pnl >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
                     {row.data.pnl >= 0 ? "" : "("}
                     {Math.abs(row.data.pnl).toLocaleString(undefined, { maximumFractionDigits: 1 })}
                     {row.data.pnl < 0 ? ")" : ""}
                   </td>
-                  <td className={`px-3 sm:px-4 py-2 text-right tabular-nums font-medium hidden sm:table-cell ${row.data.ret >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
-                    {row.data.ret >= 0 ? "" : ""}{row.data.ret.toFixed(2)}%
+                  <td className={`px-3 py-1 text-right tabular-nums font-medium hidden sm:table-cell ${row.data.ret >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                    {row.data.ret.toFixed(2)}%
                   </td>
-                  <td className={`px-3 sm:px-4 py-2 text-right tabular-nums ${row.bold ? "font-bold text-slate-900 dark:text-white" : "text-slate-500 dark:text-slate-400"}`}>
+                  <td className={`px-3 py-1 text-right tabular-nums ${row.bold ? "font-bold text-slate-900 dark:text-white" : "text-slate-500 dark:text-slate-400"}`}>
                     {row.data.pct.toFixed(1)}%
                   </td>
                 </tr>
