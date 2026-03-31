@@ -450,16 +450,16 @@ export default function DashboardPage() {
 
   // ─── Render ────────────────────────────────────────────────────────
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="w-full max-w-6xl mx-auto space-y-5 sm:space-y-6">
       {/* ─── Header ─────────────────────────────────────────────── */}
-      <div className="flex items-end justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-1">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
             Portfolio Dashboard
           </h1>
-          <p className="text-sm text-slate-500 mt-0.5">Real-time overview</p>
+          <p className="text-xs sm:text-sm text-slate-400 mt-0.5">Real-time overview</p>
         </div>
-        <p className="text-xs text-slate-400 font-medium">
+        <p className="text-[11px] sm:text-xs text-slate-400 font-medium tabular-nums">
           Last updated:{" "}
           {lastUpdated
             ? new Date(lastUpdated).toLocaleString(undefined, {
@@ -474,26 +474,26 @@ export default function DashboardPage() {
       </div>
 
       {/* ─── Hero Strip ─────────────────────────────────────────── */}
-      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm p-6">
-        <div className="flex flex-wrap items-center gap-x-10 gap-y-4">
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm p-4 sm:p-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:items-center gap-4 lg:gap-x-10 lg:gap-y-4">
           {/* Total Value */}
-          <div>
+          <div className="col-span-2 sm:col-span-1">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">
               Total Value
             </p>
-            <p className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+            <p className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
               ${fmt(totalValue)}
             </p>
           </div>
 
           {/* 1D P&L */}
-          <div>
+          <div className="col-span-2 sm:col-span-1">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">
               1D P&L
             </p>
             <div className="flex items-center gap-2">
               <span
-                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-sm font-bold ${totalDailyPL >= 0
+                className={`inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full text-xs sm:text-sm font-bold ${totalDailyPL >= 0
                   ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400"
                   : "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400"
                   }`}
@@ -511,15 +511,15 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Divider */}
-          <div className="hidden sm:block h-10 w-px bg-slate-200 dark:bg-slate-700" />
+          {/* Divider — desktop only */}
+          <div className="hidden lg:block h-10 w-px bg-slate-200 dark:bg-slate-700" />
 
           {/* Equity weight */}
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">
               Equities
             </p>
-            <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{eqPct}%</p>
+            <p className="text-base sm:text-lg font-bold text-blue-600 dark:text-blue-400">{eqPct}%</p>
           </div>
 
           {/* FI weight */}
@@ -527,7 +527,7 @@ export default function DashboardPage() {
             <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">
               Fixed Income
             </p>
-            <p className="text-lg font-bold text-teal-600 dark:text-teal-400">{fiPct}%</p>
+            <p className="text-base sm:text-lg font-bold text-teal-600 dark:text-teal-400">{fiPct}%</p>
           </div>
 
           {/* Positions */}
@@ -535,18 +535,18 @@ export default function DashboardPage() {
             <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">
               Positions
             </p>
-            <p className="text-lg font-bold text-slate-900 dark:text-white">{holdings.length}</p>
+            <p className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">{holdings.length}</p>
           </div>
         </div>
       </div>
 
       {/* ─── Tab Switcher ───────────────────────────────────────── */}
-      <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-fit">
+      <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-full sm:w-fit">
         {(["equities", "fi"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setActiveTab(t)}
-            className={`px-5 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === t
+            className={`flex-1 sm:flex-none px-5 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === t
               ? "bg-white dark:bg-[#111827] text-slate-900 dark:text-white shadow-sm"
               : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
               }`}
@@ -558,18 +558,18 @@ export default function DashboardPage() {
 
       {/* ─── EQUITIES TAB ─────────────────────────────────────── */}
       {activeTab === "equities" && (
-        <div className="space-y-6">
+        <div className="space-y-5 sm:space-y-6">
 
           {/* ── Equity PnL + Top/Bottom 3 ─────────────────────────── */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
 
             {/* Equity PnL do Dia */}
-            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm p-5 flex flex-col justify-between">
+            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm p-4 sm:p-5 flex flex-col justify-between">
               <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-3">
                 PnL do Dia — Equities
               </p>
               <div>
-                <p className={`text-2xl font-bold tabular-nums ${eqDailyPL >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                <p className={`text-xl sm:text-2xl font-bold tabular-nums ${eqDailyPL >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
                   {eqDailyPL >= 0 ? "+" : ""}${fmt(eqDailyPL)}
                 </p>
                 <p className={`text-sm font-semibold mt-1 ${eqDailyPLPct >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
@@ -579,15 +579,15 @@ export default function DashboardPage() {
             </div>
 
             {/* Top 3 */}
-            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm p-5">
+            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm p-4 sm:p-5">
               <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-3">
                 Top 3 do Dia
               </p>
               <div className="space-y-2.5">
                 {top3.length === 0 && <p className="text-xs text-slate-400">Sem dados</p>}
                 {top3.map((h) => (
-                  <div key={h.id} className="flex items-center justify-between">
-                    <div>
+                  <div key={h.id} className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
                       <span className="text-sm font-bold text-slate-800 dark:text-white">{h.ticker ?? h.isin}</span>
                       {h.chg_pct_1d != null && (
                         <span className="ml-2 text-xs font-semibold text-emerald-500">
@@ -595,7 +595,7 @@ export default function DashboardPage() {
                         </span>
                       )}
                     </div>
-                    <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                    <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums shrink-0">
                       +${fmt(h.pnl_1d!)}
                     </span>
                   </div>
@@ -604,15 +604,15 @@ export default function DashboardPage() {
             </div>
 
             {/* Bottom 3 */}
-            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm p-5">
+            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm p-4 sm:p-5">
               <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-3">
                 Bottom 3 do Dia
               </p>
               <div className="space-y-2.5">
                 {bottom3.length === 0 && <p className="text-xs text-slate-400">Sem dados</p>}
                 {bottom3.map((h) => (
-                  <div key={h.id} className="flex items-center justify-between">
-                    <div>
+                  <div key={h.id} className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
                       <span className="text-sm font-bold text-slate-800 dark:text-white">{h.ticker ?? h.isin}</span>
                       {h.chg_pct_1d != null && (
                         <span className={`ml-2 text-xs font-semibold ${(h.chg_pct_1d ?? 0) >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
@@ -620,7 +620,7 @@ export default function DashboardPage() {
                         </span>
                       )}
                     </div>
-                    <span className={`text-sm font-semibold tabular-nums ${(h.pnl_1d ?? 0) >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                    <span className={`text-sm font-semibold tabular-nums shrink-0 ${(h.pnl_1d ?? 0) >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
                       {(h.pnl_1d ?? 0) >= 0 ? "+" : ""}${fmt(h.pnl_1d!)}
                     </span>
                   </div>
@@ -639,68 +639,73 @@ export default function DashboardPage() {
               return BENCHMARKS.includes(base);
             };
             return (
-              <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm p-5">
+              <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm p-4 sm:p-5">
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-4">
                   1D % Change — All Equities
                 </p>
-                <div className="flex items-end gap-[3px]" style={{ height: 160 }}>
-                  {barChartData.map((h) => {
-                    const pct = h.chg_pct_1d ?? 0;
-                    const barH = Math.max((Math.abs(pct) / maxAbs) * 60, 2);
-                    const positive = pct >= 0;
-                    const bench = isBenchmark(h.ticker);
-                    const label = h.ticker ? h.ticker.split(/[\s.\/]+/)[0] : (h.isin ?? "");
-                    return (
-                      <div
-                        key={h.id}
-                        className="flex flex-col items-center flex-1 min-w-0"
-                        style={{ maxWidth: 48 }}
-                      >
-                        {/* Value label */}
-                        <span
-                          className={`text-[9px] font-semibold tabular-nums mb-0.5 ${positive ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
-                            }`}
+                <div className="overflow-x-auto -mx-4 sm:-mx-5 px-4 sm:px-5 pb-2">
+                  <div
+                    className="flex items-end gap-1 sm:gap-[3px]"
+                    style={{
+                      height: 140,
+                      minWidth: barChartData.length * 44,
+                    }}
+                  >
+                    {barChartData.map((h) => {
+                      const pct = h.chg_pct_1d ?? 0;
+                      const barH = Math.max((Math.abs(pct) / maxAbs) * 64, 3);
+                      const positive = pct >= 0;
+                      const bench = isBenchmark(h.ticker);
+                      const label = h.ticker ? h.ticker.split(/[\s.\/]+/)[0] : (h.isin ?? "");
+                      return (
+                        <div
+                          key={h.id}
+                          className="flex flex-col items-center flex-1"
+                          style={{ minWidth: 36 }}
                         >
-                          {pct > 0 ? "+" : ""}{pct.toFixed(1)}%
-                        </span>
+                          {/* Value label */}
+                          <span
+                            className={`text-[9px] sm:text-[10px] font-semibold tabular-nums mb-1 ${positive ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                              }`}
+                          >
+                            {pct > 0 ? "+" : ""}{pct.toFixed(1)}%
+                          </span>
 
-                        {/* Bar — grows upward from bottom */}
-                        <div className="w-full flex items-end" style={{ height: 60 + 4 }}>
-                          <div
-                            className={`w-full rounded-t-sm transition-all ${bench
-                                ? positive
-                                  ? "bg-blue-500"
-                                  : "bg-blue-400"
-                                : positive
-                                  ? "bg-emerald-500 dark:bg-emerald-400"
-                                  : "bg-rose-500 dark:bg-rose-400"
-                              } ${bench ? "ring-2 ring-blue-300 dark:ring-blue-600 ring-offset-1 ring-offset-white dark:ring-offset-[#111827]" : ""}`}
-                            style={{
-                              height: barH,
-                              opacity: bench ? 1 : 0.75,
-                            }}
-                          />
+                          {/* Bar */}
+                          <div className="w-full flex items-end" style={{ height: 68 }}>
+                            <div
+                              className={`w-full rounded-t transition-all ${bench
+                                  ? positive
+                                    ? "bg-blue-500"
+                                    : "bg-blue-400"
+                                  : positive
+                                    ? "bg-emerald-500/80 dark:bg-emerald-400/80"
+                                    : "bg-rose-500/80 dark:bg-rose-400/80"
+                                } ${bench ? "ring-2 ring-blue-300 dark:ring-blue-500 ring-offset-1 ring-offset-white dark:ring-offset-[#111827]" : ""}`}
+                              style={{ height: barH }}
+                            />
+                          </div>
+
+                          {/* Ticker label */}
+                          <span
+                            className={`text-[9px] sm:text-[10px] mt-1.5 truncate w-full text-center ${bench
+                                ? "font-extrabold text-blue-600 dark:text-blue-400"
+                                : "font-medium text-slate-400 dark:text-slate-500"
+                              }`}
+                          >
+                            {label}
+                          </span>
                         </div>
-
-                        {/* Ticker label */}
-                        <span
-                          className={`text-[9px] mt-1 truncate w-full text-center ${bench
-                              ? "font-extrabold text-blue-600 dark:text-blue-400"
-                              : "font-medium text-slate-500 dark:text-slate-400"
-                            }`}
-                        >
-                          {label}
-                        </span>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             );
           })()}
 
-          {/* Equities table */}
-          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm overflow-hidden">
+          {/* Equities — Desktop Table */}
+          <div className="hidden md:block rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
                 <thead>
@@ -815,10 +820,88 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          {/* Equities — Mobile Cards */}
+          <div className="md:hidden space-y-3">
+            {sorted(equities).map((item) => {
+              const irr = calcIRR(item);
+              return (
+                <div
+                  key={item.id}
+                  className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm p-4 active:bg-slate-50 dark:active:bg-slate-800/50 transition-colors"
+                  onClick={() =>
+                    item.stock_details &&
+                    router.push(`/stock/${item.stock_details.ticker}`)
+                  }
+                >
+                  {/* Row 1: Ticker + Value */}
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <p className="text-sm font-bold text-slate-900 dark:text-white">
+                        {item.ticker || item.isin}
+                      </p>
+                      <p className="text-xs text-slate-400 truncate max-w-[160px]">
+                        {item.stock_details?.company_name}
+                      </p>
+                    </div>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white tabular-nums">
+                      ${item.current_value.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    </p>
+                  </div>
+
+                  {/* Row 2: Key metrics */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-0.5">1D Chg</p>
+                      <p className={`text-xs font-bold tabular-nums ${(item.chg_pct_1d || 0) >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                        {(item.chg_pct_1d || 0) > 0 ? "+" : ""}{(item.chg_pct_1d || 0).toFixed(2)}%
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-0.5">1D PnL</p>
+                      <p className={`text-xs font-bold tabular-nums ${(item.pnl_1d || 0) >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                        {(item.pnl_1d || 0) > 0 ? "+" : ""}{Math.round(item.pnl_1d || 0).toLocaleString()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-0.5">Total PnL</p>
+                      <p className={`text-xs font-bold tabular-nums ${item.unrealized_pl_pct >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                        {item.average_cost > 0
+                          ? `${item.unrealized_pl_pct > 0 ? "+" : ""}${item.unrealized_pl_pct.toFixed(1)}%`
+                          : "—"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Row 3: Valuation */}
+                  <div className="grid grid-cols-3 gap-3 mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-0.5">NTM P/E</p>
+                      <p className="text-xs font-medium text-slate-700 dark:text-slate-300 tabular-nums">
+                        {item.pe_next_12_months ? `${item.pe_next_12_months.toFixed(1)}x` : "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-0.5">EPS Gr</p>
+                      <p className={`text-xs font-medium tabular-nums ${(item.eps_lt_growth || 0) >= 15 ? "text-emerald-600" : "text-slate-700 dark:text-slate-300"}`}>
+                        {item.eps_lt_growth ? `${item.eps_lt_growth.toFixed(1)}%` : "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider text-violet-400 mb-0.5">5Y IRR</p>
+                      <p className={`text-xs font-bold tabular-nums ${irr >= 15 ? "text-emerald-600" : "text-violet-700 dark:text-violet-400"}`}>
+                        {irr > 0 ? `${irr.toFixed(1)}%` : "—"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
           {/* Sector Exposure vs S&P 500 */}
-          <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-6 bg-white dark:bg-[#111827] shadow-sm">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-4 sm:p-6 bg-white dark:bg-[#111827] shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+              <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
                 Sector Exposure vs. S&P 500
               </h2>
               <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
@@ -826,7 +909,7 @@ export default function DashboardPage() {
                   <button
                     key={t}
                     onClick={() => setExposureTab(t)}
-                    className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${exposureTab === t
+                    className={`flex-1 sm:flex-none px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${exposureTab === t
                       ? "bg-white dark:bg-[#111827] text-slate-900 dark:text-white shadow-sm"
                       : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
                       }`}
@@ -851,7 +934,7 @@ export default function DashboardPage() {
                     const over = d.diff >= 0;
                     return (
                       <div key={d.sector} className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-slate-500 w-40 text-right truncate shrink-0">
+                        <span className="text-[10px] sm:text-xs font-semibold text-slate-500 w-24 sm:w-40 text-right truncate shrink-0">
                           {d.sector}
                         </span>
                         <div className="flex-1 flex items-center h-6 relative bg-slate-50 dark:bg-slate-800/20 rounded-sm">
@@ -971,46 +1054,46 @@ export default function DashboardPage() {
           : 0;
         const fiDailyPL = fixedIncome.reduce((s, h) => s + (h.pnl_1d || 0), 0);
         return (
-          <div className="space-y-6">
+          <div className="space-y-5 sm:space-y-6">
             {/* FI Key Stats */}
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm p-6">
-              <div className="flex flex-wrap items-center gap-x-10 gap-y-4">
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm p-4 sm:p-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:items-center gap-4 lg:gap-x-10 lg:gap-y-4">
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">FI Market Value</p>
-                  <p className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">${fmt(fiValue)}</p>
+                  <p className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">${fmt(fiValue)}</p>
                 </div>
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">1D P&L</p>
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-sm font-bold ${fiDailyPL >= 0
+                  <span className={`inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full text-xs sm:text-sm font-bold ${fiDailyPL >= 0
                     ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400"
                     : "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400"}`}>
                     {fiDailyPL >= 0 ? "+" : ""}${fmt(fiDailyPL)}
                   </span>
                 </div>
-                <div className="hidden sm:block h-10 w-px bg-slate-200 dark:bg-slate-700" />
+                <div className="hidden lg:block h-10 w-px bg-slate-200 dark:bg-slate-700" />
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">Wtd Avg YTW</p>
-                  <p className="text-xl font-bold text-amber-600 dark:text-amber-400">{wAvgYtw.toFixed(2)}%</p>
+                  <p className="text-lg sm:text-xl font-bold text-amber-600 dark:text-amber-400">{wAvgYtw.toFixed(2)}%</p>
                 </div>
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">Wtd Avg Duration</p>
-                  <p className="text-xl font-bold text-amber-600 dark:text-amber-400">{wAvgDur.toFixed(2)}y</p>
+                  <p className="text-lg sm:text-xl font-bold text-amber-600 dark:text-amber-400">{wAvgDur.toFixed(2)}y</p>
                 </div>
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">Positions</p>
-                  <p className="text-xl font-bold text-slate-900 dark:text-white">{fixedIncome.length}</p>
+                  <p className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">{fixedIncome.length}</p>
                 </div>
               </div>
             </div>
 
             {/* Yield × Duration Scatter */}
-            <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-6 bg-white dark:bg-[#111827] shadow-sm">
-              <div className="flex items-center justify-between mb-2">
-                <h2 className="text-base font-bold text-slate-900 dark:text-white">
+            <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-4 sm:p-6 bg-white dark:bg-[#111827] shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
                   Yield to Worst × Duration
                 </h2>
                 {/* Legend */}
-                <div className="flex items-center gap-4 text-xs font-medium text-slate-500">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] sm:text-xs font-medium text-slate-500">
                   {[
                     ["Corporate", "#14b8a6"],
                     ["Index / ETF", "#8b5cf6"],
@@ -1147,8 +1230,8 @@ export default function DashboardPage() {
               )}
             </div>
 
-            {/* FI Summary Table */}
-            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm overflow-hidden">
+            {/* FI Summary — Desktop Table */}
+            <div className="hidden md:block rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left">
                   <thead>
@@ -1223,6 +1306,73 @@ export default function DashboardPage() {
                   </tbody>
                 </table>
               </div>
+            </div>
+
+            {/* FI Summary — Mobile Cards */}
+            <div className="md:hidden space-y-3">
+              {sorted(fixedIncome).map((item) => (
+                <div
+                  key={item.id}
+                  className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm p-4"
+                >
+                  {/* Row 1: Name + Value */}
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="min-w-0 flex-1 mr-3">
+                      <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                        {item.ticker ? item.ticker.replace("Corp", "").replace("@", " ") : item.isin}
+                      </p>
+                      <p className="text-xs text-slate-400">{item.specific_type}</p>
+                    </div>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white tabular-nums shrink-0">
+                      ${item.current_value.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    </p>
+                  </div>
+
+                  {/* Row 2: PnL metrics */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-0.5">1D Chg</p>
+                      <p className={`text-xs font-bold tabular-nums ${(item.chg_pct_1d || 0) >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                        {(item.chg_pct_1d || 0) > 0 ? "+" : ""}{(item.chg_pct_1d || 0).toFixed(2)}%
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-0.5">1D PnL</p>
+                      <p className={`text-xs font-bold tabular-nums ${(item.pnl_1d || 0) >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                        {(item.pnl_1d || 0) > 0 ? "+" : ""}{Math.round(item.pnl_1d || 0).toLocaleString()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-0.5">Total PnL</p>
+                      <p className={`text-xs font-bold tabular-nums ${item.unrealized_pl_pct >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                        {item.average_cost > 0
+                          ? `${item.unrealized_pl_pct > 0 ? "+" : ""}${item.unrealized_pl_pct.toFixed(1)}%`
+                          : "—"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Row 3: FI-specific */}
+                  <div className="grid grid-cols-3 gap-3 mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider text-amber-500 mb-0.5">Rating</p>
+                      <p className="text-xs font-bold text-amber-700 dark:text-amber-400">{item.rating || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider text-amber-500 mb-0.5">YTW</p>
+                      <p className="text-xs font-bold text-amber-700 dark:text-amber-400 tabular-nums">
+                        {item.yield_to_worst ? `${(item.yield_to_worst * 100).toFixed(2)}%` : "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider text-amber-500 mb-0.5">Duration</p>
+                      <p className="text-xs font-bold text-amber-700 dark:text-amber-400 tabular-nums">
+                        {item.duration ? `${item.duration.toFixed(2)}y` : "—"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         );
