@@ -268,12 +268,21 @@ export default function DashboardPage() {
   const eqPrevValue = eqValue - eqDailyPL;
   const eqDailyPLPct = eqPrevValue > 0 ? (eqDailyPL / eqPrevValue) * 100 : 0;
 
-  const eqWithPnl = useMemo(
-    () => equities.filter((h) => h.pnl_1d != null).sort((a, b) => (b.pnl_1d ?? 0) - (a.pnl_1d ?? 0)),
+  const eqWithChg = useMemo(
+    () => equities.filter((h) => h.chg_pct_1d != null).sort((a, b) => (b.chg_pct_1d ?? 0) - (a.chg_pct_1d ?? 0)),
     [equities]
   );
-  const top3 = eqWithPnl.slice(0, 3);
-  const bottom3 = eqWithPnl.slice(-3).reverse();
+  const top3 = eqWithChg.slice(0, 3);
+  const bottom3 = eqWithChg.slice(-3).reverse();
+
+  // Bar chart: all equities sorted by 1D % change (smallest → largest, left to right)
+  const barChartData = useMemo(
+    () =>
+      equities
+        .filter((h) => h.chg_pct_1d != null)
+        .sort((a, b) => (a.chg_pct_1d ?? 0) - (b.chg_pct_1d ?? 0)),
+    [equities]
+  );
 
   // ─── Sort logic ────────────────────────────────────────────────────
   const toggleSort = (key: string) => {
@@ -606,19 +615,89 @@ export default function DashboardPage() {
                     <div>
                       <span className="text-sm font-bold text-slate-800 dark:text-white">{h.ticker ?? h.isin}</span>
                       {h.chg_pct_1d != null && (
-                        <span className="ml-2 text-xs font-semibold text-rose-500">
-                          {h.chg_pct_1d.toFixed(2)}%
+                        <span className={`ml-2 text-xs font-semibold ${(h.chg_pct_1d ?? 0) >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
+                          {(h.chg_pct_1d ?? 0) > 0 ? "+" : ""}{h.chg_pct_1d.toFixed(2)}%
                         </span>
                       )}
                     </div>
-                    <span className="text-sm font-semibold text-rose-600 dark:text-rose-400 tabular-nums">
-                      ${fmt(h.pnl_1d!)}
+                    <span className={`text-sm font-semibold tabular-nums ${(h.pnl_1d ?? 0) >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                      {(h.pnl_1d ?? 0) >= 0 ? "+" : ""}${fmt(h.pnl_1d!)}
                     </span>
                   </div>
                 ))}
               </div>
             </div>
           </div>
+
+          {/* ── 1D % Change Bar Chart ─────────────────────────────── */}
+          {barChartData.length > 0 && (() => {
+            const maxAbs = Math.max(...barChartData.map((h) => Math.abs(h.chg_pct_1d ?? 0)), 0.01);
+            const BENCHMARKS = ["SPY", "QQQ"];
+            const isBenchmark = (ticker: string | null) => {
+              if (!ticker) return false;
+              const base = ticker.split(/[\s.\/]+/)[0].toUpperCase();
+              return BENCHMARKS.includes(base);
+            };
+            return (
+              <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm p-5">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-4">
+                  1D % Change — All Equities
+                </p>
+                <div className="flex items-end gap-[3px]" style={{ height: 160 }}>
+                  {barChartData.map((h) => {
+                    const pct = h.chg_pct_1d ?? 0;
+                    const barH = Math.max((Math.abs(pct) / maxAbs) * 60, 2);
+                    const positive = pct >= 0;
+                    const bench = isBenchmark(h.ticker);
+                    const label = h.ticker ? h.ticker.split(/[\s.\/]+/)[0] : (h.isin ?? "");
+                    return (
+                      <div
+                        key={h.id}
+                        className="flex flex-col items-center flex-1 min-w-0"
+                        style={{ maxWidth: 48 }}
+                      >
+                        {/* Value label */}
+                        <span
+                          className={`text-[9px] font-semibold tabular-nums mb-0.5 ${positive ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                            }`}
+                        >
+                          {pct > 0 ? "+" : ""}{pct.toFixed(1)}%
+                        </span>
+
+                        {/* Bar — grows upward from bottom */}
+                        <div className="w-full flex items-end" style={{ height: 60 + 4 }}>
+                          <div
+                            className={`w-full rounded-t-sm transition-all ${bench
+                                ? positive
+                                  ? "bg-blue-500"
+                                  : "bg-blue-400"
+                                : positive
+                                  ? "bg-emerald-500 dark:bg-emerald-400"
+                                  : "bg-rose-500 dark:bg-rose-400"
+                              } ${bench ? "ring-2 ring-blue-300 dark:ring-blue-600 ring-offset-1 ring-offset-white dark:ring-offset-[#111827]" : ""}`}
+                            style={{
+                              height: barH,
+                              opacity: bench ? 1 : 0.75,
+                            }}
+                          />
+                        </div>
+
+                        {/* Ticker label */}
+                        <span
+                          className={`text-[9px] mt-1 truncate w-full text-center ${bench
+                              ? "font-extrabold text-blue-600 dark:text-blue-400"
+                              : "font-medium text-slate-500 dark:text-slate-400"
+                            }`}
+                        >
+                          {label}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Equities table */}
           <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm overflow-hidden">
