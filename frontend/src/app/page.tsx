@@ -215,14 +215,21 @@ export default function DashboardPage() {
   });
   const [hoveredDot, setHoveredDot] = useState<PortfolioHolding | null>(null);
   const [exposureTab, setExposureTab] = useState<"diff" | "pies" | "table">("diff");
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
       try {
-        const res = await authFetch(
-          `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/portfolio/`
-        );
-        setHoldings(await res.json());
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        const [portfolioRes, snapshotsRes] = await Promise.all([
+          authFetch(`${apiUrl}/api/portfolio/`),
+          authFetch(`${apiUrl}/api/snapshots/`),
+        ]);
+        setHoldings(await portfolioRes.json());
+        const snapshots = await snapshotsRes.json();
+        if (snapshots.length > 0) {
+          setLastUpdated(snapshots[0].created_at);
+        }
       } catch (e) {
         console.error("Fetch failed", e);
       } finally {
@@ -234,11 +241,8 @@ export default function DashboardPage() {
   // ─── Derived data ──────────────────────────────────────────────────
   const totalValue = holdings.reduce((s, h) => s + h.current_value, 0);
   const totalDailyPL = holdings.reduce((s, h) => s + (h.pnl_1d || 0), 0);
-  const prevDayValue = holdings.reduce((s, h) => {
-    const prev = h.stock_details?.previous_close || h.stock_details?.current_price;
-    return prev ? s + prev * h.quantity : s;
-  }, 0);
-  const totalDailyPLPct = prevDayValue > 0 ? (totalDailyPL / prevDayValue) * 100 : 0;
+  const totalPrevValue = totalValue - totalDailyPL;
+  const totalDailyPLPct = totalPrevValue > 0 ? (totalDailyPL / totalPrevValue) * 100 : 0;
 
   const equities = useMemo(
     () => holdings.filter((h) => h.asset_type === "Equity" || h.stock_details),
@@ -261,10 +265,7 @@ export default function DashboardPage() {
   const fiPct = totalValue > 0 ? ((fiValue / totalValue) * 100).toFixed(1) : "0";
 
   const eqDailyPL = equities.reduce((s, h) => s + (h.pnl_1d || 0), 0);
-  const eqPrevValue = equities.reduce((s, h) => {
-    const prev = h.stock_details?.previous_close || h.stock_details?.current_price;
-    return prev ? s + prev * h.quantity : s;
-  }, 0);
+  const eqPrevValue = eqValue - eqDailyPL;
   const eqDailyPLPct = eqPrevValue > 0 ? (eqDailyPL / eqPrevValue) * 100 : 0;
 
   const eqWithPnl = useMemo(
@@ -449,7 +450,18 @@ export default function DashboardPage() {
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">Real-time overview</p>
         </div>
-        <p className="text-xs text-slate-400 font-medium">Last updated: just now</p>
+        <p className="text-xs text-slate-400 font-medium">
+          Last updated:{" "}
+          {lastUpdated
+            ? new Date(lastUpdated).toLocaleString(undefined, {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : "—"}
+        </p>
       </div>
 
       {/* ─── Hero Strip ─────────────────────────────────────────── */}
