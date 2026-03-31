@@ -268,6 +268,54 @@ export default function DashboardPage() {
   const eqPrevValue = eqValue - eqDailyPL;
   const eqDailyPLPct = eqPrevValue > 0 ? (eqDailyPL / eqPrevValue) * 100 : 0;
 
+  // ─── Portfolio breakdown table data ─────────────────────────────────
+  const breakdown = useMemo(() => {
+    const isEtf = (h: PortfolioHolding) => {
+      const t = (h.ticker || "").toUpperCase().split(/[\s.\/]+/)[0];
+      return !!ETF_SECTOR_WEIGHTS[t];
+    };
+    const fiCat = (h: PortfolioHolding): string => {
+      const s = ((h.specific_type || "") + " " + (h.asset_type || "")).toLowerCase();
+      if (s.includes("index") || s.includes("etf")) return "FI Index";
+      if (s.includes("corp")) return "Corporate Bonds";
+      if (h.asset_type === "Treasury" || s.includes("treasury")) return "Treasury";
+      if (h.asset_type === "EM Sovereign" || s.includes("em") || s.includes("sovereign")) return "EM Sovereign";
+      return "Other FI";
+    };
+
+    const agg = (items: PortfolioHolding[]) => {
+      const mv = items.reduce((s, h) => s + h.current_value, 0);
+      const pnl = items.reduce((s, h) => s + (h.pnl_1d || 0), 0);
+      const prev = mv - pnl;
+      return { mv, pnl, ret: prev > 0 ? (pnl / prev) * 100 : 0, pct: totalValue > 0 ? (mv / totalValue) * 100 : 0 };
+    };
+
+    const eqStocks = equities.filter((h) => !isEtf(h));
+    const eqIndex = equities.filter((h) => isEtf(h));
+
+    const fiByType: Record<string, PortfolioHolding[]> = {};
+    fixedIncome.forEach((h) => {
+      const cat = fiCat(h);
+      (fiByType[cat] = fiByType[cat] || []).push(h);
+    });
+
+    const total = agg(holdings);
+    const eq = agg(equities);
+    const fi = agg(fixedIncome);
+
+    const rows: { label: string; indent: number; bold: boolean; data: ReturnType<typeof agg> }[] = [
+      { label: "Portfolio Total", indent: 0, bold: true, data: total },
+      { label: "Equity", indent: 0, bold: true, data: eq },
+      ...(eqStocks.length > 0 ? [{ label: "Equity", indent: 1, bold: false, data: agg(eqStocks) }] : []),
+      ...(eqIndex.length > 0 ? [{ label: "Equity Index", indent: 1, bold: false, data: agg(eqIndex) }] : []),
+      { label: "Fixed Income", indent: 0, bold: true, data: fi },
+      ...["FI Index", "Corporate Bonds", "Treasury", "EM Sovereign", "Other FI"]
+        .filter((cat) => fiByType[cat]?.length)
+        .map((cat) => ({ label: cat, indent: 1, bold: false, data: agg(fiByType[cat]) })),
+    ];
+    return rows;
+  }, [holdings, equities, fixedIncome, totalValue]);
+
   const eqWithChg = useMemo(
     () => equities.filter((h) => h.chg_pct_1d != null).sort((a, b) => (b.chg_pct_1d ?? 0) - (a.chg_pct_1d ?? 0)),
     [equities]
@@ -538,6 +586,59 @@ export default function DashboardPage() {
             <p className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">{holdings.length}</p>
           </div>
         </div>
+      </div>
+
+      {/* ─── Portfolio Breakdown ─────────────────────────────────── */}
+      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm overflow-hidden">
+        <table className="w-full text-xs sm:text-sm">
+          <thead>
+            <tr className="border-b border-slate-200 dark:border-slate-700 text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+              <th className="text-left px-3 sm:px-4 py-2.5"></th>
+              <th className="text-right px-3 sm:px-4 py-2.5">Mkt Value</th>
+              <th className="text-right px-3 sm:px-4 py-2.5">1D P&L</th>
+              <th className="text-right px-3 sm:px-4 py-2.5 hidden sm:table-cell">1D Return</th>
+              <th className="text-right px-3 sm:px-4 py-2.5">% Portfolio</th>
+            </tr>
+          </thead>
+          <tbody>
+            {breakdown.map((row, i) => {
+              const isTotal = row.label === "Portfolio Total";
+              const isGroup = row.bold && !isTotal;
+              return (
+                <tr
+                  key={`${row.label}-${row.indent}-${i}`}
+                  className={`
+                    ${isTotal ? "bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700" : ""}
+                    ${isGroup ? "border-t border-slate-100 dark:border-slate-800" : ""}
+                  `}
+                >
+                  <td
+                    className={`px-3 sm:px-4 py-2 text-slate-900 dark:text-white ${row.bold ? "font-bold" : "font-medium text-slate-500 dark:text-slate-400"}`}
+                    style={{ paddingLeft: row.indent ? `${(row.indent * 20) + 16}px` : undefined }}
+                  >
+                    {row.label}
+                  </td>
+                  <td className={`px-3 sm:px-4 py-2 text-right tabular-nums ${row.bold ? "font-bold text-slate-900 dark:text-white" : "text-slate-600 dark:text-slate-400"}`}>
+                    {row.data.mv >= 1e6
+                      ? `${(row.data.mv / 1e6).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}M`
+                      : row.data.mv.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  </td>
+                  <td className={`px-3 sm:px-4 py-2 text-right tabular-nums font-medium ${row.data.pnl >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                    {row.data.pnl >= 0 ? "" : "("}
+                    {Math.abs(row.data.pnl).toLocaleString(undefined, { maximumFractionDigits: 1 })}
+                    {row.data.pnl < 0 ? ")" : ""}
+                  </td>
+                  <td className={`px-3 sm:px-4 py-2 text-right tabular-nums font-medium hidden sm:table-cell ${row.data.ret >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                    {row.data.ret >= 0 ? "" : ""}{row.data.ret.toFixed(2)}%
+                  </td>
+                  <td className={`px-3 sm:px-4 py-2 text-right tabular-nums ${row.bold ? "font-bold text-slate-900 dark:text-white" : "text-slate-500 dark:text-slate-400"}`}>
+                    {row.data.pct.toFixed(1)}%
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
 
       {/* ─── Tab Switcher ───────────────────────────────────────── */}
