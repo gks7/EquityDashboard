@@ -604,14 +604,12 @@ export default function DashboardPage() {
             {breakdown.map((row, i) => {
               const isTotal = row.label === "Portfolio Total";
               const isGroup = row.bold && !isTotal;
-              const isSub = row.indent > 0;
+              const zebra = i % 2 === 0;
               return (
                 <tr
                   key={`${row.label}-${row.indent}-${i}`}
                   className={`
-                    ${isTotal ? "bg-slate-50 dark:bg-slate-800/60" : ""}
-                    ${isGroup ? "bg-slate-50/60 dark:bg-slate-800/30" : ""}
-                    ${isSub && i % 2 === 0 ? "bg-slate-25 dark:bg-white/[0.015]" : ""}
+                    ${zebra ? "bg-slate-50/70 dark:bg-slate-800/30" : ""}
                     ${isTotal || isGroup ? "border-t border-slate-200/80 dark:border-slate-700/60" : ""}
                   `}
                 >
