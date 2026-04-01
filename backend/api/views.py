@@ -3,7 +3,7 @@ from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from finance.models import Stock, InvestmentThesis, Estimate5Y, PortfolioItem, ValuationModel, PortfolioSnapshot, HistCashTransaction, HistIndexPrice, AssetPositionHistOfficial, NAVPosition
+from finance.models import Stock, InvestmentThesis, Estimate5Y, PortfolioItem, ValuationModel, PortfolioSnapshot, HistCashTransaction, HistIndexPrice, AssetPositionHistOfficial, NAVPosition, ThesisEditHistory
 from .serializers import StockSerializer, InvestmentThesisSerializer, Estimate5YSerializer, PortfolioItemSerializer, PortfolioSnapshotSerializer
 from finance.services import update_stock_price, bloomberg_to_yfinance
 import pandas as pd
@@ -50,28 +50,77 @@ class StockViewSet(viewsets.ModelViewSet):
         stock = self.get_object()
         user = request.user
 
+        summary = request.data.get('thesis', '')
+        conviction_val = int(request.data.get('conviction', 3))
+        pe_multiple = float(request.data.get('pe_multiple', 0))
+        eps_val = float(request.data.get('eps', 0))
+        dividends_val = float(request.data.get('dividends', 0))
+
         thesis_data = {
-            'summary': request.data.get('thesis', ''),
-            'bull_case': request.data.get('thesis', ''), # Using same for now
+            'summary': summary,
+            'bull_case': summary,
             'bear_case': '',
-            'conviction': int(request.data.get('conviction', 3))
+            'conviction': conviction_val,
+            'analyst': user,
         }
 
-        thesis, _ = InvestmentThesis.objects.update_or_create(
-            stock=stock, analyst=user,
-            defaults=thesis_data
-        )
+        # Use a single shared thesis per stock (get or create the first one)
+        thesis = InvestmentThesis.objects.filter(stock=stock).first()
+        if thesis:
+            thesis.summary = summary
+            thesis.bull_case = summary
+            thesis.conviction = conviction_val
+            thesis.analyst = user  # Track who last edited
+            thesis.save()
+        else:
+            thesis = InvestmentThesis.objects.create(stock=stock, **thesis_data)
 
         Estimate5Y.objects.update_or_create(
             thesis=thesis,
             defaults={
-                'target_pe_multiple': float(request.data.get('pe_multiple', 0)),
-                'target_eps': float(request.data.get('eps', 0)),
-                'accumulated_dividends_5y': float(request.data.get('dividends', 0))
+                'target_pe_multiple': pe_multiple,
+                'target_eps': eps_val,
+                'accumulated_dividends_5y': dividends_val
             }
         )
 
+        # Log edit history
+        ThesisEditHistory.objects.create(
+            stock=stock,
+            edited_by=user,
+            summary=summary,
+            conviction=conviction_val,
+            target_pe_multiple=pe_multiple,
+            target_eps=eps_val,
+            accumulated_dividends_5y=dividends_val,
+        )
+
         return Response({"message": "Thesis and estimates saved successfully"}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['get'], url_path='thesis_history', lookup_field='ticker')
+    def thesis_history(self, request, ticker=None):
+        """GET /api/stocks/{ticker}/thesis_history/ — Return edit history for this stock's thesis."""
+        stock = self.get_object()
+        history = ThesisEditHistory.objects.filter(stock=stock).select_related('edited_by')[:50]
+        data = [
+            {
+                'id': h.id,
+                'edited_by': {
+                    'id': h.edited_by.id,
+                    'username': h.edited_by.username,
+                    'first_name': h.edited_by.first_name,
+                    'last_name': h.edited_by.last_name,
+                },
+                'edited_at': h.edited_at.isoformat(),
+                'summary': h.summary,
+                'conviction': h.conviction,
+                'target_pe_multiple': h.target_pe_multiple,
+                'target_eps': h.target_eps,
+                'accumulated_dividends_5y': h.accumulated_dividends_5y,
+            }
+            for h in history
+        ]
+        return Response(data)
 
     @action(detail=True, methods=['get'], url_path='get_model', lookup_field='ticker')
     def get_model(self, request, ticker=None):

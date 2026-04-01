@@ -32,6 +32,8 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
         theses: {
             summary: string;
             conviction: number;
+            analyst?: { id: number; username: string; first_name: string; last_name: string };
+            updated_at?: string;
             estimates_5y?: {
                 target_pe_multiple: number;
                 target_eps: number;
@@ -56,6 +58,19 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
     const [thesisText, setThesisText] = useState("");
     const [conviction, setConviction] = useState(3);
 
+    // Edit history
+    const [editHistory, setEditHistory] = useState<{
+        id: number;
+        edited_by: { id: number; username: string; first_name: string; last_name: string };
+        edited_at: string;
+        summary: string;
+        conviction: number;
+        target_pe_multiple: number;
+        target_eps: number;
+        accumulated_dividends_5y: number;
+    }[]>([]);
+    const [showHistory, setShowHistory] = useState(false);
+
     useEffect(() => {
         const fetchStockData = async () => {
             try {
@@ -75,6 +90,14 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
                         setDividends(thesis.estimates_5y.accumulated_dividends_5y);
                     }
                 }
+
+                // Fetch edit history
+                try {
+                    const histRes = await authFetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/stocks/${ticker}/thesis_history/`);
+                    if (histRes.ok) {
+                        setEditHistory(await histRes.json());
+                    }
+                } catch {}
             } catch (error) {
                 console.error("Failed to fetch stock detail:", error);
             } finally {
@@ -117,6 +140,11 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
                         }
                     }
                 }
+                // Refresh edit history
+                try {
+                    const histRes = await authFetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/stocks/${ticker}/thesis_history/`);
+                    if (histRes.ok) setEditHistory(await histRes.json());
+                } catch {}
                 alert("Estimates and thesis saved successfully!");
             } else {
                 const errData = await res.json().catch(() => null);
@@ -372,7 +400,84 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
                                     className="flex-1 w-full min-h-[400px] p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                                     placeholder="Write your thesis in Markdown..."
                                 />
+
+                                {/* Last edited info */}
+                                {stock.theses && stock.theses.length > 0 && stock.theses[0].analyst && stock.theses[0].updated_at && (
+                                    <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
+                                        <span>
+                                            Last edited by{" "}
+                                            <span className="font-medium text-slate-500 dark:text-slate-300">
+                                                {stock.theses[0].analyst.first_name
+                                                    ? `${stock.theses[0].analyst.first_name} ${stock.theses[0].analyst.last_name}`
+                                                    : stock.theses[0].analyst.username}
+                                            </span>
+                                            {" · "}
+                                            {new Date(stock.theses[0].updated_at).toLocaleString("en-US", {
+                                                month: "short", day: "numeric", year: "numeric",
+                                                hour: "2-digit", minute: "2-digit",
+                                            })}
+                                        </span>
+                                        {editHistory.length > 0 && (
+                                            <button
+                                                onClick={() => setShowHistory(!showHistory)}
+                                                className="text-blue-500 hover:text-blue-600 font-medium hover:underline"
+                                            >
+                                                {showHistory ? "Hide history" : `View history (${editHistory.length})`}
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
                             </div>
+
+                            {/* Edit History Panel */}
+                            {showHistory && editHistory.length > 0 && (
+                                <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
+                                    <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Edit History</h3>
+                                    <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                                        {editHistory.map((h) => (
+                                            <div
+                                                key={h.id}
+                                                className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                                onClick={() => {
+                                                    setPeMultiple(h.target_pe_multiple);
+                                                    setEps(h.target_eps);
+                                                    setDividends(h.accumulated_dividends_5y);
+                                                    setThesisText(h.summary);
+                                                    setConviction(h.conviction);
+                                                }}
+                                                title="Click to restore this version"
+                                            >
+                                                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center flex-shrink-0">
+                                                    <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
+                                                        {(h.edited_by.first_name?.[0] || h.edited_by.username[0]).toUpperCase()}
+                                                    </span>
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2 text-xs">
+                                                        <span className="font-medium text-slate-700 dark:text-slate-200">
+                                                            {h.edited_by.first_name
+                                                                ? `${h.edited_by.first_name} ${h.edited_by.last_name}`
+                                                                : h.edited_by.username}
+                                                        </span>
+                                                        <span className="text-slate-400">
+                                                            {new Date(h.edited_at).toLocaleString("en-US", {
+                                                                month: "short", day: "numeric",
+                                                                hour: "2-digit", minute: "2-digit",
+                                                            })}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-[11px] text-slate-400 mt-0.5">
+                                                        P/E: {h.target_pe_multiple}x · EPS: ${h.target_eps} · Div: {h.accumulated_dividends_5y}% · Conv: {h.conviction}/5
+                                                    </div>
+                                                    {h.summary && (
+                                                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 truncate">{h.summary}</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 

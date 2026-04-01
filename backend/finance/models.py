@@ -139,7 +139,6 @@ class InvestmentThesis(models.Model):
     conviction = models.IntegerField(choices=CONVICTION_CHOICES, default=3)
     
     class Meta:
-        unique_together = ('stock', 'analyst') # One active thesis per analyst per stock
         verbose_name_plural = "Investment Theses"
 
     def __str__(self):
@@ -185,6 +184,30 @@ class Estimate5Y(models.Model):
 
     def __str__(self):
         return f"5Y Estimates for {self.thesis}"
+
+
+class ThesisEditHistory(models.Model):
+    """
+    Tracks every edit made to an InvestmentThesis / Estimate5Y.
+    Stores a snapshot of the data at the time of edit.
+    """
+    stock = models.ForeignKey(Stock, on_delete=models.CASCADE, related_name='thesis_edit_history')
+    edited_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='thesis_edits')
+    edited_at = models.DateTimeField(auto_now_add=True)
+
+    # Snapshot of the thesis at this point in time
+    summary = models.TextField(blank=True, default='')
+    conviction = models.IntegerField(default=3)
+    target_pe_multiple = models.FloatField(default=0)
+    target_eps = models.FloatField(default=0)
+    accumulated_dividends_5y = models.FloatField(default=0)
+
+    class Meta:
+        ordering = ['-edited_at']
+        verbose_name_plural = "Thesis edit histories"
+
+    def __str__(self):
+        return f"{self.edited_by.username} edited {self.stock.ticker} on {self.edited_at:%Y-%m-%d %H:%M}"
 
 
 class ValuationModel(models.Model):
