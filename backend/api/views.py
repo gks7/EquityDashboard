@@ -403,14 +403,24 @@ def _parse_date(val):
     """Try to parse a date value from various formats. Returns None on failure."""
     if not val or (isinstance(val, float) and val != val):  # NaN check
         return None
+    from datetime import datetime, timedelta
     import re
     s = str(val).strip()
     if not s or s in ('nan', 'None', ''):
         return None
-    # Try common formats
+
+    # Handle Excel serial date numbers (e.g. 45505 = 2024-08-01)
+    # Excel epoch is 1899-12-30 (accounting for the Lotus 1-2-3 leap year bug)
+    try:
+        num = float(s)
+        if 1 < num < 200000 and '.' not in s and '-' not in s and '/' not in s:
+            return (datetime(1899, 12, 30) + timedelta(days=int(num))).date()
+    except (ValueError, OverflowError):
+        pass
+
+    # Try common string date formats
     for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y', '%d-%m-%Y', '%Y%m%d'):
         try:
-            from datetime import datetime
             return datetime.strptime(s[:10], fmt).date()
         except ValueError:
             continue
