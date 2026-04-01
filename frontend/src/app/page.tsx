@@ -740,6 +740,7 @@ export default function DashboardPage() {
               const base = ticker.split(/[\s.\/]+/)[0].toUpperCase();
               return BENCHMARKS.includes(base);
             };
+            const halfH = 60;
             return (
               <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm p-4 sm:p-5">
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-4">
@@ -747,15 +748,15 @@ export default function DashboardPage() {
                 </p>
                 <div className="overflow-x-auto -mx-4 sm:-mx-5 px-4 sm:px-5 pb-2">
                   <div
-                    className="flex items-end gap-1 sm:gap-[3px]"
+                    className="flex gap-1 sm:gap-[3px]"
                     style={{
-                      height: 140,
-                      minWidth: barChartData.length * 44,
+                      height: halfH * 2 + 48,
+                      minWidth: barChartData.length * 52,
                     }}
                   >
                     {barChartData.map((h) => {
                       const pct = h.chg_pct_1d ?? 0;
-                      const barH = Math.max((Math.abs(pct) / maxAbs) * 64, 3);
+                      const barH = Math.max((Math.abs(pct) / maxAbs) * halfH, 3);
                       const positive = pct >= 0;
                       const bench = isBenchmark(h.ticker);
                       const label = h.ticker ? h.ticker.split(/[\s.\/]+/)[0] : (h.isin ?? "");
@@ -763,36 +764,56 @@ export default function DashboardPage() {
                         <div
                           key={h.id}
                           className="flex flex-col items-center flex-1"
-                          style={{ minWidth: 36 }}
+                          style={{ minWidth: 44 }}
                         >
-                          {/* Value label */}
-                          <span
-                            className={`text-[9px] sm:text-[10px] font-semibold tabular-nums mb-1 ${positive ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
-                              }`}
-                          >
-                            {pct > 0 ? "+" : ""}{pct.toFixed(1)}%
-                          </span>
+                          {/* ── Top half (positive bars grow up from center) ── */}
+                          <div className="w-full flex flex-col items-center justify-end" style={{ height: halfH }}>
+                            {positive && (
+                              <>
+                                <span
+                                  className={`text-[11px] sm:text-xs font-semibold tabular-nums mb-0.5 ${bench ? "text-blue-600 dark:text-blue-400" : "text-emerald-600 dark:text-emerald-400"}`}
+                                >
+                                  +{pct.toFixed(1)}%
+                                </span>
+                                <div
+                                  className={`w-3/4 rounded-t ${bench
+                                      ? "bg-blue-500 ring-2 ring-blue-300 dark:ring-blue-500 ring-offset-1 ring-offset-white dark:ring-offset-[#111827]"
+                                      : "bg-emerald-500/80 dark:bg-emerald-400/80"
+                                    }`}
+                                  style={{ height: barH }}
+                                />
+                              </>
+                            )}
+                          </div>
 
-                          {/* Bar */}
-                          <div className="w-full flex items-end" style={{ height: 68 }}>
-                            <div
-                              className={`w-full rounded-t transition-all ${bench
-                                  ? positive
-                                    ? "bg-blue-500"
-                                    : "bg-blue-400"
-                                  : positive
-                                    ? "bg-emerald-500/80 dark:bg-emerald-400/80"
-                                    : "bg-rose-500/80 dark:bg-rose-400/80"
-                                } ${bench ? "ring-2 ring-blue-300 dark:ring-blue-500 ring-offset-1 ring-offset-white dark:ring-offset-[#111827]" : ""}`}
-                              style={{ height: barH }}
-                            />
+                          {/* ── Center line ── */}
+                          <div className="w-full h-px bg-slate-200 dark:bg-slate-700" />
+
+                          {/* ── Bottom half (negative bars grow down from center) ── */}
+                          <div className="w-full flex flex-col items-center justify-start" style={{ height: halfH }}>
+                            {!positive && (
+                              <>
+                                <div
+                                  className={`w-3/4 rounded-b ${bench
+                                      ? "bg-blue-400 ring-2 ring-blue-300 dark:ring-blue-500 ring-offset-1 ring-offset-white dark:ring-offset-[#111827]"
+                                      : "bg-rose-500/80 dark:bg-rose-400/80"
+                                    }`}
+                                  style={{ height: barH }}
+                                />
+                                <span
+                                  className={`text-[11px] sm:text-xs font-semibold tabular-nums mt-0.5 ${bench ? "text-blue-600 dark:text-blue-400" : "text-rose-600 dark:text-rose-400"}`}
+                                >
+                                  {pct.toFixed(1)}%
+                                </span>
+                              </>
+                            )}
                           </div>
 
                           {/* Ticker label */}
                           <span
-                            className={`text-[9px] sm:text-[10px] mt-1.5 truncate w-full text-center ${bench
+                            className={`text-[10px] sm:text-[11px] mt-1 truncate w-full text-center ${bench
                                 ? "font-extrabold text-blue-600 dark:text-blue-400"
-                                : "font-medium text-slate-400 dark:text-slate-500"
+                                : "font-medium text-slate-500 dark:text-slate-400"
                               }`}
                           >
                             {label}
