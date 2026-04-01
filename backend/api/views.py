@@ -675,11 +675,11 @@ class AssetBreakdownView(APIView):
         allocation_history = []
         for date in sorted_dates:
             groups = by_date[date]
-            total = sum(v['amt_close'] for v in groups.values())
-            entry: dict = {'date': date, 'total': round(total, 2)}
+            total = sum(abs(v['amt_close']) for v in groups.values())
+            entry: dict = {'date': date, 'total': round(sum(v['amt_close'] for v in groups.values()), 2)}
             for g in all_groups:
                 val = groups.get(g, {}).get('amt_close', 0.0)
-                entry[g] = round((val / total * 100) if total else 0.0, 2)
+                entry[g] = round((abs(val) / total * 100) if total else 0.0, 2)
             allocation_history.append(entry)
 
         # ── 2. Synthetic TWR cota indices (base = 100) ────────────────────────
@@ -693,7 +693,10 @@ class AssetBreakdownView(APIView):
                     amt_open = groups[g]['amt_open']
                     pnl      = groups[g]['pnl']
                     if amt_open and abs(amt_open) > 1e-9:
-                        cota_idx[g] = round(cota_idx[g] * (1.0 + pnl / amt_open), 4)
+                        daily_ret = pnl / amt_open
+                        # Clamp extreme daily returns (likely data errors)
+                        daily_ret = max(-0.5, min(0.5, daily_ret))
+                        cota_idx[g] = round(cota_idx[g] * (1.0 + daily_ret), 4)
                 entry[g] = cota_idx[g]
             synthetic_cotas.append(entry)
 

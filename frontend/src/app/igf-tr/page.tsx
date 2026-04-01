@@ -809,14 +809,6 @@ export default function IgfTrPage() {
                   ) : (
                     <ResponsiveContainer width="100%" height={320}>
                       <AreaChart data={allocChartData} margin={{ top: 4, right: 16, left: 0, bottom: 0 }} stackOffset="none">
-                        <defs>
-                          {availableGroups.map((g, i) => (
-                            <linearGradient key={g} id={`allocGrad${i}`} x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor={groupColor(g, i)} stopOpacity={0.5} />
-                              <stop offset="100%" stopColor={groupColor(g, i)} stopOpacity={0.05} />
-                            </linearGradient>
-                          ))}
-                        </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" className="dark:[stroke:#1e293b]" />
                         <XAxis dataKey="date" tick={{ fill: "#94a3b8", fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
                         <YAxis
@@ -858,8 +850,9 @@ export default function IgfTrPage() {
                             name={g}
                             stackId="a"
                             stroke={groupColor(g, i)}
-                            strokeWidth={1.5}
-                            fill={`url(#allocGrad${i})`}
+                            strokeWidth={1}
+                            fill={groupColor(g, i)}
+                            fillOpacity={0.85}
                             dot={false}
                             activeDot={{ r: 3 }}
                           />
