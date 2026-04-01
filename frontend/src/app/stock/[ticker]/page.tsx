@@ -433,11 +433,11 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
                             {showHistory && editHistory.length > 0 && (
                                 <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
                                     <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Edit History</h3>
-                                    <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                                    <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
                                         {editHistory.map((h) => (
                                             <div
                                                 key={h.id}
-                                                className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                                className="flex items-center gap-3 py-2 px-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                                                 onClick={() => {
                                                     setPeMultiple(h.target_pe_multiple);
                                                     setEps(h.target_eps);
@@ -447,31 +447,26 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
                                                 }}
                                                 title="Click to restore this version"
                                             >
-                                                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center flex-shrink-0">
-                                                    <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
+                                                <div className="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center flex-shrink-0">
+                                                    <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400">
                                                         {(h.edited_by.first_name?.[0] || h.edited_by.username[0]).toUpperCase()}
                                                     </span>
                                                 </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 text-xs">
-                                                        <span className="font-medium text-slate-700 dark:text-slate-200">
-                                                            {h.edited_by.first_name
-                                                                ? `${h.edited_by.first_name} ${h.edited_by.last_name}`
-                                                                : h.edited_by.username}
-                                                        </span>
-                                                        <span className="text-slate-400">
-                                                            {new Date(h.edited_at).toLocaleString("en-US", {
-                                                                month: "short", day: "numeric",
-                                                                hour: "2-digit", minute: "2-digit",
-                                                            })}
-                                                        </span>
-                                                    </div>
-                                                    <div className="text-[11px] text-slate-400 mt-0.5">
-                                                        P/E: {h.target_pe_multiple}x · EPS: ${h.target_eps} · Div: {h.accumulated_dividends_5y}% · Conv: {h.conviction}/5
-                                                    </div>
-                                                    {h.summary && (
-                                                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 truncate">{h.summary}</p>
-                                                    )}
+                                                <div className="flex-1 min-w-0 flex items-center gap-3">
+                                                    <span className="text-xs font-medium text-slate-700 dark:text-slate-200 whitespace-nowrap">
+                                                        {h.edited_by.first_name
+                                                            ? `${h.edited_by.first_name} ${h.edited_by.last_name}`
+                                                            : h.edited_by.username}
+                                                    </span>
+                                                    <span className="text-[11px] text-slate-400 whitespace-nowrap">
+                                                        {new Date(h.edited_at).toLocaleString("en-US", {
+                                                            month: "short", day: "numeric",
+                                                            hour: "2-digit", minute: "2-digit",
+                                                        })}
+                                                    </span>
+                                                    <span className="text-[11px] text-slate-400 hidden sm:inline">
+                                                        P/E {h.target_pe_multiple}x · EPS ${h.target_eps} · Conv {h.conviction}/5
+                                                    </span>
                                                 </div>
                                             </div>
                                         ))}
@@ -481,7 +476,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
                         </div>
                     </div>
 
-                    <div className="mt-8 flex justify-end">
+                    <div className="mt-6 flex justify-end">
                         <button
                             onClick={handleSave}
                             disabled={saving}
