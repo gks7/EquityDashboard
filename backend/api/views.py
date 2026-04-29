@@ -3,6 +3,7 @@ from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.parsers import MultiPartParser, FormParser
 from finance.models import Stock, InvestmentThesis, Estimate5Y, PortfolioItem, ValuationModel, PortfolioSnapshot, HistCashTransaction, HistIndexPrice, AssetPositionHistOfficial, NAVPosition, ThesisEditHistory, AlphaDataPoint
 from .serializers import StockSerializer, InvestmentThesisSerializer, Estimate5YSerializer, PortfolioItemSerializer, PortfolioSnapshotSerializer
 from finance.services import update_stock_price, bloomberg_to_yfinance
@@ -941,7 +942,7 @@ class AlphaUploadView(APIView):
     in the upload — partial updates per stock are not supported (full refresh).
     """
     permission_classes = [IsAuthenticated]
-    parser_classes = []  # default parsers handle multipart
+    parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request):
         import traceback
