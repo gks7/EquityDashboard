@@ -3,7 +3,7 @@ from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from finance.models import Stock, InvestmentThesis, Estimate5Y, PortfolioItem, ValuationModel, PortfolioSnapshot, HistCashTransaction, HistIndexPrice, AssetPositionHistOfficial, NAVPosition, ThesisEditHistory
+from finance.models import Stock, InvestmentThesis, Estimate5Y, PortfolioItem, ValuationModel, PortfolioSnapshot, HistCashTransaction, HistIndexPrice, AssetPositionHistOfficial, NAVPosition, ThesisEditHistory, AlphaDataPoint
 from .serializers import StockSerializer, InvestmentThesisSerializer, Estimate5YSerializer, PortfolioItemSerializer, PortfolioSnapshotSerializer
 from finance.services import update_stock_price, bloomberg_to_yfinance
 import pandas as pd
@@ -928,3 +928,266 @@ class CRMMeetingViewSet(viewsets.ModelViewSet):
                 Q(description__icontains=search)
             )
         return qs
+
+
+# ============================================================================
+# Alpha (P/E-band forward-return) analysis
+# ============================================================================
+
+class AlphaUploadView(APIView):
+    """
+    Accepts an .xlsx with a 'Data' sheet (Stock, Date, Price, P/E, Forward Return).
+    Bulk-upserts rows into AlphaDataPoint. Replaces all rows for any stock present
+    in the upload — partial updates per stock are not supported (full refresh).
+    """
+    permission_classes = [IsAuthenticated]
+    parser_classes = []  # default parsers handle multipart
+
+    def post(self, request):
+        import traceback
+        file = request.FILES.get('file')
+        if not file:
+            return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            xl = pd.ExcelFile(file)
+            sheet = "Data" if "Data" in xl.sheet_names else xl.sheet_names[0]
+            # The Excel has a blank top row before the real header.
+            # Try header=1 first, fall back to header=0 if columns don't match.
+            df = xl.parse(sheet, header=1)
+            required = {'Stock', 'Date', 'Price', 'P/E'}
+            if not required.issubset(set(df.columns)):
+                df = xl.parse(sheet, header=0)
+            if not required.issubset(set(df.columns)):
+                return Response(
+                    {"error": f"Sheet '{sheet}' missing required columns. Found: {list(df.columns)}"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Keep only the columns we care about
+            keep = ['Stock', 'Date', 'Price', 'P/E']
+            if 'Forward Return' in df.columns:
+                keep.append('Forward Return')
+            df = df[keep].copy()
+
+            # Drop rows with no Stock or Date
+            df = df.dropna(subset=['Stock', 'Date'])
+            df['Stock'] = df['Stock'].astype(str).str.strip()
+            df = df[df['Stock'].str.len() > 0]
+            df['Date'] = pd.to_datetime(df['Date'], errors='coerce').dt.date
+            df = df.dropna(subset=['Date'])
+
+            stocks_in_upload = sorted(df['Stock'].unique().tolist())
+
+            # Wipe existing rows for these stocks then bulk insert (full refresh)
+            from django.db import transaction
+            with transaction.atomic():
+                AlphaDataPoint.objects.filter(stock__in=stocks_in_upload).delete()
+
+                rows = []
+                for _, r in df.iterrows():
+                    try:
+                        price = float(r['Price'])
+                    except (TypeError, ValueError):
+                        continue
+                    if pd.isna(price):
+                        continue
+                    try:
+                        pe = float(r['P/E']) if pd.notna(r['P/E']) else None
+                    except (TypeError, ValueError):
+                        pe = None
+                    fwd = None
+                    if 'Forward Return' in df.columns and pd.notna(r['Forward Return']):
+                        try:
+                            fwd = float(r['Forward Return'])
+                        except (TypeError, ValueError):
+                            fwd = None
+                    rows.append(AlphaDataPoint(
+                        stock=r['Stock'],
+                        date=r['Date'],
+                        price=price,
+                        pe=pe,
+                        forward_return=fwd,
+                    ))
+                AlphaDataPoint.objects.bulk_create(rows, batch_size=2000)
+
+            return Response({
+                "message": f"Uploaded {len(rows)} rows across {len(stocks_in_upload)} stocks.",
+                "stocks": stocks_in_upload,
+                "rows": len(rows),
+            }, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            return Response(
+                {"error": str(e), "traceback": traceback.format_exc()},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+class AlphaStocksView(APIView):
+    """Distinct stock tickers available in the Alpha dataset, with row counts."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from django.db.models import Count, Min, Max
+        qs = (AlphaDataPoint.objects
+              .values('stock')
+              .annotate(rows=Count('id'), since=Min('date'), latest=Max('date'))
+              .order_by('stock'))
+        return Response(list(qs))
+
+
+class AlphaAnalysisView(APIView):
+    """
+    GET /api/alpha/analysis/?stock=GOOGL&years=1&band_pct=5
+
+    Computes P/E-band forward-return statistics for the given stock and lookahead
+    window, using the configured band % around the most recent P/E. Forward return
+    for each historical point is recomputed from the price series so any window
+    is supported. Returns descriptive stats plus a 5%-bucket histogram of in-band
+    forward returns.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        stock = (request.query_params.get('stock') or '').strip()
+        if not stock:
+            return Response({"error": "stock is required"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            years = float(request.query_params.get('years', '1'))
+        except ValueError:
+            years = 1.0
+        try:
+            band_pct = float(request.query_params.get('band_pct', '5'))
+        except ValueError:
+            band_pct = 5.0
+
+        rows = list(AlphaDataPoint.objects
+                    .filter(stock=stock)
+                    .order_by('date')
+                    .values('date', 'price', 'pe'))
+        if not rows:
+            return Response({"error": f"No data for stock '{stock}'"}, status=status.HTTP_404_NOT_FOUND)
+
+        import bisect
+        from datetime import timedelta
+
+        dates = [r['date'] for r in rows]
+        prices = [r['price'] for r in rows]
+        pes = [r['pe'] for r in rows]
+
+        window_days = int(round(years * 365.25))
+
+        # Forward total return for each row: find first row whose date >= date_i + window
+        forward_returns = [None] * len(rows)
+        for i, d in enumerate(dates):
+            target = d + timedelta(days=window_days)
+            j = bisect.bisect_left(dates, target, lo=i + 1)
+            if j >= len(rows):
+                continue
+            p_now = prices[i]
+            p_fut = prices[j]
+            if p_now and p_now > 0 and p_fut is not None:
+                forward_returns[i] = (p_fut / p_now) - 1.0
+
+        # Current P/E = most recent non-null
+        current_pe = None
+        current_date = None
+        for r in reversed(rows):
+            if r['pe'] is not None:
+                current_pe = r['pe']
+                current_date = r['date']
+                break
+        if current_pe is None:
+            return Response({"error": "No P/E observations available"}, status=status.HTTP_400_BAD_REQUEST)
+
+        lower_pe = current_pe * (1 - band_pct / 100.0)
+        upper_pe = current_pe * (1 + band_pct / 100.0)
+
+        # Percentile rank of current P/E vs full history
+        valid_pes = [p for p in pes if p is not None]
+        below = sum(1 for p in valid_pes if p < current_pe)
+        percentile_rank = below / len(valid_pes) if valid_pes else None
+
+        # In-band sample. We count occurrences over ALL in-band days (including
+        # recent ones where the forward window has not yet elapsed). Avg / max
+        # drawdown / histogram are computed only over the realised subset, but
+        # win rate uses the full denominator — so unrealised future days are
+        # treated as 'not yet a win', which matches the source spreadsheet.
+        occurrences = 0
+        in_band_realised = []
+        wins = 0
+        for i in range(len(rows)):
+            pe_i = pes[i]
+            if pe_i is None or not (lower_pe <= pe_i <= upper_pe):
+                continue
+            occurrences += 1
+            fr = forward_returns[i]
+            if fr is not None:
+                in_band_realised.append(fr)
+                if fr > 0:
+                    wins += 1
+
+        if in_band_realised:
+            avg_return = sum(in_band_realised) / len(in_band_realised)
+            max_drawdown = min(in_band_realised)
+        else:
+            avg_return = None
+            max_drawdown = None
+        win_rate = (wins / occurrences) if occurrences > 0 else None
+        in_band_returns = in_band_realised
+
+        # 5%-wide histogram across the in-band sample
+        histogram = []
+        if in_band_returns:
+            bucket_w = 0.05
+            lo = min(in_band_returns)
+            hi = max(in_band_returns)
+            # Snap bucket edges to multiples of 5%
+            import math
+            start = math.floor(lo / bucket_w) * bucket_w
+            end = math.ceil(hi / bucket_w) * bucket_w
+            # Build buckets [start, start+w), [start+w, start+2w), ...
+            edges = []
+            x = start
+            # guard against floating-point creep
+            while x < end - 1e-9:
+                edges.append(x)
+                x += bucket_w
+            if not edges:
+                edges = [start]
+            counts = [0] * len(edges)
+            for v in in_band_returns:
+                # find bucket index
+                k = int(math.floor((v - start) / bucket_w))
+                if k < 0:
+                    k = 0
+                if k >= len(edges):
+                    k = len(edges) - 1
+                counts[k] += 1
+            for k, e in enumerate(edges):
+                histogram.append({
+                    "lower": round(e, 4),
+                    "upper": round(e + bucket_w, 4),
+                    "label": f"[{int(round(e*100))}%, {int(round((e+bucket_w)*100))}%]",
+                    "count": counts[k],
+                })
+
+        return Response({
+            "stock": stock,
+            "years": years,
+            "band_pct": band_pct,
+            "current_pe": current_pe,
+            "current_pe_date": current_date,
+            "lower_pe": lower_pe,
+            "upper_pe": upper_pe,
+            "data_since": dates[0],
+            "data_until": dates[-1],
+            "total_observations": len(rows),
+            "occurrences_in_band": occurrences,
+            "percentile_rank": percentile_rank,
+            "avg_forward_return": avg_return,
+            "win_rate": win_rate,
+            "max_drawdown_in_band": max_drawdown,
+            "histogram": histogram,
+        })

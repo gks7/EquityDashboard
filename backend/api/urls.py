@@ -8,6 +8,7 @@ from api.views import (
     NAVPositionViewSet, IgfTrView, AssetBreakdownView,
     TrackEventView, AdminOverviewView,
     CRMContactViewSet, CRMMeetingViewSet,
+    AlphaUploadView, AlphaStocksView, AlphaAnalysisView,
 )
 
 router = DefaultRouter()
@@ -32,4 +33,7 @@ urlpatterns = [
     path('igf-tr/asset-breakdown/', AssetBreakdownView.as_view(), name='igf-tr-asset-breakdown'),
     path('admin/track/', TrackEventView.as_view(), name='admin-track'),
     path('admin/overview/', AdminOverviewView.as_view(), name='admin-overview'),
+    path('alpha/upload_excel/', AlphaUploadView.as_view(), name='alpha-upload'),
+    path('alpha/stocks/', AlphaStocksView.as_view(), name='alpha-stocks'),
+    path('alpha/analysis/', AlphaAnalysisView.as_view(), name='alpha-analysis'),
 ]

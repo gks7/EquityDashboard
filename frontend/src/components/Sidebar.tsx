@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
-import { LayoutDashboard, List, LineChart, Users, Settings, Sun, Moon, Shield, LogOut, TrendingUp, Activity, Handshake, Database, ArrowLeftRight, ClipboardList, Wallet, Menu, X } from "lucide-react";
+import { LayoutDashboard, List, LineChart, Users, Settings, Sun, Moon, Shield, LogOut, TrendingUp, Activity, Handshake, Database, ArrowLeftRight, ClipboardList, Wallet, Menu, X, BarChart3 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 const ADMIN_EMAIL = "gabriel@igfwm.com";
@@ -14,6 +14,7 @@ const navItems = [
   { href: "/watchlist", label: "Watchlist", icon: List },
   { href: "/portfolio", label: "Portfolio", icon: LineChart },
   { href: "/igf-tr", label: "IGF TR", icon: TrendingUp },
+  { href: "/alpha", label: "Alpha", icon: BarChart3 },
   { href: "/moats", label: "Moats", icon: Shield },
   { href: "/crm", label: "CRM", icon: Handshake },
   { href: "/analysts", label: "Analysts", icon: Users },

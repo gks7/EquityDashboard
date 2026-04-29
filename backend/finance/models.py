@@ -348,6 +348,29 @@ class AssetPositionHistOfficial(models.Model):
         return f"Position {self.date} {self.fund} {self.asset}"
 
 
+class AlphaDataPoint(models.Model):
+    """
+    Daily Price + P/E + Forward Return observations per stock, used for the Alpha
+    (P/E-band forward-return) analysis dashboard. Forward returns are recomputed
+    on the fly from the price series so any lookahead window is supported; the
+    column is kept for the 1Y value carried over from the source spreadsheet.
+    """
+    stock = models.CharField(max_length=20, db_index=True)
+    date = models.DateField()
+    price = models.FloatField()
+    pe = models.FloatField(blank=True, null=True)
+    forward_return = models.FloatField(blank=True, null=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('stock', 'date')
+        ordering = ['stock', 'date']
+        indexes = [models.Index(fields=['stock', 'date'])]
+
+    def __str__(self):
+        return f"{self.stock} {self.date} P={self.price} PE={self.pe}"
+
+
 class MoatRanking(models.Model):
     """
     Stores an ordered ranking (1 to N) of stocks by moat strength, as determined by an analyst.
