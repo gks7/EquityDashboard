@@ -67,6 +67,15 @@ const groupColor = (g: string, idx: number) => GROUP_PALETTE[g] ?? FALLBACK_PALE
 const fmt = (n: number | null | undefined, decimals = 2) =>
   n == null ? "—" : n.toLocaleString("pt-BR", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 
+const fmtSig = (n: number | null | undefined, sig = 4): string => {
+  if (n == null || !isFinite(n)) return "—";
+  if (n === 0) return (0).toLocaleString("pt-BR", { minimumFractionDigits: sig - 1, maximumFractionDigits: sig - 1 });
+  const rounded = Number(n.toPrecision(sig));
+  const magnitude = Math.floor(Math.log10(Math.abs(rounded)));
+  const decimals = Math.max(0, sig - 1 - magnitude);
+  return rounded.toLocaleString("pt-BR", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+};
+
 const fmtM = (n: number) => {
   const abs = Math.abs(n);
   if (abs >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B`;
@@ -384,11 +393,21 @@ export default function IgfTrPage() {
       const idxVal = idxBase != null ? idxMap.get(p.date) : undefined;
       return {
         date: fmtDate(p.date),
+        rawDate: p.date,
         fundo: parseFloat(((p.value / cotaBase - 1) * 100).toFixed(4)),
         indice: idxVal != null && idxBase != null ? parseFloat(((idxVal / idxBase - 1) * 100).toFixed(4)) : undefined,
       };
     });
   }, [cotaSeries, cotaRange, compareIndex, data]);
+
+  // Ticks aligned to the last data point of each month (used for grid + X-axis labels)
+  const cotaMonthEndTicks = useMemo(() => {
+    const byMonth = new Map<string, string>();
+    for (const p of cotaChartData) {
+      byMonth.set(p.rawDate.slice(0, 7), p.date);
+    }
+    return Array.from(byMonth.values());
+  }, [cotaChartData]);
 
   const isCompareMode = compareIndex != null && cotaChartData.some((p) => p.indice != null);
 
@@ -587,7 +606,7 @@ export default function IgfTrPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <StatCard
                 label="Cota Atual (NAV/Cota)"
-                value={latest?.nav_per_share != null ? fmt(latest.nav_per_share, 6) : "—"}
+                value={latest?.nav_per_share != null ? fmtSig(latest.nav_per_share, 4) : "—"}
                 sub={latest?.date ? fmtDate(latest.date) : undefined}
                 icon={Activity}
                 trend="neutral"
@@ -595,8 +614,8 @@ export default function IgfTrPage() {
               />
               <StatCard
                 label="Variação no Dia"
-                value={cotaChange != null ? `${cotaChange >= 0 ? "+" : ""}${fmt(cotaChange, 6)}` : "—"}
-                sub={cotaChangePct != null ? `${cotaChangePct >= 0 ? "+" : ""}${cotaChangePct.toFixed(4)}%` : undefined}
+                value={cotaChange != null ? `${cotaChange >= 0 ? "+" : ""}${fmtSig(cotaChange, 4)}` : "—"}
+                sub={cotaChangePct != null ? `${cotaChangePct >= 0 ? "+" : ""}${fmtSig(cotaChangePct, 4)}%` : undefined}
                 icon={cotaChange != null && cotaChange >= 0 ? TrendingUp : TrendingDown}
                 trend={cotaChange != null ? (cotaChange >= 0 ? "up" : "down") : "neutral"}
                 color={cotaChange != null && cotaChange >= 0 ? "emerald" : "rose"}
@@ -671,7 +690,14 @@ export default function IgfTrPage() {
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" className="dark:[stroke:#1e293b]" />
-                    <XAxis dataKey="date" tick={{ fill: "#94a3b8", fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fill: "#94a3b8", fontSize: 10 }}
+                      tickLine={false}
+                      axisLine={false}
+                      ticks={cotaMonthEndTicks}
+                      interval={0}
+                    />
                     <YAxis
                       domain={cotaDomain}
                       tick={{ fill: "#94a3b8", fontSize: 10 }}
