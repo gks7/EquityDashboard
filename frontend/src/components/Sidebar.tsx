@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
-import { LayoutDashboard, List, LineChart, Users, Settings, Sun, Moon, Shield, LogOut, TrendingUp, Activity, Handshake, Database, ArrowLeftRight, ClipboardList, Wallet, Menu, X, BarChart3 } from "lucide-react";
+import { LayoutDashboard, List, LineChart, Settings, Sun, Moon, Shield, LogOut, TrendingUp, Activity, Menu, X, BarChart3 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 const ADMIN_EMAIL = "gabriel@igfwm.com";
@@ -16,12 +16,6 @@ const navItems = [
   { href: "/igf-tr", label: "IGF TR", icon: TrendingUp },
   { href: "/alpha", label: "Alpha", icon: BarChart3 },
   { href: "/moats", label: "Moats", icon: Shield },
-  { href: "/crm", label: "CRM", icon: Handshake },
-  { href: "/analysts", label: "Analysts", icon: Users },
-  { href: "/bbg-monitor", label: "BBG Monitor", icon: Database },
-  { href: "/trades", label: "Trades", icon: ArrowLeftRight },
-  { href: "/positions", label: "Positions", icon: Wallet },
-  { href: "/asset-register", label: "Asset Register", icon: ClipboardList },
 ];
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
