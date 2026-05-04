@@ -268,9 +268,10 @@ export default function AlphaPage() {
                                     />
                                     <Tooltip
                                         formatter={(value) => [value as number, "Count"] as [number, string]}
-                                        labelFormatter={(label: string) => {
-                                            const m = /^\[(-?\d+)%,\s*(-?\d+)%\]/.exec(label);
-                                            return m ? `Forward return: ${m[1]}% to ${m[2]}%` : `Bucket ${label}`;
+                                        labelFormatter={(label) => {
+                                            const s = String(label);
+                                            const m = /^\[(-?\d+)%,\s*(-?\d+)%\]/.exec(s);
+                                            return m ? `Forward return: ${m[1]}% to ${m[2]}%` : `Bucket ${s}`;
                                         }}
                                         contentStyle={{ backgroundColor: "#1e293b", border: "none", borderRadius: 6, color: "#fff" }}
                                     />
