@@ -243,13 +243,35 @@ export default function AlphaPage() {
                         <h2 className="text-base font-bold text-rose-500 text-center mb-2">Count of return in each bracket</h2>
                         <div style={{ width: "100%", height: 420 }}>
                             <ResponsiveContainer>
-                                <BarChart data={analysis?.histogram || []} margin={{ top: 10, right: 16, left: 0, bottom: 60 }}>
+                                <BarChart data={analysis?.histogram || []} margin={{ top: 10, right: 16, left: 0, bottom: 30 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                                    <XAxis dataKey="label" tick={{ fill: "#dc2626", fontSize: 11 }} angle={-90} textAnchor="end" interval={0} height={70} />
-                                    <YAxis tick={{ fill: "#dc2626", fontSize: 11 }} />
+                                    <XAxis
+                                        dataKey="label"
+                                        tick={{ fill: "#64748b", fontSize: 10 }}
+                                        tickFormatter={(label: string) => {
+                                            const m = /^\[(-?\d+)%/.exec(label);
+                                            return m ? `${m[1]}%` : label;
+                                        }}
+                                        angle={-45}
+                                        textAnchor="end"
+                                        interval={0}
+                                        height={48}
+                                        tickMargin={4}
+                                        tickLine={false}
+                                        axisLine={{ stroke: "#cbd5e1" }}
+                                    />
+                                    <YAxis
+                                        tick={{ fill: "#64748b", fontSize: 11 }}
+                                        tickLine={false}
+                                        axisLine={false}
+                                        allowDecimals={false}
+                                    />
                                     <Tooltip
                                         formatter={(value) => [value as number, "Count"] as [number, string]}
-                                        labelFormatter={(label) => `Bucket ${label}`}
+                                        labelFormatter={(label: string) => {
+                                            const m = /^\[(-?\d+)%,\s*(-?\d+)%\]/.exec(label);
+                                            return m ? `Forward return: ${m[1]}% to ${m[2]}%` : `Bucket ${label}`;
+                                        }}
                                         contentStyle={{ backgroundColor: "#1e293b", border: "none", borderRadius: 6, color: "#fff" }}
                                     />
                                     <Bar dataKey="count" fill="#1f4e79">
