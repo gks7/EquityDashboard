@@ -243,11 +243,11 @@ export default function AlphaPage() {
                         <h2 className="text-base font-bold text-rose-500 text-center mb-2">Count of return in each bracket</h2>
                         <div style={{ width: "100%", height: 420 }}>
                             <ResponsiveContainer>
-                                <BarChart data={analysis?.histogram || []} margin={{ top: 10, right: 16, left: 0, bottom: 30 }}>
+                                <BarChart data={analysis?.histogram || []} margin={{ top: 10, right: 16, left: 0, bottom: 40 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
                                     <XAxis
                                         dataKey="label"
-                                        tick={{ fill: "#64748b", fontSize: 10 }}
+                                        tick={{ fill: "#334155", fontSize: 13, fontWeight: 600 }}
                                         tickFormatter={(label: string) => {
                                             const m = /^\[(-?\d+)%/.exec(label);
                                             return m ? `${m[1]}%` : label;
@@ -255,8 +255,8 @@ export default function AlphaPage() {
                                         angle={-45}
                                         textAnchor="end"
                                         interval={0}
-                                        height={48}
-                                        tickMargin={4}
+                                        height={64}
+                                        tickMargin={8}
                                         tickLine={false}
                                         axisLine={{ stroke: "#cbd5e1" }}
                                     />
