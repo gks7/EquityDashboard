@@ -11,11 +11,21 @@ interface Props {
 
 export const HeatmapSection: React.FC<Props> = ({ section, monthsWindow }) => {
   return (
-    <section className="mb-6 last:mb-0">
-      <h3 className="text-white text-[15px] font-bold tracking-tight mb-2">
-        {section.title}
-      </h3>
-      <div>
+    <section className="mb-5 last:mb-0">
+      <div className="flex items-center gap-2 mb-2 pl-1">
+        <span
+          aria-hidden="true"
+          className="inline-block w-[3px] h-3.5 rounded-sm bg-blue-500/80"
+        />
+        <h3 className="text-slate-100 text-[12px] font-semibold uppercase tracking-[0.08em]">
+          {section.title}
+        </h3>
+        <span className="text-[11px] text-slate-500 font-normal normal-case tracking-normal">
+          {section.indicators.length}{" "}
+          {section.indicators.length === 1 ? "series" : "series"}
+        </span>
+      </div>
+      <div className="rounded-md bg-slate-950/40 ring-1 ring-white/5 px-2 py-1.5">
         {section.indicators.map((ind) => (
           <HeatmapRow
             key={ind.id}

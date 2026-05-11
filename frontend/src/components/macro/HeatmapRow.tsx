@@ -9,65 +9,127 @@ interface Props {
   monthsWindow: string[];
 }
 
+const formatMonth = (ym: string) => {
+  const [y, m] = ym.split("-").map(Number);
+  if (!y || !m) return ym;
+  return new Date(Date.UTC(y, m - 1, 1)).toLocaleString("en-US", {
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+};
+
+const formatValue = (v: number | null, label: string) => {
+  if (v === null || v === undefined) return "—";
+  const isPct = /%/.test(label);
+  const digits = Math.abs(v) >= 100 ? 0 : isPct ? 2 : 2;
+  return isPct ? `${v.toFixed(digits)}%` : v.toFixed(digits);
+};
+
 export const HeatmapRow: React.FC<Props> = ({ indicator, monthsWindow }) => {
   const [hover, setHover] = useState<
-    | { x: number; y: number; cell: (typeof indicator.cells)[number] }
+    | { x: number; y: number; cell: (typeof indicator.cells)[number]; prev: number | null }
     | null
   >(null);
 
   const cellByMonth = new Map(indicator.cells.map((c) => [c.month, c]));
+  const orderedCells = monthsWindow
+    .map((m) => cellByMonth.get(m))
+    .filter((c): c is (typeof indicator.cells)[number] => !!c);
+  const latestCell = orderedCells[orderedCells.length - 1];
 
   return (
     <div
-      className="grid items-center gap-3 py-[2px]"
-      style={{ gridTemplateColumns: "180px 70px 1fr" }}
+      className="grid items-center gap-3 py-[3px]"
+      style={{ gridTemplateColumns: "150px 80px 64px 1fr" }}
     >
-      <div className="text-[12px] text-right font-semibold text-slate-200 pr-1">
+      <div className="text-[12.5px] text-right font-medium text-slate-300 pr-1 truncate">
         {indicator.name}
       </div>
-      <Sparkline points={indicator.sparkline} />
+
+      <div className="flex items-center justify-end gap-2 pr-1">
+        <span
+          className="inline-block w-2 h-2 rounded-full ring-1 ring-black/30"
+          style={{ backgroundColor: latestCell?.color ?? "#3f3f46" }}
+          aria-hidden="true"
+        />
+        <span className="text-[12.5px] tabular-nums font-semibold text-slate-100">
+          {formatValue(indicator.latest_value, indicator.transform_label)}
+        </span>
+      </div>
+
+      <Sparkline
+        points={indicator.sparkline}
+        className="text-slate-400 dark:text-slate-500"
+      />
+
       <div className="flex h-[22px] gap-[1px]">
-        {monthsWindow.map((m) => {
+        {monthsWindow.map((m, idx) => {
           const c = cellByMonth.get(m);
-          const color = c?.color ?? "#2a2a2a";
+          const color = c?.color ?? "#1e1e22";
+          const prev = idx > 0 ? cellByMonth.get(monthsWindow[idx - 1])?.value ?? null : null;
           return (
             <div
               key={m}
               onMouseEnter={(e) =>
-                c &&
-                setHover({ x: e.clientX, y: e.clientY, cell: c })
+                c && setHover({ x: e.clientX, y: e.clientY, cell: c, prev })
               }
               onMouseMove={(e) =>
-                c &&
-                setHover({ x: e.clientX, y: e.clientY, cell: c })
+                c && setHover({ x: e.clientX, y: e.clientY, cell: c, prev })
               }
               onMouseLeave={() => setHover(null)}
-              className="flex-1"
+              className="flex-1 rounded-[1px] transition-transform hover:scale-y-110 hover:z-10"
               style={{
                 backgroundColor: color,
                 cursor: c ? "crosshair" : "default",
               }}
               aria-label={
-                c
-                  ? `${indicator.name} ${m}: ${c.value} (z=${c.z})`
-                  : undefined
+                c ? `${indicator.name} ${m}: ${c.value} (z=${c.z})` : undefined
               }
             />
           );
         })}
       </div>
+
       {hover && (
         <div
-          className="fixed z-50 pointer-events-none whitespace-nowrap rounded border border-slate-700 bg-slate-900 text-white text-[11px] px-2.5 py-1.5"
-          style={{ left: hover.x + 12, top: hover.y + 12 }}
+          className="fixed z-50 pointer-events-none whitespace-nowrap rounded-lg border border-slate-700 bg-slate-900/95 backdrop-blur text-white text-[11.5px] px-3 py-2 shadow-xl"
+          style={{ left: hover.x + 14, top: hover.y + 14 }}
         >
-          <div className="font-semibold">
-            {indicator.name} · {hover.cell.month}
+          <div className="flex items-center gap-2 font-semibold mb-1">
+            <span
+              className="inline-block w-2 h-2 rounded-full"
+              style={{ backgroundColor: hover.cell.color }}
+            />
+            {indicator.name}
+            <span className="text-slate-400 font-normal">
+              · {formatMonth(hover.cell.month)}
+            </span>
           </div>
-          <div>
-            Value: {hover.cell.value} {indicator.transform_label}
+          <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
+            <span className="text-slate-400">Value</span>
+            <span className="tabular-nums text-right">
+              {formatValue(hover.cell.value, indicator.transform_label)}
+              {hover.prev !== null && hover.cell.value !== null && (
+                <span
+                  className={`ml-2 text-[10.5px] ${
+                    hover.cell.value - hover.prev >= 0
+                      ? "text-emerald-400"
+                      : "text-rose-400"
+                  }`}
+                >
+                  {hover.cell.value - hover.prev >= 0 ? "▲" : "▼"}{" "}
+                  {Math.abs(hover.cell.value - hover.prev).toFixed(2)}
+                </span>
+              )}
+            </span>
+            <span className="text-slate-400">Z-score</span>
+            <span className="tabular-nums text-right">
+              {hover.cell.z?.toFixed(2) ?? "—"}
+            </span>
+            <span className="text-slate-400">Series</span>
+            <span className="text-right">{indicator.transform_label}</span>
           </div>
-          <div>Z-score: {hover.cell.z}</div>
         </div>
       )}
     </div>
