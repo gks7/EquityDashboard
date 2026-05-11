@@ -62,8 +62,27 @@ export const HeatmapRow: React.FC<Props> = ({
       style={{ gridTemplateColumns: "150px 80px 64px 1fr" }}
       onClick={onSelect ? () => onSelect(indicator.id) : undefined}
     >
-      <div className="text-[12.5px] text-right font-medium text-slate-700 dark:text-slate-300 pr-1 truncate">
-        {indicator.name}
+      <div className="flex items-center justify-end gap-1.5 pr-1 min-w-0">
+        {indicator.frequency && (
+          <span
+            className="inline-flex items-center justify-center text-[9px] font-mono font-semibold w-3.5 h-3.5 rounded-sm bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+            title={
+              indicator.frequency === "M"
+                ? "Monthly release"
+                : indicator.frequency === "W"
+                ? "Weekly release"
+                : indicator.frequency === "Q"
+                ? "Quarterly release"
+                : "Daily release"
+            }
+            aria-hidden="true"
+          >
+            {indicator.frequency}
+          </span>
+        )}
+        <span className="text-[12.5px] text-right font-medium text-slate-700 dark:text-slate-300 truncate">
+          {indicator.name}
+        </span>
       </div>
 
       <div className="flex items-center justify-end gap-2 pr-1">

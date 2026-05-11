@@ -32,69 +32,81 @@ FRED_BASE = "https://api.stlouisfed.org/fred/series/observations"
 INDICATORS: List[Dict] = [
     # --- Headline Inflation ---
     {"id": "CPIAUCSL", "name": "CPI", "section": "Headline Inflation",
-     "transform": "yoy_pct", "bad_when_high": True},
+     "transform": "yoy_pct", "bad_when_high": True, "freq": "M"},
     {"id": "CPILFESL", "name": "Core CPI", "section": "Headline Inflation",
-     "transform": "yoy_pct", "bad_when_high": True},
+     "transform": "yoy_pct", "bad_when_high": True, "freq": "M"},
     {"id": "PCEPI", "name": "PCE", "section": "Headline Inflation",
-     "transform": "yoy_pct", "bad_when_high": True},
+     "transform": "yoy_pct", "bad_when_high": True, "freq": "M"},
     {"id": "PCEPILFE", "name": "Core PCE", "section": "Headline Inflation",
-     "transform": "yoy_pct", "bad_when_high": True},
+     "transform": "yoy_pct", "bad_when_high": True, "freq": "M"},
 
     # --- Inflation Persistence ---
     {"id": "CORESTICKM159SFRBATL", "name": "Sticky CPI",
      "section": "Inflation Persistence",
-     "transform": "level", "display_label": "YoY %", "bad_when_high": True},
+     "transform": "level", "display_label": "YoY %", "bad_when_high": True, "freq": "M"},
     {"id": "PCETRIM12M159SFRBDAL", "name": "Trimmed Mean PCE",
      "section": "Inflation Persistence",
-     "transform": "level", "display_label": "YoY %", "bad_when_high": True},
+     "transform": "level", "display_label": "YoY %", "bad_when_high": True, "freq": "M"},
     {"id": "T5YIFR", "name": "5Y5Y Forward Inflation",
      "section": "Inflation Persistence",
-     "transform": "level", "display_label": "%", "bad_when_high": True},
+     "transform": "level", "display_label": "%", "bad_when_high": True, "freq": "D"},
 
     # --- Employment ---
     {"id": "UNRATE", "name": "Unemployment Rate", "section": "Employment",
-     "transform": "level", "display_label": "%", "bad_when_high": True},
+     "transform": "level", "display_label": "%", "bad_when_high": True, "freq": "M"},
     {"id": "PAYEMS", "name": "Nonfarm Payrolls", "section": "Employment",
-     "transform": "mom_diff_k", "bad_when_high": False},
+     "transform": "mom_diff_k", "bad_when_high": False, "freq": "M"},
     {"id": "ICSA", "name": "Initial Claims", "section": "Employment",
-     "transform": "level_k", "bad_when_high": True},
+     "transform": "level_k", "bad_when_high": True, "freq": "W"},
     {"id": "JTSJOL", "name": "Job Openings", "section": "Employment",
-     "transform": "yoy_pct", "bad_when_high": False},
+     "transform": "yoy_pct", "bad_when_high": False, "freq": "M"},
     {"id": "CES0500000003", "name": "Avg Hourly Earnings",
      "section": "Employment",
-     "transform": "yoy_pct", "bad_when_high": True},
+     "transform": "yoy_pct", "bad_when_high": True, "freq": "M"},
 
     # --- Activity ---
     {"id": "INDPRO", "name": "Industrial Production", "section": "Activity",
-     "transform": "yoy_pct", "bad_when_high": False},
+     "transform": "yoy_pct", "bad_when_high": False, "freq": "M"},
     {"id": "RSAFS", "name": "Retail Sales", "section": "Activity",
-     "transform": "yoy_pct", "bad_when_high": False},
+     "transform": "yoy_pct", "bad_when_high": False, "freq": "M"},
     {"id": "GDPC1", "name": "Real GDP", "section": "Activity",
-     "transform": "yoy_pct", "bad_when_high": False, "quarterly": True},
+     "transform": "yoy_pct", "bad_when_high": False, "quarterly": True, "freq": "Q"},
     {"id": "TCU", "name": "Capacity Utilization", "section": "Activity",
-     "transform": "level", "display_label": "%", "bad_when_high": False},
+     "transform": "level", "display_label": "%", "bad_when_high": False, "freq": "M"},
 
     # --- Consumer & Housing ---
     {"id": "UMCSENT", "name": "Consumer Sentiment",
      "section": "Consumer & Housing",
-     "transform": "level", "display_label": "Index", "bad_when_high": False},
+     "transform": "level", "display_label": "Index", "bad_when_high": False, "freq": "M"},
     {"id": "PERMIT", "name": "Building Permits",
      "section": "Consumer & Housing",
-     "transform": "yoy_pct", "bad_when_high": False},
+     "transform": "yoy_pct", "bad_when_high": False, "freq": "M"},
     {"id": "MORTGAGE30US", "name": "30Y Mortgage Rate",
      "section": "Consumer & Housing",
-     "transform": "level", "display_label": "%", "bad_when_high": True},
+     "transform": "level", "display_label": "%", "bad_when_high": True, "freq": "W"},
 
     # --- Credit & Conditions ---
     {"id": "BAMLH0A0HYM2", "name": "HY Credit Spread",
      "section": "Credit & Conditions",
-     "transform": "level", "display_label": "%", "bad_when_high": True},
+     "transform": "level", "display_label": "%", "bad_when_high": True, "freq": "D"},
     {"id": "NFCI", "name": "Financial Conditions",
      "section": "Credit & Conditions",
-     "transform": "level", "display_label": "Index", "bad_when_high": True},
+     "transform": "level", "display_label": "Index", "bad_when_high": True, "freq": "W"},
     {"id": "T10Y2Y", "name": "10Y-2Y Curve",
      "section": "Credit & Conditions",
-     "transform": "level", "display_label": "%", "bad_when_high": False},
+     "transform": "level", "display_label": "%", "bad_when_high": False, "freq": "D"},
+]
+
+# Series fetched only for the bond cockpit charts (NOT shown as heatmap rows).
+# All emitted as monthly time-series at the same DISPLAY_MONTHS window.
+BOND_CHART_SERIES: List[Dict] = [
+    {"id": "FEDFUNDS", "name": "Fed Funds Rate"},
+    {"id": "DGS3MO", "name": "3M Treasury"},
+    {"id": "DGS2", "name": "2Y Treasury"},
+    {"id": "DGS10", "name": "10Y Treasury"},
+    {"id": "DFII10", "name": "10Y Real Yield"},
+    {"id": "T10YIE", "name": "10Y Breakeven"},
+    {"id": "BAMLC0A0CM", "name": "IG Credit Spread"},
 ]
 
 ROLLING_WINDOW_YEARS = 10
@@ -261,11 +273,25 @@ def build_indicator(api_key: str, cfg: Dict) -> Dict:
         "section": cfg["section"],
         "transform_label": cfg.get("display_label", TRANSFORM_LABELS[cfg["transform"]]),
         "bad_when_high": cfg["bad_when_high"],
+        "frequency": cfg.get("freq", "M"),
         "latest_value": cells[-1]["value"] if cells else None,
         "latest_month": cells[-1]["month"] if cells else None,
         "sparkline": sparkline,
         "cells": cells,
     }
+
+
+def build_bond_chart_series(api_key: str, cfg: Dict) -> Dict:
+    """Fetch a bond series and return DISPLAY_MONTHS of monthly samples."""
+    raw = fetch_fred(cfg["id"], api_key)
+    last = raw.index.max()
+    cutoff = (last - pd.DateOffset(months=DISPLAY_MONTHS - 1)).replace(day=1)
+    window = raw.loc[raw.index >= cutoff]
+    points = [
+        {"month": d.strftime("%Y-%m"), "value": round(float(v), 3)}
+        for d, v in window.items()
+    ]
+    return {"id": cfg["id"], "name": cfg["name"], "points": points}
 
 
 def fetch_recession_months(api_key: str, months_window: List[str]) -> List[str]:
@@ -315,10 +341,17 @@ def main() -> int:
     print("Fetching USREC (NBER recession indicator)...", file=sys.stderr)
     recession_months = fetch_recession_months(api_key, months_window)
 
+    bond_chart = {}
+    for cfg in BOND_CHART_SERIES:
+        print(f"Fetching {cfg['id']} ({cfg['name']}) for bond cockpit...", file=sys.stderr)
+        s = build_bond_chart_series(api_key, cfg)
+        bond_chart[cfg["id"]] = s
+
     payload = {
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "rolling_window_years": ROLLING_WINDOW_YEARS,
         "recession_months": recession_months,
+        "bond_chart": bond_chart,
         "months_window": months_window,
         "sections": sections,
     }

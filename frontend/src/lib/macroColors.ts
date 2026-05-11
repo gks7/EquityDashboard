@@ -43,16 +43,25 @@ export interface MacroCell {
   color: string;
 }
 
+export type IndicatorFrequency = "D" | "W" | "M" | "Q";
+
 export interface MacroIndicator {
   id: string;
   name: string;
   section: string;
   transform_label: string;
   bad_when_high: boolean;
+  frequency?: IndicatorFrequency;
   latest_value: number | null;
   latest_month: string | null;
   sparkline: { date: string; value: number }[];
   cells: MacroCell[];
+}
+
+export interface BondChartSeries {
+  id: string;
+  name: string;
+  points: { month: string; value: number }[];
 }
 
 export interface MacroSection {
@@ -66,4 +75,5 @@ export interface MacroPayload {
   months_window: string[];
   sections: MacroSection[];
   recession_months?: string[];
+  bond_chart?: Record<string, BondChartSeries>;
 }

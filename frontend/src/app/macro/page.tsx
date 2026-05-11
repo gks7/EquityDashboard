@@ -8,6 +8,16 @@ import { HeatmapSection } from "@/components/macro/HeatmapSection";
 import { MacroHoverProvider } from "@/components/macro/MacroHoverContext";
 import { IndicatorChart } from "@/components/macro/IndicatorChart";
 import { classifyRegime, TONE_CLASSES } from "@/components/macro/regime";
+import { AnomalyStrip } from "@/components/macro/AnomalyStrip";
+import { BondCockpit } from "@/components/macro/BondCockpit";
+
+type RangeKey = "1y" | "3y" | "5y" | "all";
+const RANGE_OPTIONS: Array<{ key: RangeKey; label: string; months: number | null }> = [
+  { key: "1y", label: "1Y", months: 12 },
+  { key: "3y", label: "3Y", months: 36 },
+  { key: "5y", label: "5Y", months: 60 },
+  { key: "all", label: "All", months: null },
+];
 
 const GRID_COLS = "150px 80px 64px 1fr";
 
@@ -53,6 +63,7 @@ export default function MacroPage() {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [range, setRange] = useState<RangeKey>("all");
 
   const load = useCallback(async () => {
     setRefreshing(true);
@@ -74,11 +85,17 @@ export default function MacroPage() {
     load();
   }, [load]);
 
-  const yearTicks = useMemo(() => {
+  const visibleMonths = useMemo(() => {
     if (!data) return [];
+    const opt = RANGE_OPTIONS.find((r) => r.key === range);
+    if (!opt || opt.months === null) return data.months_window;
+    return data.months_window.slice(-opt.months);
+  }, [data, range]);
+
+  const yearTicks = useMemo(() => {
     const seen = new Set<string>();
     const ticks: { year: string; index: number }[] = [];
-    data.months_window.forEach((m, i) => {
+    visibleMonths.forEach((m, i) => {
       const y = m.slice(0, 4);
       if (!seen.has(y)) {
         seen.add(y);
@@ -86,11 +103,11 @@ export default function MacroPage() {
       }
     });
     return ticks;
-  }, [data]);
+  }, [visibleMonths]);
 
   const recessionRanges = useMemo(
-    () => recessionRangesAsIndices(data?.recession_months, data?.months_window ?? []),
-    [data]
+    () => recessionRangesAsIndices(data?.recession_months, visibleMonths),
+    [data, visibleMonths]
   );
 
   const regime = useMemo(() => (data ? classifyRegime(data) : null), [data]);
@@ -133,7 +150,7 @@ export default function MacroPage() {
     );
   }
 
-  const total = data.months_window.length;
+  const total = visibleMonths.length;
 
   return (
     <MacroHoverProvider>
@@ -188,6 +205,10 @@ export default function MacroPage() {
           </div>
         </div>
 
+        <AnomalyStrip data={data} onSelect={handleSelect} />
+
+        <BondCockpit data={data} />
+
         {selected && (
           <div className="mb-4">
             <IndicatorChart
@@ -214,7 +235,23 @@ export default function MacroPage() {
                 click any row to chart
               </span>
             </div>
-            <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+            <div className="flex items-center gap-3 text-[11px] text-slate-500 dark:text-slate-400">
+              <div className="inline-flex items-center gap-px rounded-md bg-slate-100 dark:bg-slate-800 p-0.5">
+                {RANGE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => setRange(opt.key)}
+                    className={`px-2 py-0.5 rounded text-[10.5px] font-semibold transition-colors ${
+                      range === opt.key
+                        ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+                        : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
               <span>worse</span>
               <span
                 className="inline-block w-44 h-2.5 rounded-full ring-1 ring-black/5 dark:ring-white/10"
@@ -251,7 +288,7 @@ export default function MacroPage() {
 
             <div className="relative">
               <div
-                className="absolute inset-0 grid pointer-events-none"
+                className="absolute inset-0 grid gap-3 pointer-events-none"
                 style={{ gridTemplateColumns: GRID_COLS }}
                 aria-hidden="true"
               >
@@ -285,7 +322,7 @@ export default function MacroPage() {
                   <HeatmapSection
                     key={s.title}
                     section={s}
-                    monthsWindow={data.months_window}
+                    monthsWindow={visibleMonths}
                     selectedId={selectedId}
                     onSelect={handleSelect}
                   />
