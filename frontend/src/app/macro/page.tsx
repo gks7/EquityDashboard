@@ -10,6 +10,7 @@ import { IndicatorChart } from "@/components/macro/IndicatorChart";
 import { classifyRegime, TONE_CLASSES } from "@/components/macro/regime";
 import { AnomalyStrip } from "@/components/macro/AnomalyStrip";
 import { BondCockpit } from "@/components/macro/BondCockpit";
+import { RegimePanel } from "@/components/macro/RegimePanel";
 
 type RangeKey = "1y" | "3y" | "5y" | "all";
 const RANGE_OPTIONS: Array<{ key: RangeKey; label: string; months: number | null }> = [
@@ -167,7 +168,18 @@ export default function MacroPage() {
               {regime && (
                 <span
                   className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-semibold ring-1 ${TONE_CLASSES[regime.tone]}`}
-                  title={regime.reasons.join("\n")}
+                  title={`Growth z: ${
+                    regime.growthZ === null
+                      ? "—"
+                      : (regime.growthZ >= 0 ? "+" : "") + regime.growthZ.toFixed(2)
+                  } · Inflation z: ${
+                    regime.inflationZ === null
+                      ? "—"
+                      : (regime.inflationZ >= 0 ? "+" : "") + regime.inflationZ.toFixed(2)
+                  }${regime.alerts
+                    .filter((a) => a.triggered)
+                    .map((a) => ` · ${a.label} ${a.value}`)
+                    .join("")}`}
                 >
                   {regime.tone === "bad" && <AlertCircle className="w-3.5 h-3.5" />}
                   {regime.label}
@@ -204,6 +216,8 @@ export default function MacroPage() {
             </button>
           </div>
         </div>
+
+        <RegimePanel data={data} />
 
         <AnomalyStrip data={data} onSelect={handleSelect} />
 
