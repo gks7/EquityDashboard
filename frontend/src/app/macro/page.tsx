@@ -157,7 +157,7 @@ export default function MacroPage() {
           </div>
         </div>
 
-        <div className="bg-slate-950 px-4 py-4">
+        <div className="bg-white dark:bg-slate-950 px-4 py-4">
           <div
             className="grid items-end gap-3 mb-2 relative"
             style={{ gridTemplateColumns: GRID_COLS }}
@@ -195,7 +195,7 @@ export default function MacroPage() {
                 {yearTicks.slice(1).map((t) => (
                   <span
                     key={t.year}
-                    className="absolute top-0 bottom-0 w-px bg-white/[0.04]"
+                    className="absolute top-0 bottom-0 w-px bg-slate-900/[0.06] dark:bg-white/[0.04]"
                     style={{ left: `${(t.index / total) * 100}%` }}
                   />
                 ))}

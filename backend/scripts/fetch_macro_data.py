@@ -29,48 +29,54 @@ FRED_BASE = "https://api.stlouisfed.org/fred/series/observations"
 # To add an indicator later: append a dict with the FRED series_id,
 # display name, section, transform, and sign convention.
 INDICATORS: List[Dict] = [
-    {
-        "id": "CPIAUCSL",
-        "name": "CPI",
-        "section": "Headline Inflation",
-        "transform": "yoy_pct",
-        "bad_when_high": True,
-    },
-    {
-        "id": "CPILFESL",
-        "name": "Core CPI",
-        "section": "Headline Inflation",
-        "transform": "yoy_pct",
-        "bad_when_high": True,
-    },
-    {
-        "id": "PCEPI",
-        "name": "PCE",
-        "section": "Headline Inflation",
-        "transform": "yoy_pct",
-        "bad_when_high": True,
-    },
-    {
-        "id": "PCEPILFE",
-        "name": "Core PCE",
-        "section": "Headline Inflation",
-        "transform": "yoy_pct",
-        "bad_when_high": True,
-    },
-    {
-        "id": "UNRATE",
-        "name": "Unemployment Rate",
-        "section": "Employment",
-        "transform": "level",
-        "bad_when_high": True,
-    },
-    {
-        "id": "PAYEMS",
-        "name": "Nonfarm Payrolls",
-        "section": "Employment",
-        "transform": "mom_diff_k",
-        "bad_when_high": False,
-    },
+    # --- Headline Inflation ---
+    {"id": "CPIAUCSL", "name": "CPI", "section": "Headline Inflation",
+     "transform": "yoy_pct", "bad_when_high": True},
+    {"id": "CPILFESL", "name": "Core CPI", "section": "Headline Inflation",
+     "transform": "yoy_pct", "bad_when_high": True},
+    {"id": "PCEPI", "name": "PCE", "section": "Headline Inflation",
+     "transform": "yoy_pct", "bad_when_high": True},
+    {"id": "PCEPILFE", "name": "Core PCE", "section": "Headline Inflation",
+     "transform": "yoy_pct", "bad_when_high": True},
+
+    # --- Inflation Persistence ---
+    {"id": "CORESTICKM159SFRBATL", "name": "Sticky CPI",
+     "section": "Inflation Persistence",
+     "transform": "level", "display_label": "YoY %", "bad_when_high": True},
+    {"id": "PCETRIM12M159SFRBDAL", "name": "Trimmed Mean PCE",
+     "section": "Inflation Persistence",
+     "transform": "level", "display_label": "YoY %", "bad_when_high": True},
+
+    # --- Employment ---
+    {"id": "UNRATE", "name": "Unemployment Rate", "section": "Employment",
+     "transform": "level", "display_label": "%", "bad_when_high": True},
+    {"id": "PAYEMS", "name": "Nonfarm Payrolls", "section": "Employment",
+     "transform": "mom_diff_k", "bad_when_high": False},
+    {"id": "ICSA", "name": "Initial Claims", "section": "Employment",
+     "transform": "level_k", "bad_when_high": True},
+    {"id": "JTSJOL", "name": "Job Openings", "section": "Employment",
+     "transform": "yoy_pct", "bad_when_high": False},
+
+    # --- Activity ---
+    {"id": "INDPRO", "name": "Industrial Production", "section": "Activity",
+     "transform": "yoy_pct", "bad_when_high": False},
+    {"id": "RSAFS", "name": "Retail Sales", "section": "Activity",
+     "transform": "yoy_pct", "bad_when_high": False},
+    {"id": "GDPC1", "name": "Real GDP", "section": "Activity",
+     "transform": "yoy_pct", "bad_when_high": False, "quarterly": True},
+    {"id": "TCU", "name": "Capacity Utilization", "section": "Activity",
+     "transform": "level", "display_label": "%", "bad_when_high": False},
+
+    # --- Consumer & Housing ---
+    {"id": "UMCSENT", "name": "Consumer Sentiment",
+     "section": "Consumer & Housing",
+     "transform": "level", "display_label": "Index", "bad_when_high": False},
+    {"id": "PERMIT", "name": "Building Permits",
+     "section": "Consumer & Housing",
+     "transform": "yoy_pct", "bad_when_high": False},
+    {"id": "MORTGAGE30US", "name": "30Y Mortgage Rate",
+     "section": "Consumer & Housing",
+     "transform": "level", "display_label": "%", "bad_when_high": True},
 ]
 
 ROLLING_WINDOW_YEARS = 10
@@ -81,11 +87,12 @@ TRANSFORM_LABELS = {
     "yoy_pct": "YoY %",
     "mom_diff_k": "Change (thousands)",
     "level": "Level",
+    "level_k": "Thousands",
 }
 
 
-def fetch_fred(series_id: str, api_key: str) -> pd.Series:
-    """Pull full history of a FRED series back to 1950."""
+def fetch_fred(series_id: str, api_key: str, quarterly: bool = False) -> pd.Series:
+    """Pull full history of a FRED series back to 1950, normalized to month-start."""
     params = {
         "series_id": series_id,
         "api_key": api_key,
@@ -102,8 +109,11 @@ def fetch_fred(series_id: str, api_key: str) -> pd.Series:
     df["date"] = pd.to_datetime(df["date"])
     df["value"] = pd.to_numeric(df["value"], errors="coerce")
     df = df.set_index("date").dropna(subset=["value"])
-    # Normalize to month-start for clean alignment across series.
-    series = df["value"].resample("MS").last().dropna()
+    series = df["value"].resample("MS").last()
+    if quarterly:
+        # Fill the two non-quarter months so YoY (shift 12 rows) works on a true monthly index.
+        series = series.ffill(limit=2)
+    series = series.dropna()
     series.name = series_id
     return series
 
@@ -116,6 +126,8 @@ def transform(series: pd.Series, kind: str) -> pd.Series:
         return series.diff()
     if kind == "level":
         return series
+    if kind == "level_k":
+        return series / 1000.0
     raise ValueError(f"Unknown transform: {kind}")
 
 
@@ -147,7 +159,7 @@ def z_color(z: float, bad_when_high: bool) -> str:
 
 
 def build_indicator(api_key: str, cfg: Dict) -> Dict:
-    raw = fetch_fred(cfg["id"], api_key)
+    raw = fetch_fred(cfg["id"], api_key, quarterly=cfg.get("quarterly", False))
     disp = transform(raw, cfg["transform"]).dropna()
 
     window = ROLLING_WINDOW_YEARS * 12
@@ -184,7 +196,7 @@ def build_indicator(api_key: str, cfg: Dict) -> Dict:
         "id": cfg["id"],
         "name": cfg["name"],
         "section": cfg["section"],
-        "transform_label": TRANSFORM_LABELS[cfg["transform"]],
+        "transform_label": cfg.get("display_label", TRANSFORM_LABELS[cfg["transform"]]),
         "bad_when_high": cfg["bad_when_high"],
         "latest_value": cells[-1]["value"] if cells else None,
         "latest_month": cells[-1]["month"] if cells else None,

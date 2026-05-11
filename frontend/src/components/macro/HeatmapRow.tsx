@@ -43,30 +43,29 @@ export const HeatmapRow: React.FC<Props> = ({ indicator, monthsWindow }) => {
       className="grid items-center gap-3 py-[3px]"
       style={{ gridTemplateColumns: "150px 80px 64px 1fr" }}
     >
-      <div className="text-[12.5px] text-right font-medium text-slate-300 pr-1 truncate">
+      <div className="text-[12.5px] text-right font-medium text-slate-700 dark:text-slate-300 pr-1 truncate">
         {indicator.name}
       </div>
 
       <div className="flex items-center justify-end gap-2 pr-1">
         <span
-          className="inline-block w-2 h-2 rounded-full ring-1 ring-black/30"
-          style={{ backgroundColor: latestCell?.color ?? "#3f3f46" }}
+          className="inline-block w-2 h-2 rounded-full ring-1 ring-black/20 dark:ring-black/40"
+          style={{ backgroundColor: latestCell?.color ?? "#cbd5e1" }}
           aria-hidden="true"
         />
-        <span className="text-[12.5px] tabular-nums font-semibold text-slate-100">
+        <span className="text-[12.5px] tabular-nums font-semibold text-slate-900 dark:text-slate-100">
           {formatValue(indicator.latest_value, indicator.transform_label)}
         </span>
       </div>
 
       <Sparkline
         points={indicator.sparkline}
-        className="text-slate-400 dark:text-slate-500"
+        className="text-slate-500 dark:text-slate-400"
       />
 
       <div className="flex h-[22px] gap-[1px]">
         {monthsWindow.map((m, idx) => {
           const c = cellByMonth.get(m);
-          const color = c?.color ?? "#1e1e22";
           const prev = idx > 0 ? cellByMonth.get(monthsWindow[idx - 1])?.value ?? null : null;
           return (
             <div
@@ -78,9 +77,11 @@ export const HeatmapRow: React.FC<Props> = ({ indicator, monthsWindow }) => {
                 c && setHover({ x: e.clientX, y: e.clientY, cell: c, prev })
               }
               onMouseLeave={() => setHover(null)}
-              className="flex-1 rounded-[1px] transition-transform hover:scale-y-110 hover:z-10"
+              className={`flex-1 rounded-[1px] transition-transform hover:scale-y-110 hover:z-10 ${
+                c ? "" : "bg-slate-200 dark:bg-slate-800"
+              }`}
               style={{
-                backgroundColor: color,
+                backgroundColor: c?.color,
                 cursor: c ? "crosshair" : "default",
               }}
               aria-label={
