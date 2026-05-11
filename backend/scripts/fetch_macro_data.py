@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import time
 from datetime import datetime, timezone
 from typing import Dict, List
 
@@ -109,15 +110,50 @@ TRANSFORM_LABELS = {
 
 
 def fetch_fred(series_id: str, api_key: str, quarterly: bool = False) -> pd.Series:
-    """Pull full history of a FRED series back to 1950, normalized to month-start."""
+    """Pull full history of a FRED series back to 1950, normalized to month-start.
+
+    Retries on 5xx errors with exponential backoff — FRED is occasionally
+    flaky on licensed series (notably the BAML credit indices).
+    """
     params = {
         "series_id": series_id,
         "api_key": api_key,
         "file_type": "json",
         "observation_start": "1950-01-01",
     }
-    resp = requests.get(FRED_BASE, params=params, timeout=30)
-    resp.raise_for_status()
+    last_exc: Exception | None = None
+    for attempt in range(4):
+        try:
+            resp = requests.get(FRED_BASE, params=params, timeout=30)
+            resp.raise_for_status()
+            break
+        except requests.exceptions.HTTPError as e:
+            last_exc = e
+            status = e.response.status_code if e.response is not None else 0
+            if status >= 500 and attempt < 3:
+                wait = 2 ** attempt
+                print(
+                    f"  retry {series_id} (HTTP {status}) in {wait}s",
+                    file=sys.stderr,
+                )
+                time.sleep(wait)
+                continue
+            raise
+        except requests.exceptions.RequestException as e:
+            last_exc = e
+            if attempt < 3:
+                wait = 2 ** attempt
+                print(
+                    f"  retry {series_id} ({type(e).__name__}) in {wait}s",
+                    file=sys.stderr,
+                )
+                time.sleep(wait)
+                continue
+            raise
+    else:
+        if last_exc:
+            raise last_exc
+
     obs = resp.json().get("observations", [])
     if not obs:
         raise RuntimeError(f"No observations returned for {series_id}")
