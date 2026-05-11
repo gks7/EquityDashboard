@@ -46,6 +46,9 @@ INDICATORS: List[Dict] = [
     {"id": "PCETRIM12M159SFRBDAL", "name": "Trimmed Mean PCE",
      "section": "Inflation Persistence",
      "transform": "level", "display_label": "YoY %", "bad_when_high": True},
+    {"id": "T5YIFR", "name": "5Y5Y Forward Inflation",
+     "section": "Inflation Persistence",
+     "transform": "level", "display_label": "%", "bad_when_high": True},
 
     # --- Employment ---
     {"id": "UNRATE", "name": "Unemployment Rate", "section": "Employment",
@@ -56,6 +59,9 @@ INDICATORS: List[Dict] = [
      "transform": "level_k", "bad_when_high": True},
     {"id": "JTSJOL", "name": "Job Openings", "section": "Employment",
      "transform": "yoy_pct", "bad_when_high": False},
+    {"id": "CES0500000003", "name": "Avg Hourly Earnings",
+     "section": "Employment",
+     "transform": "yoy_pct", "bad_when_high": True},
 
     # --- Activity ---
     {"id": "INDPRO", "name": "Industrial Production", "section": "Activity",
@@ -77,6 +83,17 @@ INDICATORS: List[Dict] = [
     {"id": "MORTGAGE30US", "name": "30Y Mortgage Rate",
      "section": "Consumer & Housing",
      "transform": "level", "display_label": "%", "bad_when_high": True},
+
+    # --- Credit & Conditions ---
+    {"id": "BAMLH0A0HYM2", "name": "HY Credit Spread",
+     "section": "Credit & Conditions",
+     "transform": "level", "display_label": "%", "bad_when_high": True},
+    {"id": "NFCI", "name": "Financial Conditions",
+     "section": "Credit & Conditions",
+     "transform": "level", "display_label": "Index", "bad_when_high": True},
+    {"id": "T10Y2Y", "name": "10Y-2Y Curve",
+     "section": "Credit & Conditions",
+     "transform": "level", "display_label": "%", "bad_when_high": False},
 ]
 
 ROLLING_WINDOW_YEARS = 10
@@ -215,6 +232,23 @@ def build_indicator(api_key: str, cfg: Dict) -> Dict:
     }
 
 
+def fetch_recession_months(api_key: str, months_window: List[str]) -> List[str]:
+    """Return the subset of months_window that NBER marks as a US recession.
+
+    USREC is a binary FRED series (1 = recession). We keep only the months
+    that fall inside the display window so the frontend can shade them.
+    """
+    raw = fetch_fred("USREC", api_key)
+    window_set = set(months_window)
+    out: List[str] = []
+    for d, v in raw.items():
+        if int(v) == 1:
+            m = d.strftime("%Y-%m")
+            if m in window_set:
+                out.append(m)
+    return sorted(out)
+
+
 def main() -> int:
     api_key = os.environ.get("FRED_API_KEY")
     if not api_key:
@@ -242,9 +276,13 @@ def main() -> int:
 
     months_window = sorted({c["month"] for ind in built for c in ind["cells"]})
 
+    print("Fetching USREC (NBER recession indicator)...", file=sys.stderr)
+    recession_months = fetch_recession_months(api_key, months_window)
+
     payload = {
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "rolling_window_years": ROLLING_WINDOW_YEARS,
+        "recession_months": recession_months,
         "months_window": months_window,
         "sections": sections,
     }

@@ -4,10 +4,13 @@ import React, { useState } from "react";
 import type { MacroIndicator } from "@/lib/macroColors";
 import { zToColor } from "@/lib/macroColors";
 import { Sparkline } from "./Sparkline";
+import { useMacroHover } from "./MacroHoverContext";
 
 interface Props {
   indicator: MacroIndicator;
   monthsWindow: string[];
+  onSelect?: (indicatorId: string) => void;
+  isSelected?: boolean;
 }
 
 const formatMonth = (ym: string) => {
@@ -27,11 +30,17 @@ const formatValue = (v: number | null, label: string) => {
   return isPct ? `${v.toFixed(digits)}%` : v.toFixed(digits);
 };
 
-export const HeatmapRow: React.FC<Props> = ({ indicator, monthsWindow }) => {
+export const HeatmapRow: React.FC<Props> = ({
+  indicator,
+  monthsWindow,
+  onSelect,
+  isSelected = false,
+}) => {
   const [hover, setHover] = useState<
     | { x: number; y: number; cell: (typeof indicator.cells)[number]; prev: number | null }
     | null
   >(null);
+  const { hoveredIndex, setHovered } = useMacroHover();
 
   const cellByMonth = new Map(indicator.cells.map((c) => [c.month, c]));
   const orderedCells = monthsWindow
@@ -39,10 +48,19 @@ export const HeatmapRow: React.FC<Props> = ({ indicator, monthsWindow }) => {
     .filter((c): c is (typeof indicator.cells)[number] => !!c);
   const latestCell = orderedCells[orderedCells.length - 1];
 
+  const total = monthsWindow.length;
+
   return (
     <div
-      className="grid items-center gap-3 py-[3px]"
+      className={`grid items-center gap-3 py-[3px] rounded-md transition-colors ${
+        isSelected
+          ? "bg-blue-500/10 ring-1 ring-blue-500/30"
+          : onSelect
+          ? "hover:bg-slate-100/60 dark:hover:bg-slate-800/30 cursor-pointer"
+          : ""
+      }`}
       style={{ gridTemplateColumns: "150px 80px 64px 1fr" }}
+      onClick={onSelect ? () => onSelect(indicator.id) : undefined}
     >
       <div className="text-[12.5px] text-right font-medium text-slate-700 dark:text-slate-300 pr-1 truncate">
         {indicator.name}
@@ -68,20 +86,29 @@ export const HeatmapRow: React.FC<Props> = ({ indicator, monthsWindow }) => {
         className="text-slate-500 dark:text-slate-400"
       />
 
-      <div className="flex h-[22px] gap-[1px]">
+      <div className="relative flex h-[22px] gap-[1px]">
         {monthsWindow.map((m, idx) => {
           const c = cellByMonth.get(m);
-          const prev = idx > 0 ? cellByMonth.get(monthsWindow[idx - 1])?.value ?? null : null;
+          const prev =
+            idx > 0
+              ? cellByMonth.get(monthsWindow[idx - 1])?.value ?? null
+              : null;
           return (
             <div
               key={m}
-              onMouseEnter={(e) =>
-                c && setHover({ x: e.clientX, y: e.clientY, cell: c, prev })
-              }
+              onMouseEnter={(e) => {
+                if (c) {
+                  setHover({ x: e.clientX, y: e.clientY, cell: c, prev });
+                  setHovered(m, idx);
+                }
+              }}
               onMouseMove={(e) =>
                 c && setHover({ x: e.clientX, y: e.clientY, cell: c, prev })
               }
-              onMouseLeave={() => setHover(null)}
+              onMouseLeave={() => {
+                setHover(null);
+                setHovered(null, null);
+              }}
               className={`flex-1 rounded-[1px] transition-transform hover:scale-y-110 hover:z-10 ${
                 c ? "" : "bg-slate-200 dark:bg-slate-800"
               }`}
@@ -89,7 +116,7 @@ export const HeatmapRow: React.FC<Props> = ({ indicator, monthsWindow }) => {
                 backgroundColor: c
                   ? zToColor(c.z, indicator.bad_when_high)
                   : undefined,
-                cursor: c ? "crosshair" : "default",
+                cursor: c ? "crosshair" : onSelect ? "pointer" : "default",
               }}
               aria-label={
                 c ? `${indicator.name} ${m}: ${c.value} (z=${c.z})` : undefined
@@ -97,6 +124,13 @@ export const HeatmapRow: React.FC<Props> = ({ indicator, monthsWindow }) => {
             />
           );
         })}
+        {hoveredIndex !== null && (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute top-[-2px] bottom-[-2px] w-px bg-slate-900/70 dark:bg-white/70 z-20"
+            style={{ left: `${((hoveredIndex + 0.5) / total) * 100}%` }}
+          />
+        )}
       </div>
 
       {hover && (
@@ -143,6 +177,11 @@ export const HeatmapRow: React.FC<Props> = ({ indicator, monthsWindow }) => {
             <span className="text-slate-400">Series</span>
             <span className="text-right">{indicator.transform_label}</span>
           </div>
+          {onSelect && (
+            <div className="mt-1.5 pt-1.5 border-t border-slate-700 text-[10px] text-slate-400">
+              click row to expand chart
+            </div>
+          )}
         </div>
       )}
     </div>

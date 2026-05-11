@@ -65,4 +65,5 @@ export interface MacroPayload {
   rolling_window_years: number;
   months_window: string[];
   sections: MacroSection[];
+  recession_months?: string[];
 }
