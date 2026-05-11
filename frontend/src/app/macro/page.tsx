@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { RefreshCcw, Gauge, Info } from "lucide-react";
 import type { MacroPayload } from "@/lib/macroColors";
+import { PALETTE_GRADIENT_CSS } from "@/lib/macroColors";
 import { HeatmapSection } from "@/components/macro/HeatmapSection";
 
 const GRID_COLS = "150px 80px 64px 1fr";
@@ -148,10 +149,7 @@ export default function MacroPage() {
             <span>worse</span>
             <span
               className="inline-block w-44 h-2.5 rounded-full ring-1 ring-black/5 dark:ring-white/10"
-              style={{
-                background:
-                  "linear-gradient(to right, #d24545, #e6c34a, #3fa863)",
-              }}
+              style={{ background: PALETTE_GRADIENT_CSS }}
             />
             <span>better</span>
           </div>

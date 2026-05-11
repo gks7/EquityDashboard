@@ -1,26 +1,40 @@
-// Z-score -> hex color. Mirrors backend logic so cells render identically
-// even if a frontend recompute is ever needed. Backend currently provides
-// the color in the JSON, but keeping this here makes the data file optional.
+// ColorBrewer RdYlBu — diverging palette safe for red-green colorblindness
+// (deuteranopia/protanopia, ~8% of men). The green end is replaced by blue
+// so the two poles remain distinguishable under all common color-vision
+// deficiencies. Kept in sync with z_color() in fetch_macro_data.py.
+const PALETTE: ReadonlyArray<[number, [number, number, number]]> = [
+  [-2, [215, 25, 28]],   // #d7191c  red
+  [-1, [253, 174, 97]],  // #fdae61  orange
+  [0,  [254, 216, 118]], // #fed876  warm amber
+  [1,  [116, 173, 209]], // #74add1  medium blue
+  [2,  [44, 123, 182]],  // #2c7bb6  deep blue
+];
+
+const NO_DATA = "rgb(203, 213, 225)"; // slate-300
 
 export function zToColor(z: number | null, badWhenHigh: boolean): string {
-  if (z === null || Number.isNaN(z)) return "#2a2a2a";
+  if (z === null || Number.isNaN(z)) return NO_DATA;
 
   let score = badWhenHigh ? -z : z;
   score = Math.max(-2, Math.min(2, score));
 
-  if (score >= 0) {
-    const t = score / 2;
-    const r = Math.round(230 + t * (63 - 230));
-    const g = Math.round(195 + t * (168 - 195));
-    const b = Math.round(74 + t * (99 - 74));
-    return `rgb(${r}, ${g}, ${b})`;
+  for (let i = 0; i < PALETTE.length - 1; i++) {
+    const [z0, c0] = PALETTE[i];
+    const [z1, c1] = PALETTE[i + 1];
+    if (score <= z1) {
+      const t = z1 === z0 ? 0 : (score - z0) / (z1 - z0);
+      const r = Math.round(c0[0] + t * (c1[0] - c0[0]));
+      const g = Math.round(c0[1] + t * (c1[1] - c0[1]));
+      const b = Math.round(c0[2] + t * (c1[2] - c0[2]));
+      return `rgb(${r}, ${g}, ${b})`;
+    }
   }
-  const t = -score / 2;
-  const r = Math.round(230 + t * (210 - 230));
-  const g = Math.round(195 + t * (69 - 195));
-  const b = Math.round(74 + t * (69 - 74));
-  return `rgb(${r}, ${g}, ${b})`;
+  const [, last] = PALETTE[PALETTE.length - 1];
+  return `rgb(${last[0]}, ${last[1]}, ${last[2]})`;
 }
+
+export const PALETTE_GRADIENT_CSS =
+  "linear-gradient(to right, #d7191c, #fdae61, #fed876, #74add1, #2c7bb6)";
 
 export interface MacroCell {
   month: string;

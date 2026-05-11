@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import type { MacroIndicator } from "@/lib/macroColors";
+import { zToColor } from "@/lib/macroColors";
 import { Sparkline } from "./Sparkline";
 
 interface Props {
@@ -50,7 +51,11 @@ export const HeatmapRow: React.FC<Props> = ({ indicator, monthsWindow }) => {
       <div className="flex items-center justify-end gap-2 pr-1">
         <span
           className="inline-block w-2 h-2 rounded-full ring-1 ring-black/20 dark:ring-black/40"
-          style={{ backgroundColor: latestCell?.color ?? "#cbd5e1" }}
+          style={{
+            backgroundColor: latestCell
+              ? zToColor(latestCell.z, indicator.bad_when_high)
+              : "#cbd5e1",
+          }}
           aria-hidden="true"
         />
         <span className="text-[12.5px] tabular-nums font-semibold text-slate-900 dark:text-slate-100">
@@ -81,7 +86,9 @@ export const HeatmapRow: React.FC<Props> = ({ indicator, monthsWindow }) => {
                 c ? "" : "bg-slate-200 dark:bg-slate-800"
               }`}
               style={{
-                backgroundColor: c?.color,
+                backgroundColor: c
+                  ? zToColor(c.z, indicator.bad_when_high)
+                  : undefined,
                 cursor: c ? "crosshair" : "default",
               }}
               aria-label={
@@ -100,7 +107,12 @@ export const HeatmapRow: React.FC<Props> = ({ indicator, monthsWindow }) => {
           <div className="flex items-center gap-2 font-semibold mb-1">
             <span
               className="inline-block w-2 h-2 rounded-full"
-              style={{ backgroundColor: hover.cell.color }}
+              style={{
+                backgroundColor: zToColor(
+                  hover.cell.z,
+                  indicator.bad_when_high
+                ),
+              }}
             />
             {indicator.name}
             <span className="text-slate-400 font-normal">
@@ -115,8 +127,8 @@ export const HeatmapRow: React.FC<Props> = ({ indicator, monthsWindow }) => {
                 <span
                   className={`ml-2 text-[10.5px] ${
                     hover.cell.value - hover.prev >= 0
-                      ? "text-emerald-400"
-                      : "text-rose-400"
+                      ? "text-sky-400"
+                      : "text-orange-400"
                   }`}
                 >
                   {hover.cell.value - hover.prev >= 0 ? "▲" : "▼"}{" "}

@@ -131,30 +131,40 @@ def transform(series: pd.Series, kind: str) -> pd.Series:
     raise ValueError(f"Unknown transform: {kind}")
 
 
-def z_color(z: float, bad_when_high: bool) -> str:
-    """Map a z-score to a hex color on a red->yellow->green scale.
+# ColorBrewer RdYlBu — diverging palette safe for red-green colorblindness
+# (deuteranopia/protanopia, ~8% of men). The green end is replaced by blue.
+# Keep in sync with PALETTE in frontend/src/lib/macroColors.ts.
+_PALETTE_STOPS = [
+    (-2.0, (215, 25, 28)),    # #d7191c  red
+    (-1.0, (253, 174, 97)),   # #fdae61  orange
+    (0.0,  (254, 216, 118)),  # #fed876  warm amber
+    (1.0,  (116, 173, 209)),  # #74add1  medium blue
+    (2.0,  (44, 123, 182)),   # #2c7bb6  deep blue
+]
 
-    bad_when_high flips the sign so green always means 'good' regardless of
+
+def z_color(z: float, bad_when_high: bool) -> str:
+    """Map z-score to a hex color on a colorblind-safe diverging palette.
+
+    bad_when_high flips the sign so blue always means 'good' regardless of
     the underlying series (e.g. for CPI, a high reading is bad).
     """
     if z is None or (isinstance(z, float) and np.isnan(z)):
-        return "#2a2a2a"
+        return "#cbd5e1"  # slate-300 — no-data
 
     score = -z if bad_when_high else z
     score = max(-2.0, min(2.0, score))
 
-    # Anchor stops: red (-2) #d24545, yellow (0) #e6c34a, green (+2) #3fa863
-    if score >= 0:
-        t = score / 2.0
-        r = round(230 + t * (63 - 230))
-        g = round(195 + t * (168 - 195))
-        b = round(74 + t * (99 - 74))
-    else:
-        t = -score / 2.0
-        r = round(230 + t * (210 - 230))
-        g = round(195 + t * (69 - 195))
-        b = round(74 + t * (69 - 74))
-
+    for i in range(len(_PALETTE_STOPS) - 1):
+        z0, c0 = _PALETTE_STOPS[i]
+        z1, c1 = _PALETTE_STOPS[i + 1]
+        if score <= z1:
+            t = (score - z0) / (z1 - z0) if z1 > z0 else 0.0
+            r = round(c0[0] + t * (c1[0] - c0[0]))
+            g = round(c0[1] + t * (c1[1] - c0[1]))
+            b = round(c0[2] + t * (c1[2] - c0[2]))
+            return "#{:02x}{:02x}{:02x}".format(int(r), int(g), int(b))
+    r, g, b = _PALETTE_STOPS[-1][1]
     return "#{:02x}{:02x}{:02x}".format(int(r), int(g), int(b))
 
 
@@ -173,7 +183,7 @@ def build_indicator(api_key: str, cfg: Dict) -> Dict:
     cells = []
     for d in pd.date_range(cutoff, last, freq="MS"):
         if d not in disp.index:
-            cells.append({"month": d.strftime("%Y-%m"), "value": None, "z": None, "color": "#2a2a2a"})
+            cells.append({"month": d.strftime("%Y-%m"), "value": None, "z": None, "color": "#cbd5e1"})
             continue
         v = float(disp.loc[d])
         zv_raw = z.loc[d]
