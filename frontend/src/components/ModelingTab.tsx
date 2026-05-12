@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Save, RefreshCcw, TrendingUp, TrendingDown, Info } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
+import GrowthBridgeTab, { type BridgeDefaults } from "./GrowthBridgeTab";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -25,6 +26,9 @@ interface TickerConfig {
     sharesOutstanding: number;  // billions
     defaultNetDebt: number;     // $B (negative = net cash)
     methodNote: string;
+    mode?: "sotp" | "growth-bridge";
+    bridgeDefaults?: BridgeDefaults;
+    bridgeMacroDriver?: string; // indicator name in macro.json to auto-fill marketGrowth (e.g. "Nominal PCE")
 }
 
 // ─── Per-Ticker Config Map ─────────────────────────────────────────────────
@@ -174,6 +178,26 @@ const TICKER_CONFIGS: Record<string, TickerConfig> = {
             },
         ],
     },
+    MA: {
+        label: "Growth Bridge — IRR Decomposition",
+        targetYear: 2031,
+        sharesOutstanding: 0.90,
+        defaultNetDebt: 12,
+        mode: "growth-bridge",
+        bridgeMacroDriver: "Nominal PCE",
+        bridgeDefaults: {
+            marketGrowth: 5.5,
+            cardPenetration: 2.0,
+            crossBorderMix: 1.5,
+            netYield: 0.5,
+            marginExpansion: 1.5,
+            netBuyback: 2.5,
+            dividendYield: 0.6,
+            multipleRerate: 0.0,
+        },
+        methodNote: "Annual IRR decomposed into macro tailwind (nominal PCE) + secular drivers (penetration, cross-border) + operating leverage (yield, margin) + capital return + multiple re-rate.",
+        segments: [], // unused in growth-bridge mode
+    },
 };
 
 // Generic fallback for unconfigured tickers
@@ -254,6 +278,31 @@ interface ModelingTabProps {
 export default function ModelingTab({ ticker, currentPrice }: ModelingTabProps) {
     const config = TICKER_CONFIGS[ticker] ?? DEFAULT_CONFIG(ticker);
 
+    if (config.mode === "growth-bridge" && config.bridgeDefaults) {
+        return (
+            <GrowthBridgeTab
+                ticker={ticker}
+                currentPrice={currentPrice}
+                defaults={config.bridgeDefaults}
+                macroDriver={config.bridgeMacroDriver ?? "Nominal PCE"}
+                methodNote={config.methodNote}
+                targetYear={config.targetYear}
+            />
+        );
+    }
+
+    return (
+        <SotpTab ticker={ticker} currentPrice={currentPrice} config={config} />
+    );
+}
+
+interface SotpTabProps {
+    ticker: string;
+    currentPrice: number;
+    config: TickerConfig;
+}
+
+function SotpTab({ ticker, currentPrice, config }: SotpTabProps) {
     // ── State init ────────────────────────────────────────────────────────────
     const initSegments = (): SegmentState[] =>
         config.segments.map((s) => ({

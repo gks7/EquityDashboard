@@ -69,6 +69,8 @@ INDICATORS: List[Dict] = [
      "transform": "yoy_pct", "bad_when_high": False, "freq": "M"},
     {"id": "RSAFS", "name": "Retail Sales", "section": "Activity",
      "transform": "yoy_pct", "bad_when_high": False, "freq": "M"},
+    {"id": "PCE", "name": "Nominal PCE", "section": "Activity",
+     "transform": "yoy_pct", "bad_when_high": False, "freq": "M"},
     {"id": "GDPC1", "name": "Real GDP", "section": "Activity",
      "transform": "yoy_pct", "bad_when_high": False, "quarterly": True, "freq": "Q"},
     {"id": "TCU", "name": "Capacity Utilization", "section": "Activity",
