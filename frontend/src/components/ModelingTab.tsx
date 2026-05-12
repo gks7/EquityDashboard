@@ -4,6 +4,9 @@ import { useState, useEffect, useCallback } from "react";
 import { Save, RefreshCcw, TrendingUp, TrendingDown, Info } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
 import GrowthBridgeTab, { type BridgeDefaults } from "./GrowthBridgeTab";
+import ProductBridgeTab, {
+    type ProductBridgeConfig,
+} from "./ProductBridgeTab";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -26,9 +29,10 @@ interface TickerConfig {
     sharesOutstanding: number;  // billions
     defaultNetDebt: number;     // $B (negative = net cash)
     methodNote: string;
-    mode?: "sotp" | "growth-bridge";
+    mode?: "sotp" | "growth-bridge" | "product-bridge";
     bridgeDefaults?: BridgeDefaults;
     bridgeMacroDriver?: string; // indicator name in macro.json to auto-fill marketGrowth (e.g. "Nominal PCE")
+    productBridge?: ProductBridgeConfig;
 }
 
 // ─── Per-Ticker Config Map ─────────────────────────────────────────────────
@@ -178,6 +182,86 @@ const TICKER_CONFIGS: Record<string, TickerConfig> = {
             },
         ],
     },
+    AAPL: {
+        label: "Product Bridge — IRR Decomposition",
+        targetYear: 2031,
+        sharesOutstanding: 14.8,
+        defaultNetDebt: -45, // net cash
+        mode: "product-bridge",
+        methodNote: "Apple's IRR is dominated by firm-specific drivers, not macro. Each product segment contributes weighted by its share of revenue. iPhone hinges on install-base × (1/replacement-cycle) × ASP; Services on active-devices × ARPU. Capital return and multiple close the bridge.",
+        segments: [],
+        productBridge: {
+            segments: [
+                {
+                    id: "iphone",
+                    name: "iPhone",
+                    color: "#3b82f6",
+                    defaultWeight: 52,
+                    drivers: [
+                        {
+                            id: "install_base",
+                            label: "Install base growth",
+                            desc: "Active iPhone users worldwide (~1.4B)",
+                            defaultValue: 1.5,
+                        },
+                        {
+                            id: "replacement_cycle",
+                            label: "Replacement cycle effect",
+                            desc: "Negative if cycle extends. AI features could shorten it",
+                            defaultValue: -1.0,
+                            allowNegative: true,
+                        },
+                        {
+                            id: "asp",
+                            label: "ASP growth",
+                            desc: "Pro mix shift, currency, pricing",
+                            defaultValue: 2.5,
+                            allowNegative: true,
+                        },
+                    ],
+                },
+                {
+                    id: "services",
+                    name: "Services",
+                    color: "#10b981",
+                    defaultWeight: 24,
+                    drivers: [
+                        {
+                            id: "active_devices",
+                            label: "Active device growth",
+                            desc: "All Apple devices (~2.2B)",
+                            defaultValue: 5.0,
+                        },
+                        {
+                            id: "arpu",
+                            label: "ARPU growth",
+                            desc: "App Store, AppleCare, subs, ads, payments",
+                            defaultValue: 6.0,
+                        },
+                    ],
+                },
+                {
+                    id: "other_hw",
+                    name: "Other Hardware",
+                    color: "#a855f7",
+                    defaultWeight: 24,
+                    drivers: [
+                        {
+                            id: "hw_growth",
+                            label: "Aggregate growth",
+                            desc: "Mac + iPad + Wearables blended",
+                            defaultValue: 3.0,
+                            allowNegative: true,
+                        },
+                    ],
+                },
+            ],
+            marginExpansion: 0.5,
+            netBuyback: 3.5,
+            dividendYield: 0.5,
+            multipleRerate: 0.0,
+        },
+    },
     MA: {
         label: "Growth Bridge — IRR Decomposition",
         targetYear: 2031,
@@ -285,6 +369,18 @@ export default function ModelingTab({ ticker, currentPrice }: ModelingTabProps) 
                 currentPrice={currentPrice}
                 defaults={config.bridgeDefaults}
                 macroDriver={config.bridgeMacroDriver ?? "Nominal PCE"}
+                methodNote={config.methodNote}
+                targetYear={config.targetYear}
+            />
+        );
+    }
+
+    if (config.mode === "product-bridge" && config.productBridge) {
+        return (
+            <ProductBridgeTab
+                ticker={ticker}
+                currentPrice={currentPrice}
+                bridgeConfig={config.productBridge}
                 methodNote={config.methodNote}
                 targetYear={config.targetYear}
             />
