@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-13T19:20:13Z",
+  "generated_at": "2026-05-14T19:17:16Z",
   "rolling_window_years": 10,
   "recession_months": [
     "2020-03",
@@ -884,7 +884,7 @@
         },
         {
           "month": "2026-05",
-          "value": 3.95
+          "value": 4.0
         }
       ]
     },
@@ -1178,7 +1178,7 @@
         },
         {
           "month": "2026-05",
-          "value": 4.42
+          "value": 4.46
         }
       ]
     },
@@ -1472,7 +1472,7 @@
         },
         {
           "month": "2026-05",
-          "value": 1.95
+          "value": 1.99
         }
       ]
     },
@@ -1920,7 +1920,7 @@
         },
         {
           "month": "2026-05",
-          "value": 0.77
+          "value": 0.76
         }
       ]
     }
@@ -5263,7 +5263,7 @@
           "transform_label": "%",
           "bad_when_high": true,
           "frequency": "D",
-          "latest_value": 2.25,
+          "latest_value": 2.24,
           "latest_month": "2026-05",
           "sparkline": [
             {
@@ -5360,7 +5360,7 @@
             },
             {
               "date": "2026-05",
-              "value": 2.25
+              "value": 2.24
             }
           ],
           "cells": [
@@ -5792,9 +5792,9 @@
             },
             {
               "month": "2026-05",
-              "value": 2.25,
-              "z": 0.623,
-              "color": "#fdbe69"
+              "value": 2.24,
+              "z": 0.583,
+              "color": "#fdc06a"
             }
           ]
         }
@@ -6890,7 +6890,7 @@
           "transform_label": "Thousands",
           "bad_when_high": true,
           "frequency": "W",
-          "latest_value": 200.0,
+          "latest_value": 211.0,
           "latest_month": "2026-05",
           "sparkline": [
             {
@@ -6987,7 +6987,7 @@
             },
             {
               "date": "2026-05",
-              "value": 200.0
+              "value": 211.0
             }
           ],
           "cells": [
@@ -7419,9 +7419,9 @@
             },
             {
               "month": "2026-05",
-              "value": 200.0,
-              "z": -0.278,
-              "color": "#d8cc8f"
+              "value": 211.0,
+              "z": -0.26,
+              "color": "#dacd8e"
             }
           ]
         },
@@ -9063,13 +9063,9 @@
           "transform_label": "YoY %",
           "bad_when_high": false,
           "frequency": "M",
-          "latest_value": 3.97,
-          "latest_month": "2026-03",
+          "latest_value": 4.87,
+          "latest_month": "2026-04",
           "sparkline": [
-            {
-              "date": "2024-04",
-              "value": 2.55
-            },
             {
               "date": "2024-05",
               "value": 2.8
@@ -9116,7 +9112,7 @@
             },
             {
               "date": "2025-04",
-              "value": 4.97
+              "value": 4.99
             },
             {
               "date": "2025-05",
@@ -9156,20 +9152,18 @@
             },
             {
               "date": "2026-02",
-              "value": 3.96
+              "value": 4.17
             },
             {
               "date": "2026-03",
-              "value": 3.97
+              "value": 4.15
+            },
+            {
+              "date": "2026-04",
+              "value": 4.87
             }
           ],
           "cells": [
-            {
-              "month": "2020-04",
-              "value": -19.69,
-              "z": -8.162,
-              "color": "#d7191c"
-            },
             {
               "month": "2020-05",
               "value": -5.21,
@@ -9526,8 +9520,8 @@
             },
             {
               "month": "2025-04",
-              "value": 4.97,
-              "z": -0.048,
+              "value": 4.99,
+              "z": -0.046,
               "color": "#fed675"
             },
             {
@@ -9586,15 +9580,21 @@
             },
             {
               "month": "2026-02",
-              "value": 3.96,
-              "z": -0.211,
-              "color": "#fecf72"
+              "value": 4.17,
+              "z": -0.18,
+              "color": "#fed072"
             },
             {
               "month": "2026-03",
-              "value": 3.97,
-              "z": -0.213,
-              "color": "#fecf72"
+              "value": 4.15,
+              "z": -0.187,
+              "color": "#fed072"
+            },
+            {
+              "month": "2026-04",
+              "value": 4.87,
+              "z": -0.083,
+              "color": "#fed474"
             }
           ]
         },
@@ -12320,7 +12320,7 @@
           "transform_label": "%",
           "bad_when_high": true,
           "frequency": "W",
-          "latest_value": 6.37,
+          "latest_value": 6.36,
           "latest_month": "2026-05",
           "sparkline": [
             {
@@ -12417,7 +12417,7 @@
             },
             {
               "date": "2026-05",
-              "value": 6.37
+              "value": 6.36
             }
           ],
           "cells": [
@@ -12849,8 +12849,8 @@
             },
             {
               "month": "2026-05",
-              "value": 6.37,
-              "z": 0.985,
+              "value": 6.36,
+              "z": 0.979,
               "color": "#fdaf61"
             }
           ]
@@ -13951,7 +13951,7 @@
           "transform_label": "%",
           "bad_when_high": false,
           "frequency": "D",
-          "latest_value": 0.46,
+          "latest_value": 0.48,
           "latest_month": "2026-05",
           "sparkline": [
             {
@@ -14048,7 +14048,7 @@
             },
             {
               "date": "2026-05",
-              "value": 0.46
+              "value": 0.48
             }
           ],
           "cells": [
@@ -14480,9 +14480,9 @@
             },
             {
               "month": "2026-05",
-              "value": 0.46,
-              "z": 0.179,
-              "color": "#e5d086"
+              "value": 0.48,
+              "z": 0.214,
+              "color": "#e1cf89"
             }
           ]
         }
