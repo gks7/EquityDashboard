@@ -70,13 +70,20 @@ def compute_calculated_nav(as_of=None):
     hwm = cfg.high_water_mark or 0.0
     mgmt_paid_through = cfg.mgmt_fee_paid_through
 
-    # Management fee is paid monthly, so the accrued (unpaid) liability resets each
-    # month. An explicit paid-through date wins; otherwise accrue only from the first
-    # day of the latest snapshot's month, so the figure self-corrects without manual
-    # upkeep instead of compounding from the very first snapshot ever loaded.
+    # Both fees crystallize (are paid) at end of May and end of November, so the
+    # accrued management-fee liability resets on those dates. An explicit paid-through
+    # date wins; otherwise anchor to the most recent crystallization on or before the
+    # latest snapshot, so the figure resets per period without manual upkeep instead
+    # of compounding from the very first snapshot ever loaded.
     mgmt_accrual_start = mgmt_paid_through
     if mgmt_accrual_start is None:
-        mgmt_accrual_start = snapshots[-1].date.replace(day=1) - datetime.timedelta(days=1)
+        ld = snapshots[-1].date
+        boundaries = [
+            datetime.date(ld.year - 1, 11, 30),
+            datetime.date(ld.year, 5, 31),
+            datetime.date(ld.year, 11, 30),
+        ]
+        mgmt_accrual_start = max(b for b in boundaries if b <= ld)
 
     series = []
     mgmt_accrued = 0.0
@@ -147,8 +154,11 @@ def compute_calculated_nav(as_of=None):
             return round((latest['net_cota'] / base - 1.0) * 100.0, 4)
         return None
 
-    ytd_return = _pct(ytd_base if ytd_base is not None else ytd_first)
-    mtd_return = _pct(mtd_base if mtd_base is not None else mtd_first)
+    # Prefer a series-derived base (the cota just before the period). When the
+    # uploaded history doesn't yet reach the period start, fall back to the
+    # configured base cota, then to the first observation within the period.
+    mtd_return = _pct(mtd_base if mtd_base is not None else (cfg.mtd_base_cota or mtd_first))
+    ytd_return = _pct(ytd_base if ytd_base is not None else (cfg.ytd_base_cota or ytd_first))
 
     # Official cota from the administrator upload, for side-by-side comparison.
     official_cota = None

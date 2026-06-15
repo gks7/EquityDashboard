@@ -714,6 +714,10 @@ class FundConfigView(APIView):
                 cfg.trading_days = int(val)
         if 'fund' in request.data and request.data.get('fund'):
             cfg.fund = str(request.data.get('fund'))
+        # Nullable base cotas — an empty value clears the override (back to automatic).
+        for f in ['mtd_base_cota', 'ytd_base_cota']:
+            if f in request.data:
+                setattr(cfg, f, _safe_float(request.data.get(f)))
         for f in ['mgmt_fee_paid_through', 'perf_fee_paid_through']:
             if f in request.data:
                 setattr(cfg, f, _parse_date(request.data.get(f)))
@@ -729,6 +733,8 @@ class FundConfigView(APIView):
             'trading_days': cfg.trading_days,
             'perf_fee_rate': cfg.perf_fee_rate,
             'high_water_mark': cfg.high_water_mark,
+            'mtd_base_cota': cfg.mtd_base_cota,
+            'ytd_base_cota': cfg.ytd_base_cota,
             'mgmt_fee_paid_through': cfg.mgmt_fee_paid_through.isoformat() if cfg.mgmt_fee_paid_through else None,
             'perf_fee_paid_through': cfg.perf_fee_paid_through.isoformat() if cfg.perf_fee_paid_through else None,
         }

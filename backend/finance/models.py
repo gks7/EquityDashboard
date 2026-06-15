@@ -390,6 +390,12 @@ class FundConfig(models.Model):
     perf_fee_rate = models.FloatField(default=0.10)          # 10% above the high-water mark
     high_water_mark = models.FloatField(default=1.1364)      # cota level (fixed; bumped at crystallization)
 
+    # Period-start net cotas used as the MTD/YTD return base while the uploaded
+    # history doesn't yet reach the start of the month / year. Once the series spans
+    # the period, the series-derived base takes over automatically.
+    mtd_base_cota = models.FloatField(blank=True, null=True, default=1.14324)
+    ytd_base_cota = models.FloatField(blank=True, null=True, default=1.10964)
+
     # Management fee accrues daily and is paid out periodically. Days strictly after
     # this date contribute to the accrued (unpaid) management-fee liability.
     mgmt_fee_paid_through = models.DateField(blank=True, null=True)
