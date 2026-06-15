@@ -70,6 +70,14 @@ def compute_calculated_nav(as_of=None):
     hwm = cfg.high_water_mark or 0.0
     mgmt_paid_through = cfg.mgmt_fee_paid_through
 
+    # Management fee is paid monthly, so the accrued (unpaid) liability resets each
+    # month. An explicit paid-through date wins; otherwise accrue only from the first
+    # day of the latest snapshot's month, so the figure self-corrects without manual
+    # upkeep instead of compounding from the very first snapshot ever loaded.
+    mgmt_accrual_start = mgmt_paid_through
+    if mgmt_accrual_start is None:
+        mgmt_accrual_start = snapshots[-1].date.replace(day=1) - datetime.timedelta(days=1)
+
     series = []
     mgmt_accrued = 0.0
     prev_net_cota = None
@@ -82,8 +90,9 @@ def compute_calculated_nav(as_of=None):
         gross_cota = gav / shares
         mgmt_fee_day = gav * rate / days if days else 0.0
 
-        # Only days after the last payment contribute to the unpaid liability.
-        if mgmt_paid_through is None or snap.date > mgmt_paid_through:
+        # Only days after the accrual start (last payment / month boundary) count
+        # toward the unpaid liability.
+        if snap.date > mgmt_accrual_start:
             mgmt_accrued += mgmt_fee_day
 
         nav_after_mgmt = gav - mgmt_accrued
@@ -165,6 +174,9 @@ def compute_calculated_nav(as_of=None):
             'mgmt_fee_paid_through': mgmt_paid_through.isoformat() if mgmt_paid_through else None,
             'perf_fee_paid_through': cfg.perf_fee_paid_through.isoformat() if cfg.perf_fee_paid_through else None,
         },
+        # Day from which the management fee is accruing (explicit paid-through date,
+        # or the day before the current month started when none is set).
+        'mgmt_accrual_start': mgmt_accrual_start.isoformat(),
         'latest': latest,
         'previous': prev,
         'mtd_return_pct': mtd_return,
