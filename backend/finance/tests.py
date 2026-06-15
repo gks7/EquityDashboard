@@ -74,21 +74,35 @@ class CalculatedNavTests(TestCase):
         one_day = round(30_000_000 * 0.01 / 255, 2)
         self.assertAlmostEqual(r['latest']['mgmt_fee_accrued'], one_day, places=2)
 
-    def test_mgmt_fee_resets_monthly_by_default(self):
-        # No explicit paid-through date: only the latest snapshot's month accrues,
-        # so prior-month snapshots do not inflate the unpaid liability.
-        for day in [datetime.date(2026, 5, 28), datetime.date(2026, 5, 29)]:
-            snap = PortfolioSnapshot.objects.create(date=day)
-            PortfolioItem.objects.create(snapshot=snap, ticker='AAA', quantity=1, market_value=30_000_000)
-        for day in [datetime.date(2026, 6, 1), datetime.date(2026, 6, 2)]:
+    def test_mgmt_fee_resets_at_crystallization(self):
+        # Fees crystallize end of May / end of November. With the latest snapshot in
+        # July, accrual anchors to May 31 — so June AND July accrue (a monthly reset
+        # would wrongly count only July).
+        for day in [datetime.date(2026, 5, 31), datetime.date(2026, 6, 30),
+                    datetime.date(2026, 7, 1), datetime.date(2026, 7, 2)]:
             snap = PortfolioSnapshot.objects.create(date=day)
             PortfolioItem.objects.create(snapshot=snap, ticker='AAA', quantity=1, market_value=30_000_000)
 
         r = compute_calculated_nav()
-        # Only the two June days accrue (May is a prior, already-paid month).
-        two_days = round(30_000_000 * 0.01 / 255, 2) * 2
-        self.assertAlmostEqual(r['latest']['mgmt_fee_accrued'], two_days, places=2)
+        # May 31 is the crystallization date itself (not accrued); Jun 30, Jul 1, Jul 2 accrue.
+        three_days = round(30_000_000 * 0.01 / 255, 2) * 3
+        self.assertAlmostEqual(r['latest']['mgmt_fee_accrued'], three_days, places=2)
         self.assertEqual(r['mgmt_accrual_start'], '2026-05-31')
+
+    def test_mtd_ytd_fall_back_to_config_base(self):
+        # A single snapshot in the current month/year leaves no series base, so the
+        # configured base cotas drive the MTD/YTD returns.
+        snap = PortfolioSnapshot.objects.create(date=datetime.date(2026, 6, 13))
+        PortfolioItem.objects.create(snapshot=snap, ticker='AAA', quantity=1, market_value=30_000_000)
+        self.cfg.mgmt_fee_rate = 0.0
+        self.cfg.mtd_base_cota = 0.9
+        self.cfg.ytd_base_cota = 0.8
+        self.cfg.save()
+
+        r = compute_calculated_nav()
+        net = r['latest']['net_cota']
+        self.assertAlmostEqual(r['mtd_return_pct'], (net / 0.9 - 1) * 100, places=3)
+        self.assertAlmostEqual(r['ytd_return_pct'], (net / 0.8 - 1) * 100, places=3)
 
     def test_mtd_and_ytd_returns(self):
         # Below the HWM so no perf fee; tiny mgmt fee. Net cota tracks gross closely.

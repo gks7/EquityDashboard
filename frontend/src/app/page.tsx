@@ -219,59 +219,6 @@ function FundPct({ value }: { value: number | null }) {
   );
 }
 
-function FundCotaStrip() {
-  const [data, setData] = useState<FundCotaData | null>(null);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-        const res = await authFetch(`${apiUrl}/api/igf-tr/calculated-nav/`);
-        if (res.ok) setData(await res.json());
-      } catch {
-        /* dashboard still works without the fund cota */
-      }
-    })();
-  }, []);
-
-  if (!data) return null;
-  const L = data.latest;
-
-  return (
-    <Link
-      href="/igf-tr"
-      className="block rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm p-4 sm:p-6 hover:border-blue-300 dark:hover:border-blue-700/60 transition-colors"
-    >
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">
-          Cota do Fundo — IGF TR (calculada)
-        </p>
-        <span className="text-[11px] text-slate-400 tabular-nums">{L.date}</span>
-      </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">Cota Líquida</p>
-          <p className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white tabular-nums">
-            {L.net_cota.toLocaleString("pt-BR", { minimumFractionDigits: 6, maximumFractionDigits: 6 })}
-          </p>
-        </div>
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">Variação no Dia</p>
-          <p className="text-lg sm:text-xl font-bold tabular-nums"><FundPct value={L.daily_return_pct} /></p>
-        </div>
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">MTD</p>
-          <p className="text-lg sm:text-xl font-bold tabular-nums"><FundPct value={data.mtd_return_pct} /></p>
-        </div>
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">YTD</p>
-          <p className="text-lg sm:text-xl font-bold tabular-nums"><FundPct value={data.ytd_return_pct} /></p>
-        </div>
-      </div>
-    </Link>
-  );
-}
-
 // ─── Main Component ─────────────────────────────────────────────────
 export default function DashboardPage() {
   const router = useRouter();
@@ -285,6 +232,7 @@ export default function DashboardPage() {
   const [hoveredDot, setHoveredDot] = useState<PortfolioHolding | null>(null);
   const [exposureTab, setExposureTab] = useState<"diff" | "pies" | "table">("diff");
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [cota, setCota] = useState<FundCotaData | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -304,6 +252,18 @@ export default function DashboardPage() {
       } finally {
         setLoading(false);
       }
+    })();
+  }, []);
+
+  // Fund cota (calculated NAV) — independent of the portfolio fetch so a failure
+  // here never blocks the dashboard.
+  useEffect(() => {
+    (async () => {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        const res = await authFetch(`${apiUrl}/api/igf-tr/calculated-nav/`);
+        if (res.ok) setCota(await res.json());
+      } catch { /* dashboard works without the fund cota */ }
     })();
   }, []);
 
@@ -601,6 +561,19 @@ export default function DashboardPage() {
             </p>
           </div>
 
+          {/* Cota Líquida (calculated NAV) */}
+          {cota && (
+            <Link href="/igf-tr" className="col-span-2 sm:col-span-1 group">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1 group-hover:text-blue-500 transition-colors">
+                Cota Líquida
+              </p>
+              <p className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white tabular-nums">
+                {cota.latest.net_cota.toLocaleString("pt-BR", { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
+              </p>
+              <p className="text-[10px] text-slate-400 mt-0.5">{cota.latest.date}</p>
+            </Link>
+          )}
+
           {/* 1D P&L */}
           <div className="col-span-2 sm:col-span-1">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">
@@ -625,6 +598,24 @@ export default function DashboardPage() {
               </span>
             </div>
           </div>
+
+          {/* Cota returns — Dia / MTD / YTD */}
+          {cota && (
+            <>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">Cota Dia</p>
+                <p className="text-base sm:text-lg font-bold tabular-nums"><FundPct value={cota.latest.daily_return_pct} /></p>
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">Cota MTD</p>
+                <p className="text-base sm:text-lg font-bold tabular-nums"><FundPct value={cota.mtd_return_pct} /></p>
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">Cota YTD</p>
+                <p className="text-base sm:text-lg font-bold tabular-nums"><FundPct value={cota.ytd_return_pct} /></p>
+              </div>
+            </>
+          )}
 
           {/* Divider — desktop only */}
           <div className="hidden lg:block h-10 w-px bg-slate-200 dark:bg-slate-700" />
@@ -654,9 +645,6 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-
-      {/* ─── Fund Cota (calculated NAV) ──────────────────────────── */}
-      <FundCotaStrip />
 
       {/* ─── Portfolio Breakdown ─────────────────────────────────── */}
       <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm overflow-hidden">

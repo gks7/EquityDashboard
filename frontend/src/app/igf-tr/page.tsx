@@ -63,6 +63,8 @@ interface FundConfig {
   trading_days: number;
   perf_fee_rate: number;
   high_water_mark: number;
+  mtd_base_cota: number | null;
+  ytd_base_cota: number | null;
   mgmt_fee_paid_through: string | null;
   perf_fee_paid_through: string | null;
 }
@@ -478,6 +480,8 @@ function CalculatedNavPanel() {
                 ["trading_days", "Dias úteis (ano)", 1, false],
                 ["perf_fee_rate", "Taxa de perf. (%)", 0.01, true],
                 ["high_water_mark", "High-water mark (cota)", 0.0001, false],
+                ["mtd_base_cota", "Cota início do mês (MTD)", 0.00001, false],
+                ["ytd_base_cota", "Cota início do ano (YTD)", 0.00001, false],
               ] as [keyof FundConfig, string, number, boolean][]).map(([key, label, step, isPct]) => (
                 <div key={key} className="flex items-center justify-between gap-2">
                   <label className="text-xs text-slate-500 dark:text-slate-400">{label}</label>
