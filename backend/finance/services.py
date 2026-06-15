@@ -2,6 +2,153 @@ from .models import Stock
 from django.utils import timezone
 import datetime
 
+
+def compute_calculated_nav(as_of=None):
+    """
+    Compute the fund's estimated daily NAV/cota from the uploaded Portfolio
+    snapshots, applying an accrued management fee and a performance-fee provision.
+
+    For each PortfolioSnapshot (one per trading day) the gross asset value is the
+    sum of every item's market value plus that day's cash balance (carried forward
+    when missing). Daily management fee accrues at ``mgmt_fee_rate / trading_days``
+    of the gross asset value; the running accrued amount (since ``mgmt_fee_paid_through``)
+    is the unpaid management-fee liability. The performance-fee provision is
+    ``perf_fee_rate`` of the cota gain above the high-water mark (measured net of the
+    accrued management fee), multiplied by the shares outstanding.
+
+        net_nav  = gross_asset_value - mgmt_fee_accrued - perf_fee_provision
+        net_cota = net_nav / shares
+
+    Returns a dict ready for JSON serialization, or ``None`` when there are no
+    snapshots to compute from. ``as_of`` (a date) limits the series to snapshots on
+    or before that date; the latest snapshot is used when omitted.
+    """
+    from .models import FundConfig, DailyCash, PortfolioSnapshot, PortfolioItem, NAVPosition
+
+    cfg = FundConfig.get_solo()
+    shares = cfg.shares or 0.0
+    if shares <= 0:
+        return None
+
+    snapshots = list(PortfolioSnapshot.objects.order_by('date', 'created_at'))
+    if as_of:
+        snapshots = [s for s in snapshots if s.date <= as_of]
+    if not snapshots:
+        return None
+
+    # Gross asset value (positions only) per snapshot, in one query. Prefer the
+    # stored market_value; fall back to quantity * price * cross_usd when absent.
+    snapshot_ids = [s.id for s in snapshots]
+    asset_value_by_snapshot = {sid: 0.0 for sid in snapshot_ids}
+    items = PortfolioItem.objects.filter(snapshot_id__in=snapshot_ids).values(
+        'snapshot_id', 'market_value', 'price', 'quantity', 'cross_usd'
+    )
+    for it in items:
+        mv = it['market_value']
+        if mv is None:
+            price = it['price'] or 0.0
+            qty = it['quantity'] or 0.0
+            cross = it['cross_usd'] if it['cross_usd'] is not None else 1.0
+            mv = qty * price * cross
+        asset_value_by_snapshot[it['snapshot_id']] += mv or 0.0
+
+    # Cash per date, carried forward.
+    cash_rows = list(DailyCash.objects.order_by('date').values('date', 'cash'))
+
+    def cash_for(d):
+        carry = 0.0
+        for row in cash_rows:
+            if row['date'] <= d:
+                carry = row['cash'] or 0.0
+            else:
+                break
+        return carry
+
+    rate = cfg.mgmt_fee_rate or 0.0
+    days = cfg.trading_days or 255
+    perf_rate = cfg.perf_fee_rate or 0.0
+    hwm = cfg.high_water_mark or 0.0
+    mgmt_paid_through = cfg.mgmt_fee_paid_through
+
+    series = []
+    mgmt_accrued = 0.0
+    prev_net_cota = None
+
+    for snap in snapshots:
+        assets = asset_value_by_snapshot.get(snap.id, 0.0)
+        cash = cash_for(snap.date)
+        gav = assets + cash
+
+        gross_cota = gav / shares
+        mgmt_fee_day = gav * rate / days if days else 0.0
+
+        # Only days after the last payment contribute to the unpaid liability.
+        if mgmt_paid_through is None or snap.date > mgmt_paid_through:
+            mgmt_accrued += mgmt_fee_day
+
+        nav_after_mgmt = gav - mgmt_accrued
+        cota_after_mgmt = nav_after_mgmt / shares
+
+        perf_provision = max(0.0, cota_after_mgmt - hwm) * shares * perf_rate
+
+        net_nav = nav_after_mgmt - perf_provision
+        net_cota = net_nav / shares
+
+        daily_return = None
+        if prev_net_cota:
+            daily_return = (net_cota / prev_net_cota - 1.0) * 100.0
+        prev_net_cota = net_cota
+
+        series.append({
+            'date': snap.date.isoformat() if snap.date else None,
+            'asset_value': round(assets, 2),
+            'cash': round(cash, 2),
+            'gross_asset_value': round(gav, 2),
+            'gross_cota': round(gross_cota, 6),
+            'mgmt_fee_day': round(mgmt_fee_day, 2),
+            'mgmt_fee_accrued': round(mgmt_accrued, 2),
+            'cota_after_mgmt': round(cota_after_mgmt, 6),
+            'perf_fee_provision': round(perf_provision, 2),
+            'net_nav': round(net_nav, 2),
+            'net_cota': round(net_cota, 6),
+            'daily_return_pct': round(daily_return, 4) if daily_return is not None else None,
+        })
+
+    latest = series[-1]
+    prev = series[-2] if len(series) > 1 else None
+
+    # Official cota from the administrator upload, for side-by-side comparison.
+    official_cota = None
+    nav_qs = NAVPosition.objects.filter(nav_per_share__isnull=False)
+    if cfg.fund:
+        nav_qs = nav_qs.filter(fund__icontains=cfg.fund) or nav_qs
+    official = nav_qs.order_by('-date').first()
+    if official:
+        official_cota = {
+            'date': official.date.isoformat() if official.date else None,
+            'nav_per_share': official.nav_per_share,
+            'nav': official.nav,
+        }
+
+    return {
+        'config': {
+            'fund': cfg.fund,
+            'shares': shares,
+            'mgmt_fee_rate': rate,
+            'trading_days': days,
+            'perf_fee_rate': perf_rate,
+            'high_water_mark': hwm,
+            'mgmt_fee_paid_through': mgmt_paid_through.isoformat() if mgmt_paid_through else None,
+            'perf_fee_paid_through': cfg.perf_fee_paid_through.isoformat() if cfg.perf_fee_paid_through else None,
+        },
+        'latest': latest,
+        'previous': prev,
+        'excess_over_hwm': round(latest['cota_after_mgmt'] - hwm, 6),
+        'total_fees_to_pay': round(latest['mgmt_fee_accrued'] + latest['perf_fee_provision'], 2),
+        'official_cota': official_cota,
+        'series': series,
+    }
+
 # Bloomberg exchange code → yfinance suffix mapping
 BLOOMBERG_TO_YFINANCE: dict[str, str] = {
     "CN": ".TO",    # Canada (Toronto)

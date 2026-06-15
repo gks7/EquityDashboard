@@ -5,7 +5,7 @@ import {
   ResponsiveContainer, LineChart, Line, AreaChart, Area,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
 } from "recharts";
-import { TrendingUp, TrendingDown, Activity, DollarSign, RefreshCcw, ChevronDown, ArrowUpDown } from "lucide-react";
+import { TrendingUp, TrendingDown, Activity, DollarSign, RefreshCcw, ChevronDown, ArrowUpDown, Settings } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
 
 const API_BASE = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api`;
@@ -37,6 +37,44 @@ interface IgfData {
   available_funds: string[];
   available_assets: string[];
   available_infos: string[];
+}
+
+// ─── Calculated NAV (cota calculada) ───────────────────────────────────────────
+
+interface CalcNavPoint {
+  date: string;
+  asset_value: number;
+  cash: number;
+  gross_asset_value: number;
+  gross_cota: number;
+  mgmt_fee_day: number;
+  mgmt_fee_accrued: number;
+  cota_after_mgmt: number;
+  perf_fee_provision: number;
+  net_nav: number;
+  net_cota: number;
+  daily_return_pct: number | null;
+}
+
+interface FundConfig {
+  fund: string;
+  shares: number;
+  mgmt_fee_rate: number;
+  trading_days: number;
+  perf_fee_rate: number;
+  high_water_mark: number;
+  mgmt_fee_paid_through: string | null;
+  perf_fee_paid_through: string | null;
+}
+
+interface CalcNavData {
+  config: FundConfig;
+  latest: CalcNavPoint;
+  previous: CalcNavPoint | null;
+  excess_over_hwm: number;
+  total_fees_to_pay: number;
+  official_cota: { date: string; nav_per_share: number; nav: number | null } | null;
+  series: CalcNavPoint[];
 }
 
 // One entry per date; each asset_group is a dynamic key with a number value
@@ -290,6 +328,306 @@ function PaginationBar({ page, total, onChange }: { page: number; total: number;
         <button onClick={() => onChange(Math.min(total - 1, page + 1))} disabled={page === total - 1} className={btnCls}>›</button>
         <button onClick={() => onChange(total - 1)} disabled={page === total - 1} className={btnCls}>»</button>
       </div>
+    </div>
+  );
+}
+
+// ─── Calculated NAV panel ──────────────────────────────────────────────────
+
+const fmtPct4 = (n: number | null | undefined) =>
+  n == null ? "—" : `${n >= 0 ? "+" : ""}${n.toFixed(4)}%`;
+
+function CalculatedNavPanel() {
+  const [data, setData] = useState<CalcNavData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [cashInput, setCashInput] = useState("");
+  const [savingCash, setSavingCash] = useState(false);
+
+  const [showSettings, setShowSettings] = useState(false);
+  const [form, setForm] = useState<Partial<FundConfig>>({});
+  const [savingCfg, setSavingCfg] = useState(false);
+  const settingsRef = useRef<HTMLDivElement>(null);
+
+  const fetchCalc = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await authFetch(`${API_BASE}/igf-tr/calculated-nav/`);
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || `HTTP ${res.status}`);
+      }
+      const json: CalcNavData = await res.json();
+      setData(json);
+      setCashInput(json.latest.cash != null ? String(json.latest.cash) : "");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Erro");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchCalc(); }, [fetchCalc]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) setShowSettings(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const saveCash = async () => {
+    if (!data) return;
+    const val = parseFloat(cashInput);
+    if (isNaN(val)) return;
+    setSavingCash(true);
+    try {
+      const res = await authFetch(`${API_BASE}/igf-tr/daily-cash/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date: data.latest.date, cash: val }),
+      });
+      if (res.ok) await fetchCalc();
+    } finally {
+      setSavingCash(false);
+    }
+  };
+
+  const openSettings = () => {
+    if (data) setForm({ ...data.config });
+    setShowSettings((o) => !o);
+  };
+
+  const saveSettings = async () => {
+    setSavingCfg(true);
+    try {
+      const res = await authFetch(`${API_BASE}/fund-config/`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (res.ok) {
+        setShowSettings(false);
+        await fetchCalc();
+      }
+    } finally {
+      setSavingCfg(false);
+    }
+  };
+
+  const cardCls = "rounded-xl border border-slate-200 dark:border-slate-800/60 bg-white dark:bg-slate-900/50 shadow-sm";
+
+  if (loading) {
+    return (
+      <div className={`${cardCls} p-6 flex items-center justify-center h-40`}>
+        <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className={`${cardCls} p-6`}>
+        <SectionHeader title="Cota Calculada (Estimada)" subtitle="NAV estimado a partir dos preços do dia" />
+        <EmptyState message={
+          error?.includes("snapshot")
+            ? "Nenhum snapshot de portfólio encontrado. Faça upload do Excel na página Portfolio para calcular o NAV."
+            : `Não foi possível calcular o NAV. ${error ?? ""}`
+        } />
+      </div>
+    );
+  }
+
+  const L = data.latest;
+  const cfg = data.config;
+  const officialDelta = data.official_cota?.nav_per_share != null
+    ? L.net_cota - data.official_cota.nav_per_share
+    : null;
+
+  return (
+    <div className={`${cardCls} p-6`}>
+      <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
+        <SectionHeader
+          title="Cota Calculada (Estimada)"
+          subtitle={`NAV estimado a partir dos preços do último snapshot (${fmtDate(L.date)}) — líquido de taxas`}
+        />
+        <div ref={settingsRef} className="relative">
+          <button
+            onClick={openSettings}
+            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/60 transition-colors"
+          >
+            <Settings className="w-3.5 h-3.5" /> Parâmetros
+          </button>
+          {showSettings && (
+            <div className="absolute right-0 top-full mt-1.5 z-30 w-72 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl p-4 space-y-3">
+              {([
+                ["shares", "Cotas (shares)", 1, false],
+                ["mgmt_fee_rate", "Taxa de adm. (% a.a.)", 0.0001, true],
+                ["trading_days", "Dias úteis (ano)", 1, false],
+                ["perf_fee_rate", "Taxa de perf. (%)", 0.01, true],
+                ["high_water_mark", "High-water mark (cota)", 0.0001, false],
+              ] as [keyof FundConfig, string, number, boolean][]).map(([key, label, step, isPct]) => (
+                <div key={key} className="flex items-center justify-between gap-2">
+                  <label className="text-xs text-slate-500 dark:text-slate-400">{label}</label>
+                  <input
+                    type="number"
+                    step={step}
+                    value={isPct
+                      ? ((form[key] as number) ?? 0) * 100
+                      : ((form[key] as number) ?? "")}
+                    onChange={(e) => {
+                      const raw = parseFloat(e.target.value);
+                      setForm((f) => ({ ...f, [key]: isNaN(raw) ? 0 : (isPct ? raw / 100 : raw) }));
+                    }}
+                    className="w-28 px-2 py-1 text-right text-xs rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                  />
+                </div>
+              ))}
+              {([
+                ["mgmt_fee_paid_through", "Taxa adm. paga até"],
+                ["perf_fee_paid_through", "Perf. cristalizada até"],
+              ] as [keyof FundConfig, string][]).map(([key, label]) => (
+                <div key={key} className="flex items-center justify-between gap-2">
+                  <label className="text-xs text-slate-500 dark:text-slate-400">{label}</label>
+                  <input
+                    type="date"
+                    value={(form[key] as string) ?? ""}
+                    onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value || null }))}
+                    className="w-36 px-2 py-1 text-xs rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                  />
+                </div>
+              ))}
+              <button
+                onClick={saveSettings}
+                disabled={savingCfg}
+                className="w-full mt-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+              >
+                {savingCfg ? "Salvando…" : "Salvar parâmetros"}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Headline cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+        <StatCard
+          label="Cota Líquida (Net)"
+          value={fmt(L.net_cota, 6)}
+          sub={`Bruta ${fmt(L.gross_cota, 6)}`}
+          icon={Activity}
+          trend="neutral"
+          color="blue"
+        />
+        <StatCard
+          label="Variação no Dia"
+          value={fmtPct4(L.daily_return_pct)}
+          sub="vs. cota líquida anterior"
+          icon={L.daily_return_pct != null && L.daily_return_pct >= 0 ? TrendingUp : TrendingDown}
+          trend={L.daily_return_pct != null ? (L.daily_return_pct >= 0 ? "up" : "down") : "neutral"}
+          color={L.daily_return_pct != null && L.daily_return_pct >= 0 ? "emerald" : "rose"}
+        />
+        <StatCard
+          label="Patrimônio Líquido"
+          value={`R$ ${fmtM(L.net_nav)}`}
+          sub={`Bruto R$ ${fmtM(L.gross_asset_value)}`}
+          icon={DollarSign}
+          color="violet"
+        />
+        <StatCard
+          label="vs. High-Water Mark"
+          value={`${data.excess_over_hwm >= 0 ? "+" : ""}${fmt(data.excess_over_hwm, 6)}`}
+          sub={`HWM ${fmt(cfg.high_water_mark, 4)}`}
+          icon={data.excess_over_hwm >= 0 ? TrendingUp : TrendingDown}
+          trend={data.excess_over_hwm >= 0 ? "up" : "down"}
+          color={data.excess_over_hwm >= 0 ? "emerald" : "amber"}
+        />
+      </div>
+
+      {/* Breakdown + fees-to-pay */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {/* NAV bridge */}
+        <div className="rounded-xl border border-slate-200 dark:border-slate-800/60 p-4">
+          <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">Composição do NAV</h3>
+          <div className="space-y-2 text-sm">
+            <Row label="Valor das posições" value={`R$ ${fmt(L.asset_value, 2)}`} />
+            <div className="flex items-center justify-between gap-2 py-1">
+              <span className="text-slate-500 dark:text-slate-400">Caixa (R$)</span>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  step="0.01"
+                  value={cashInput}
+                  onChange={(e) => setCashInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") saveCash(); }}
+                  className="w-32 px-2 py-1 text-right text-sm rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                />
+                <button
+                  onClick={saveCash}
+                  disabled={savingCash}
+                  className="px-2.5 py-1 text-xs font-semibold rounded bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+                >
+                  {savingCash ? "…" : "OK"}
+                </button>
+              </div>
+            </div>
+            <div className="border-t border-slate-200 dark:border-slate-700/60 pt-2">
+              <Row label="Patrimônio bruto" value={`R$ ${fmt(L.gross_asset_value, 2)}`} bold />
+            </div>
+            <Row label="(−) Taxa de administração acumulada" value={`R$ ${fmt(L.mgmt_fee_accrued, 2)}`} negative />
+            <Row label="(−) Provisão de taxa de performance" value={`R$ ${fmt(L.perf_fee_provision, 2)}`} negative />
+            <div className="border-t border-slate-200 dark:border-slate-700/60 pt-2">
+              <Row label="Patrimônio líquido" value={`R$ ${fmt(L.net_nav, 2)}`} bold />
+            </div>
+          </div>
+        </div>
+
+        {/* Fees to pay (accrued / provisioned) */}
+        <div className="rounded-xl border border-amber-200 dark:border-amber-500/20 bg-amber-50/40 dark:bg-amber-500/5 p-4">
+          <h3 className="text-xs font-semibold uppercase tracking-widest text-amber-600 dark:text-amber-400 mb-3">
+            Taxas a Pagar (provisionado)
+          </h3>
+          <div className="space-y-2 text-sm">
+            <Row label="Taxa de adm. — acumulada" value={`R$ ${fmt(L.mgmt_fee_accrued, 2)}`} />
+            <Row label="Taxa de adm. — do dia" value={`R$ ${fmt(L.mgmt_fee_day, 2)}`} muted />
+            <Row label="Taxa de performance — provisão" value={`R$ ${fmt(L.perf_fee_provision, 2)}`} />
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 pt-1">
+              Performance cristaliza ao fim de maio e novembro. Adm. acumulada desde{" "}
+              {cfg.mgmt_fee_paid_through ? fmtDate(cfg.mgmt_fee_paid_through) : "o primeiro snapshot"}.
+            </p>
+            <div className="border-t border-amber-200 dark:border-amber-500/20 pt-2">
+              <Row label="Total a pagar" value={`R$ ${fmt(data.total_fees_to_pay, 2)}`} bold />
+            </div>
+          </div>
+
+          {data.official_cota?.nav_per_share != null && (
+            <div className="mt-4 pt-3 border-t border-amber-200 dark:border-amber-500/20 text-xs text-slate-500 dark:text-slate-400">
+              Cota oficial (administrador): <strong className="text-slate-700 dark:text-slate-200">{fmt(data.official_cota.nav_per_share, 6)}</strong>
+              {officialDelta != null && (
+                <span className={officialDelta >= 0 ? "text-emerald-500 ml-2" : "text-rose-500 ml-2"}>
+                  (calc {officialDelta >= 0 ? "+" : ""}{fmt(officialDelta, 6)})
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Row({ label, value, bold, negative, muted }: {
+  label: string; value: string; bold?: boolean; negative?: boolean; muted?: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <span className={`${muted ? "text-slate-400 dark:text-slate-500" : "text-slate-500 dark:text-slate-400"}`}>{label}</span>
+      <span className={`tabular-nums ${bold ? "font-bold text-slate-900 dark:text-white" : negative ? "text-rose-600 dark:text-rose-400" : "font-medium text-slate-700 dark:text-slate-200"}`}>
+        {value}
+      </span>
     </div>
   );
 }
@@ -617,6 +955,9 @@ export default function IgfTrPage() {
                 color="violet"
               />
             </div>
+
+            {/* Cota Calculada (Estimada) — NAV from daily prices, net of fees */}
+            <CalculatedNavPanel />
 
 
             {/* Histórico de Cotas — large line chart */}
