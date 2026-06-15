@@ -117,6 +117,30 @@ def compute_calculated_nav(as_of=None):
     latest = series[-1]
     prev = series[-2] if len(series) > 1 else None
 
+    # ── Month-to-date / year-to-date net-cota returns ──────────────────────────
+    # Base = last net cota strictly before the period (so the first move counts);
+    # fall back to the first observation within the period when no prior point exists.
+    latest_d = datetime.date.fromisoformat(latest['date'])
+    ytd_base = ytd_first = mtd_base = mtd_first = None
+    for pt in series:
+        d = datetime.date.fromisoformat(pt['date'])
+        if d.year < latest_d.year:
+            ytd_base = pt['net_cota']
+        elif ytd_first is None:
+            ytd_first = pt['net_cota']
+        if (d.year, d.month) < (latest_d.year, latest_d.month):
+            mtd_base = pt['net_cota']
+        elif mtd_first is None:
+            mtd_first = pt['net_cota']
+
+    def _pct(base):
+        if base:
+            return round((latest['net_cota'] / base - 1.0) * 100.0, 4)
+        return None
+
+    ytd_return = _pct(ytd_base if ytd_base is not None else ytd_first)
+    mtd_return = _pct(mtd_base if mtd_base is not None else mtd_first)
+
     # Official cota from the administrator upload, for side-by-side comparison.
     official_cota = None
     nav_qs = NAVPosition.objects.filter(nav_per_share__isnull=False)
@@ -143,6 +167,8 @@ def compute_calculated_nav(as_of=None):
         },
         'latest': latest,
         'previous': prev,
+        'mtd_return_pct': mtd_return,
+        'ytd_return_pct': ytd_return,
         'excess_over_hwm': round(latest['cota_after_mgmt'] - hwm, 6),
         'total_fees_to_pay': round(latest['mgmt_fee_accrued'] + latest['perf_fee_provision'], 2),
         'official_cota': official_cota,
