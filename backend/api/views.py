@@ -664,6 +664,102 @@ class IgfTrView(APIView):
         })
 
 
+class CalculatedNAVView(APIView):
+    """
+    GET /api/igf-tr/calculated-nav/[?date=YYYY-MM-DD]
+
+    Returns the fund's estimated NAV/cota computed from the latest Portfolio
+    snapshot plus the daily cash balance, net of the accrued management fee and
+    performance-fee provision. ``date`` limits the calculation to snapshots on or
+    before that date.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        from finance.services import compute_calculated_nav
+        as_of = _parse_date(request.query_params.get('date'))
+        result = compute_calculated_nav(as_of=as_of)
+        if result is None:
+            return Response(
+                {'error': 'No portfolio snapshots available to compute NAV.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        return Response(result)
+
+
+class FundConfigView(APIView):
+    """
+    GET  /api/fund-config/  — current calculated-NAV parameters.
+    PATCH /api/fund-config/ — update any subset of the parameters.
+    """
+
+    def get(self, request):
+        from finance.models import FundConfig
+        cfg = FundConfig.get_solo()
+        return Response(self._serialize(cfg))
+
+    def patch(self, request):
+        from finance.models import FundConfig
+        cfg = FundConfig.get_solo()
+
+        float_fields = ['shares', 'mgmt_fee_rate', 'perf_fee_rate', 'high_water_mark']
+        for f in float_fields:
+            if f in request.data:
+                val = _safe_float(request.data.get(f))
+                if val is not None:
+                    setattr(cfg, f, val)
+        if 'trading_days' in request.data:
+            val = _safe_float(request.data.get('trading_days'))
+            if val:
+                cfg.trading_days = int(val)
+        if 'fund' in request.data and request.data.get('fund'):
+            cfg.fund = str(request.data.get('fund'))
+        for f in ['mgmt_fee_paid_through', 'perf_fee_paid_through']:
+            if f in request.data:
+                setattr(cfg, f, _parse_date(request.data.get(f)))
+        cfg.save()
+        return Response(self._serialize(cfg))
+
+    @staticmethod
+    def _serialize(cfg):
+        return {
+            'fund': cfg.fund,
+            'shares': cfg.shares,
+            'mgmt_fee_rate': cfg.mgmt_fee_rate,
+            'trading_days': cfg.trading_days,
+            'perf_fee_rate': cfg.perf_fee_rate,
+            'high_water_mark': cfg.high_water_mark,
+            'mgmt_fee_paid_through': cfg.mgmt_fee_paid_through.isoformat() if cfg.mgmt_fee_paid_through else None,
+            'perf_fee_paid_through': cfg.perf_fee_paid_through.isoformat() if cfg.perf_fee_paid_through else None,
+        }
+
+
+class DailyCashView(APIView):
+    """
+    GET  /api/igf-tr/daily-cash/         — list all cash entries.
+    POST /api/igf-tr/daily-cash/         — upsert {date, cash}.
+    """
+
+    def get(self, request):
+        from finance.models import DailyCash
+        rows = list(DailyCash.objects.order_by('date').values('date', 'cash'))
+        for r in rows:
+            if r['date']:
+                r['date'] = r['date'].isoformat()
+        return Response(rows)
+
+    def post(self, request):
+        from finance.models import DailyCash
+        d = _parse_date(request.data.get('date'))
+        if d is None:
+            return Response({'error': 'A valid date is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        cash = _safe_float(request.data.get('cash'))
+        if cash is None:
+            cash = 0.0
+        obj, _ = DailyCash.objects.update_or_create(date=d, defaults={'cash': cash})
+        return Response({'date': obj.date.isoformat(), 'cash': obj.cash}, status=status.HTTP_200_OK)
+
+
 class AssetBreakdownView(APIView):
     """
     GET /api/igf-tr/asset-breakdown/

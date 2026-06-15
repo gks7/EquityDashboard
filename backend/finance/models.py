@@ -371,6 +371,68 @@ class AlphaDataPoint(models.Model):
         return f"{self.stock} {self.date} P={self.price} PE={self.pe}"
 
 
+class FundConfig(models.Model):
+    """
+    Singleton configuration for the calculated-NAV / cota engine.
+
+    The website computes its own daily NAV/cota estimate from the prices uploaded
+    on the Portfolio page (latest PortfolioSnapshot) plus a cash balance, then
+    deducts an accrued management fee and a performance-fee provision.
+
+    All parameters are editable from the IGF TR dashboard so they can be adjusted
+    without a code change (e.g. bumping the high-water mark at each crystallization).
+    """
+    fund = models.CharField(max_length=255, default='IGF TR')
+
+    shares = models.FloatField(default=32_435_667)            # cotas outstanding
+    mgmt_fee_rate = models.FloatField(default=0.01)           # 1% per annum
+    trading_days = models.IntegerField(default=255)          # days used to pro-rate the annual fee
+    perf_fee_rate = models.FloatField(default=0.10)          # 10% above the high-water mark
+    high_water_mark = models.FloatField(default=1.1364)      # cota level (fixed; bumped at crystallization)
+
+    # Management fee accrues daily and is paid out periodically. Days strictly after
+    # this date contribute to the accrued (unpaid) management-fee liability.
+    mgmt_fee_paid_through = models.DateField(blank=True, null=True)
+    # Performance fee crystallizes bi-annually (end of May / end of November).
+    perf_fee_paid_through = models.DateField(blank=True, null=True)
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Fund configuration"
+        verbose_name_plural = "Fund configuration"
+
+    def __str__(self):
+        return f"FundConfig({self.fund})"
+
+    @classmethod
+    def get_solo(cls):
+        """Return the single configuration row, creating it with defaults if missing."""
+        obj = cls.objects.first()
+        if obj is None:
+            obj = cls.objects.create()
+        return obj
+
+
+class DailyCash(models.Model):
+    """
+    Cash balance (in the fund base currency, R$) entered per day. Added on top of
+    the portfolio positions' market value to form the gross asset value used by the
+    calculated-NAV engine. If a day has no entry the most recent prior value is
+    carried forward.
+    """
+    date = models.DateField(unique=True, db_index=True)
+    cash = models.FloatField(default=0.0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['date']
+        verbose_name_plural = "Daily cash balances"
+
+    def __str__(self):
+        return f"Cash {self.date}: {self.cash}"
+
+
 class MoatRanking(models.Model):
     """
     Stores an ordered ranking (1 to N) of stocks by moat strength, as determined by an analyst.
