@@ -604,8 +604,8 @@ function CalculatedNavPanel() {
             <Row label="Taxa de adm. — do dia" value={`R$ ${fmt(L.mgmt_fee_day, 2)}`} muted />
             <Row label="Taxa de performance — provisão" value={`R$ ${fmt(L.perf_fee_provision, 2)}`} />
             <p className="text-[11px] text-slate-500 dark:text-slate-400 pt-1">
-              Performance cristaliza ao fim de maio e novembro. Adm. acumulada desde{" "}
-              {cfg.mgmt_fee_paid_through ? fmtDate(cfg.mgmt_fee_paid_through) : "o primeiro snapshot"}.
+              Performance cristaliza ao fim de maio e novembro. Adm. acumulada{" "}
+              {cfg.mgmt_fee_paid_through ? `desde ${fmtDate(cfg.mgmt_fee_paid_through)}` : "no mês corrente (paga mensalmente)"}.
             </p>
             <div className="border-t border-amber-200 dark:border-amber-500/20 pt-2">
               <Row label="Total a pagar" value={`R$ ${fmt(data.total_fees_to_pay, 2)}`} bold />
