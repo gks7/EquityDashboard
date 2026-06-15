@@ -203,6 +203,75 @@ function fiColor(item: PortfolioHolding): string {
   return "#64748b"; // slate fallback
 }
 
+// ─── Fund cota strip (calculated NAV) ───────────────────────────────
+interface FundCotaData {
+  latest: { date: string; net_cota: number; daily_return_pct: number | null };
+  mtd_return_pct: number | null;
+  ytd_return_pct: number | null;
+}
+
+function FundPct({ value }: { value: number | null }) {
+  if (value == null) return <span className="text-slate-400">—</span>;
+  return (
+    <span className={value >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}>
+      {value >= 0 ? "+" : ""}{value.toFixed(2)}%
+    </span>
+  );
+}
+
+function FundCotaStrip() {
+  const [data, setData] = useState<FundCotaData | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        const res = await authFetch(`${apiUrl}/api/igf-tr/calculated-nav/`);
+        if (res.ok) setData(await res.json());
+      } catch {
+        /* dashboard still works without the fund cota */
+      }
+    })();
+  }, []);
+
+  if (!data) return null;
+  const L = data.latest;
+
+  return (
+    <Link
+      href="/igf-tr"
+      className="block rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm p-4 sm:p-6 hover:border-blue-300 dark:hover:border-blue-700/60 transition-colors"
+    >
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+          Cota do Fundo — IGF TR (calculada)
+        </p>
+        <span className="text-[11px] text-slate-400 tabular-nums">{L.date}</span>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">Cota Líquida</p>
+          <p className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white tabular-nums">
+            {L.net_cota.toLocaleString("pt-BR", { minimumFractionDigits: 6, maximumFractionDigits: 6 })}
+          </p>
+        </div>
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">Variação no Dia</p>
+          <p className="text-lg sm:text-xl font-bold tabular-nums"><FundPct value={L.daily_return_pct} /></p>
+        </div>
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">MTD</p>
+          <p className="text-lg sm:text-xl font-bold tabular-nums"><FundPct value={data.mtd_return_pct} /></p>
+        </div>
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">YTD</p>
+          <p className="text-lg sm:text-xl font-bold tabular-nums"><FundPct value={data.ytd_return_pct} /></p>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 // ─── Main Component ─────────────────────────────────────────────────
 export default function DashboardPage() {
   const router = useRouter();
@@ -585,6 +654,9 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* ─── Fund Cota (calculated NAV) ──────────────────────────── */}
+      <FundCotaStrip />
 
       {/* ─── Portfolio Breakdown ─────────────────────────────────── */}
       <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm overflow-hidden">

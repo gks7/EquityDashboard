@@ -74,6 +74,26 @@ class CalculatedNavTests(TestCase):
         one_day = round(30_000_000 * 0.01 / 255, 2)
         self.assertAlmostEqual(r['latest']['mgmt_fee_accrued'], one_day, places=2)
 
+    def test_mtd_and_ytd_returns(self):
+        # Below the HWM so no perf fee; tiny mgmt fee. Net cota tracks gross closely.
+        # Points: end of prior year, end of prior month, and current.
+        pts = [
+            (datetime.date(2025, 12, 31), 30_000_000),
+            (datetime.date(2026, 5, 30), 31_000_000),
+            (datetime.date(2026, 6, 13), 31_500_000),
+        ]
+        for day, mv in pts:
+            snap = PortfolioSnapshot.objects.create(date=day)
+            PortfolioItem.objects.create(snapshot=snap, ticker='AAA', quantity=1, market_value=mv)
+        # Avoid mgmt accrual muddying the ratios for this assertion.
+        self.cfg.mgmt_fee_rate = 0.0
+        self.cfg.save()
+
+        r = compute_calculated_nav()
+        # MTD base = May 30 (last point before June), YTD base = Dec 31 (prior year)
+        self.assertAlmostEqual(r['mtd_return_pct'], (31_500_000 / 31_000_000 - 1) * 100, places=3)
+        self.assertAlmostEqual(r['ytd_return_pct'], (31_500_000 / 30_000_000 - 1) * 100, places=3)
+
     def test_cash_carries_forward(self):
         s1 = PortfolioSnapshot.objects.create(date=datetime.date(2026, 6, 11))
         PortfolioItem.objects.create(snapshot=s1, ticker='AAA', quantity=1, market_value=10_000_000)
