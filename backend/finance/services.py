@@ -36,6 +36,18 @@ def compute_calculated_nav(as_of=None):
     if not snapshots:
         return None
 
+    # Collapse to one snapshot per date — the most recent upload for that day.
+    # Each macro run creates a new snapshot dated today, so re-runs and partial
+    # uploads would otherwise each become a separate series point. The daily
+    # return compares the last point against the one before it, so a same-day
+    # partial upload sitting in that slot produces a nonsense daily move (e.g.
+    # +48%). Ordered ascending by (date, created_at), so last write per date
+    # wins = the latest upload for that date.
+    by_date = {}
+    for s in snapshots:
+        by_date[s.date] = s
+    snapshots = [by_date[d] for d in sorted(by_date)]
+
     # Gross asset value (positions only) per snapshot, in one query. Prefer the
     # stored market_value; fall back to quantity * price * cross_usd when absent.
     snapshot_ids = [s.id for s in snapshots]
