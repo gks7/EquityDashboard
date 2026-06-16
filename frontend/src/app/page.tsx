@@ -11,6 +11,8 @@ import {
   ChevronUp,
   ChevronDown,
   ArrowUpDown,
+  TrendingUp,
+  TrendingDown,
 } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from "recharts";
@@ -208,22 +210,40 @@ interface FundCotaData {
   ytd_return_pct: number | null;
 }
 
-function FundPct({ value }: { value: number | null }) {
-  if (value == null) return <span className="text-slate-400">—</span>;
+// ─── Return pill — labelled, sign-tinted badge with a trend arrow ──────────
+function ReturnBadge({ label, value }: { label: string; value: number | null }) {
+  if (value == null) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-xs font-semibold text-slate-400 tabular-nums">
+        {label} —
+      </span>
+    );
+  }
+  const up = value >= 0;
+  const Icon = up ? TrendingUp : TrendingDown;
   return (
-    <span className={value >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}>
-      {value >= 0 ? "+" : ""}{value.toFixed(2)}%
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums ${
+        up
+          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400"
+          : "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400"
+      }`}
+    >
+      <Icon className="w-3.5 h-3.5" />
+      <span className="text-[10px] font-bold uppercase tracking-wider opacity-70">{label}</span>
+      {up ? "+" : ""}{value.toFixed(2)}%
     </span>
   );
 }
 
 // ─── Hero metric cell — uniform label + top-aligned value for clean rows ───
 function HeroMetric({
-  label, children, hint, href, size = "md",
+  label, children, hint, sub, href, size = "md",
 }: {
   label: string;
   children: ReactNode;
   hint?: ReactNode;
+  sub?: ReactNode;
   href?: string;
   size?: "md" | "lg";
 }) {
@@ -237,6 +257,7 @@ function HeroMetric({
         {children}
         {hint && <span className="text-xs font-medium text-slate-400">{hint}</span>}
       </p>
+      {sub && <p className="text-[11px] text-slate-400 mt-1.5 tabular-nums">{sub}</p>}
     </>
   );
   return href ? (
@@ -581,14 +602,23 @@ export default function DashboardPage() {
 
       {/* ─── Hero Strip ─────────────────────────────────────────── */}
       <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm p-4 sm:p-6">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:flex-wrap lg:items-start gap-x-8 sm:gap-x-10 gap-y-5">
-          {/* ── Headline values ── */}
+        <div className="flex flex-wrap items-start gap-x-7 sm:gap-x-9 gap-y-5">
+          {/* ── Patrimônio ── */}
           <HeroMetric label="Total Value" size="lg">
             <span className="text-slate-900 dark:text-white">${fmt(totalValue)}</span>
           </HeroMetric>
 
           {cota && (
-            <HeroMetric label="Cota Líquida" size="lg" href="/igf-tr">
+            <HeroMetric
+              label="Cota Líquida"
+              size="lg"
+              href="/igf-tr"
+              sub={new Date(cota.latest.date + "T00:00:00").toLocaleDateString("pt-BR", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })}
+            >
               <span className="text-slate-900 dark:text-white">
                 {cota.latest.net_cota.toLocaleString("pt-BR", { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
               </span>
@@ -597,36 +627,57 @@ export default function DashboardPage() {
 
           <HeroDivider />
 
-          {/* ── Changes ── */}
-          <HeroMetric
-            label="1D P&L"
-            hint={`${totalDailyPLPct >= 0 ? "+" : ""}${totalDailyPLPct.toFixed(2)}%`}
-          >
-            <span className={totalDailyPL >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}>
-              {totalDailyPL >= 0 ? "+" : ""}${fmt(totalDailyPL)}
-            </span>
-          </HeroMetric>
-
-          {cota && (
-            <>
-              <HeroMetric label="Cota Dia"><FundPct value={cota.latest.daily_return_pct} /></HeroMetric>
-              <HeroMetric label="Cota MTD"><FundPct value={cota.mtd_return_pct} /></HeroMetric>
-              <HeroMetric label="Cota YTD"><FundPct value={cota.ytd_return_pct} /></HeroMetric>
-            </>
-          )}
+          {/* ── Resultado ── */}
+          <div className="flex flex-col gap-2.5">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap mb-1.5">
+                1D P&amp;L
+              </p>
+              <p className="text-2xl sm:text-3xl font-bold tracking-tight tabular-nums leading-none flex items-baseline gap-1.5">
+                <span className={totalDailyPL >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}>
+                  {totalDailyPL >= 0 ? "+" : ""}${fmt(totalDailyPL)}
+                </span>
+                <span className="text-xs font-medium text-slate-400">
+                  {totalDailyPLPct >= 0 ? "+" : ""}{totalDailyPLPct.toFixed(2)}%
+                </span>
+              </p>
+            </div>
+            {cota && (
+              <div className="flex flex-wrap gap-1.5">
+                <ReturnBadge label="Dia" value={cota.latest.daily_return_pct} />
+                <ReturnBadge label="MTD" value={cota.mtd_return_pct} />
+                <ReturnBadge label="YTD" value={cota.ytd_return_pct} />
+              </div>
+            )}
+          </div>
 
           <HeroDivider />
 
-          {/* ── Allocation ── */}
-          <HeroMetric label="Equities">
-            <span className="text-blue-600 dark:text-blue-400">{eqPct}%</span>
-          </HeroMetric>
-          <HeroMetric label="Fixed Income">
-            <span className="text-teal-600 dark:text-teal-400">{fiPct}%</span>
-          </HeroMetric>
-          <HeroMetric label="Positions">
-            <span className="text-slate-900 dark:text-white">{holdings.length}</span>
-          </HeroMetric>
+          {/* ── Alocação ── */}
+          <div className="flex flex-col gap-2 min-w-[210px] flex-1">
+            <div className="flex items-center justify-between gap-4">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Alocação</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">
+                <span className="text-slate-900 dark:text-white font-semibold">{holdings.length}</span> posições
+              </p>
+            </div>
+            <div className="flex h-2 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800">
+              <div className="bg-blue-500" style={{ width: `${eqPct}%` }} />
+              <div className="bg-teal-500" style={{ width: `${fiPct}%` }} />
+            </div>
+            <div className="flex items-center justify-between gap-4 text-xs">
+              <span className="inline-flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                <span className="w-2 h-2 rounded-full bg-blue-500" />
+                Equities
+                <span className="text-slate-900 dark:text-white font-semibold tabular-nums">{eqPct}%</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                <span className="w-2 h-2 rounded-full bg-teal-500" />
+                Fixed Income
+                <span className="text-slate-900 dark:text-white font-semibold tabular-nums">{fiPct}%</span>
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
