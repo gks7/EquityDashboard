@@ -1,11 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  TrendingUp,
-  TrendingDown,
   Briefcase,
   RefreshCcw,
   ArrowUpRight,
@@ -13,6 +11,8 @@ import {
   ChevronUp,
   ChevronDown,
   ArrowUpDown,
+  TrendingUp,
+  TrendingDown,
 } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from "recharts";
@@ -210,13 +210,65 @@ interface FundCotaData {
   ytd_return_pct: number | null;
 }
 
-function FundPct({ value }: { value: number | null }) {
-  if (value == null) return <span className="text-slate-400">—</span>;
+// ─── Return pill — labelled, sign-tinted badge with a trend arrow ──────────
+function ReturnBadge({ label, value }: { label: string; value: number | null }) {
+  if (value == null) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-xs font-semibold text-slate-400 tabular-nums">
+        {label} —
+      </span>
+    );
+  }
+  const up = value >= 0;
+  const Icon = up ? TrendingUp : TrendingDown;
   return (
-    <span className={value >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}>
-      {value >= 0 ? "+" : ""}{value.toFixed(2)}%
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums ${
+        up
+          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400"
+          : "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400"
+      }`}
+    >
+      <Icon className="w-3.5 h-3.5" />
+      <span className="text-[10px] font-bold uppercase tracking-wider opacity-70">{label}</span>
+      {up ? "+" : ""}{value.toFixed(2)}%
     </span>
   );
+}
+
+// ─── Hero metric cell — uniform label + top-aligned value for clean rows ───
+function HeroMetric({
+  label, children, hint, sub, href, size = "md",
+}: {
+  label: string;
+  children: ReactNode;
+  hint?: ReactNode;
+  sub?: ReactNode;
+  href?: string;
+  size?: "md" | "lg";
+}) {
+  const valueSize = size === "lg" ? "text-2xl sm:text-3xl" : "text-lg sm:text-xl";
+  const content = (
+    <>
+      <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap mb-1.5 group-hover:text-blue-500 transition-colors">
+        {label}
+      </p>
+      <p className={`${valueSize} font-bold tracking-tight tabular-nums leading-none flex items-baseline gap-1.5`}>
+        {children}
+        {hint && <span className="text-xs font-medium text-slate-400">{hint}</span>}
+      </p>
+      {sub && <p className="text-[11px] text-slate-400 mt-1.5 tabular-nums">{sub}</p>}
+    </>
+  );
+  return href ? (
+    <Link href={href} className="group">{content}</Link>
+  ) : (
+    <div>{content}</div>
+  );
+}
+
+function HeroDivider() {
+  return <div className="hidden lg:block self-stretch w-px bg-slate-200 dark:bg-slate-700" />;
 }
 
 // ─── Main Component ─────────────────────────────────────────────────
@@ -550,98 +602,81 @@ export default function DashboardPage() {
 
       {/* ─── Hero Strip ─────────────────────────────────────────── */}
       <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm p-4 sm:p-6">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:items-center gap-4 lg:gap-x-10 lg:gap-y-4">
-          {/* Total Value */}
-          <div className="col-span-2 sm:col-span-1">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">
-              Total Value
-            </p>
-            <p className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-              ${fmt(totalValue)}
-            </p>
-          </div>
+        <div className="flex flex-wrap items-start gap-x-7 sm:gap-x-9 gap-y-5">
+          {/* ── Patrimônio ── */}
+          <HeroMetric label="Total Value" size="lg">
+            <span className="text-slate-900 dark:text-white">${fmt(totalValue)}</span>
+          </HeroMetric>
 
-          {/* Cota Líquida (calculated NAV) */}
           {cota && (
-            <Link href="/igf-tr" className="col-span-2 sm:col-span-1 group">
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1 group-hover:text-blue-500 transition-colors">
-                Cota Líquida
-              </p>
-              <p className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white tabular-nums">
+            <HeroMetric
+              label="Cota Líquida"
+              size="lg"
+              href="/igf-tr"
+              sub={new Date(cota.latest.date + "T00:00:00").toLocaleDateString("pt-BR", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })}
+            >
+              <span className="text-slate-900 dark:text-white">
                 {cota.latest.net_cota.toLocaleString("pt-BR", { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
-              </p>
-              <p className="text-[10px] text-slate-400 mt-0.5">{cota.latest.date}</p>
-            </Link>
+              </span>
+            </HeroMetric>
           )}
 
-          {/* 1D P&L */}
-          <div className="col-span-2 sm:col-span-1">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">
-              1D P&L
-            </p>
-            <div className="flex items-center gap-2">
-              <span
-                className={`inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full text-xs sm:text-sm font-bold ${totalDailyPL >= 0
-                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400"
-                  : "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400"
-                  }`}
-              >
-                {totalDailyPL >= 0 ? (
-                  <TrendingUp className="w-3.5 h-3.5" />
-                ) : (
-                  <TrendingDown className="w-3.5 h-3.5" />
-                )}
-                {totalDailyPL >= 0 ? "+" : ""}${fmt(totalDailyPL)}
-                <span className="font-medium opacity-70 ml-0.5">
-                  ({totalDailyPLPct >= 0 ? "+" : ""}{totalDailyPLPct.toFixed(2)}%)
+          <HeroDivider />
+
+          {/* ── Resultado ── */}
+          <div className="flex flex-col gap-2.5">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap mb-1.5">
+                1D P&amp;L
+              </p>
+              <p className="text-2xl sm:text-3xl font-bold tracking-tight tabular-nums leading-none flex items-baseline gap-1.5">
+                <span className={totalDailyPL >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}>
+                  {totalDailyPL >= 0 ? "+" : ""}${fmt(totalDailyPL)}
                 </span>
+                <span className="text-xs font-medium text-slate-400">
+                  {totalDailyPLPct >= 0 ? "+" : ""}{totalDailyPLPct.toFixed(2)}%
+                </span>
+              </p>
+            </div>
+            {cota && (
+              <div className="flex flex-wrap gap-1.5">
+                <ReturnBadge label="Dia" value={cota.latest.daily_return_pct} />
+                <ReturnBadge label="MTD" value={cota.mtd_return_pct} />
+                <ReturnBadge label="YTD" value={cota.ytd_return_pct} />
+              </div>
+            )}
+          </div>
+
+          <HeroDivider />
+
+          {/* ── Alocação ── */}
+          <div className="flex flex-col gap-2 min-w-[210px] flex-1">
+            <div className="flex items-center justify-between gap-4">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Alocação</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">
+                <span className="text-slate-900 dark:text-white font-semibold">{holdings.length}</span> posições
+              </p>
+            </div>
+            <div className="flex h-2 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800">
+              <div className="bg-blue-500" style={{ width: `${eqPct}%` }} />
+              <div className="bg-teal-500" style={{ width: `${fiPct}%` }} />
+            </div>
+            <div className="flex items-center justify-between gap-4 text-xs">
+              <span className="inline-flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                <span className="w-2 h-2 rounded-full bg-blue-500" />
+                Equities
+                <span className="text-slate-900 dark:text-white font-semibold tabular-nums">{eqPct}%</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                <span className="w-2 h-2 rounded-full bg-teal-500" />
+                Fixed Income
+                <span className="text-slate-900 dark:text-white font-semibold tabular-nums">{fiPct}%</span>
               </span>
             </div>
-          </div>
-
-          {/* Cota returns — Dia / MTD / YTD */}
-          {cota && (
-            <>
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">Cota Dia</p>
-                <p className="text-base sm:text-lg font-bold tabular-nums"><FundPct value={cota.latest.daily_return_pct} /></p>
-              </div>
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">Cota MTD</p>
-                <p className="text-base sm:text-lg font-bold tabular-nums"><FundPct value={cota.mtd_return_pct} /></p>
-              </div>
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">Cota YTD</p>
-                <p className="text-base sm:text-lg font-bold tabular-nums"><FundPct value={cota.ytd_return_pct} /></p>
-              </div>
-            </>
-          )}
-
-          {/* Divider — desktop only */}
-          <div className="hidden lg:block h-10 w-px bg-slate-200 dark:bg-slate-700" />
-
-          {/* Equity weight */}
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">
-              Equities
-            </p>
-            <p className="text-base sm:text-lg font-bold text-blue-600 dark:text-blue-400">{eqPct}%</p>
-          </div>
-
-          {/* FI weight */}
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">
-              Fixed Income
-            </p>
-            <p className="text-base sm:text-lg font-bold text-teal-600 dark:text-teal-400">{fiPct}%</p>
-          </div>
-
-          {/* Positions */}
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">
-              Positions
-            </p>
-            <p className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">{holdings.length}</p>
           </div>
         </div>
       </div>
