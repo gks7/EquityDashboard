@@ -170,7 +170,18 @@ class PortfolioSnapshotViewSet(viewsets.ModelViewSet):
                 # Try reading the "Data" sheet first (where Bloomberg data lives)
                 xl = pd.ExcelFile(file)
                 sheet = "Data" if "Data" in xl.sheet_names else xl.sheet_names[0]
-                df = xl.parse(sheet)
+                # The Data sheet often has blank/title rows above the real header,
+                # which would make pandas treat row 0 as the header and produce
+                # "Unnamed: N" columns (every holding then gets skipped). Detect the
+                # row that actually contains the headers and parse from there.
+                probe = xl.parse(sheet, header=None, nrows=15)
+                header_row = 0
+                for i in range(len(probe)):
+                    cells = {str(v).strip() for v in probe.iloc[i].tolist()}
+                    if 'Ticker' in cells or 'Quantity' in cells:
+                        header_row = i
+                        break
+                df = xl.parse(sheet, header=header_row)
             except Exception as e:
                 # Fallback: VBA might send it with a weird mimetype or encoding
                 return Response({"error": f"Failed to read file as Excel. {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
