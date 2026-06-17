@@ -105,15 +105,15 @@ const groupColor = (g: string, idx: number) => GROUP_PALETTE[g] ?? FALLBACK_PALE
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const fmt = (n: number | null | undefined, decimals = 2) =>
-  n == null ? "—" : n.toLocaleString("pt-BR", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  n == null ? "—" : n.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 
 const fmtSig = (n: number | null | undefined, sig = 4): string => {
   if (n == null || !isFinite(n)) return "—";
-  if (n === 0) return (0).toLocaleString("pt-BR", { minimumFractionDigits: sig - 1, maximumFractionDigits: sig - 1 });
+  if (n === 0) return (0).toLocaleString("en-US", { minimumFractionDigits: sig - 1, maximumFractionDigits: sig - 1 });
   const rounded = Number(n.toPrecision(sig));
   const magnitude = Math.floor(Math.log10(Math.abs(rounded)));
   const decimals = Math.max(0, sig - 1 - magnitude);
-  return rounded.toLocaleString("pt-BR", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  return rounded.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 };
 
 const fmtM = (n: number) => {
@@ -545,8 +545,8 @@ function CalculatedNavPanel() {
         />
         <StatCard
           label="Patrimônio Líquido"
-          value={`R$ ${fmtM(L.net_nav)}`}
-          sub={`Bruto R$ ${fmtM(L.gross_asset_value)}`}
+          value={`$${fmtM(L.net_nav)}`}
+          sub={`Bruto $${fmtM(L.gross_asset_value)}`}
           icon={DollarSign}
           color="violet"
         />
@@ -566,9 +566,9 @@ function CalculatedNavPanel() {
         <div className="rounded-xl border border-slate-200 dark:border-slate-800/60 p-4">
           <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">Composição do NAV</h3>
           <div className="space-y-2 text-sm">
-            <Row label="Valor das posições" value={`R$ ${fmt(L.asset_value, 2)}`} />
+            <Row label="Valor das posições" value={`$${fmt(L.asset_value, 2)}`} />
             <div className="flex items-center justify-between gap-2 py-1">
-              <span className="text-slate-500 dark:text-slate-400">Caixa (R$)</span>
+              <span className="text-slate-500 dark:text-slate-400">Caixa ($)</span>
               <div className="flex items-center gap-2">
                 <input
                   type="number"
@@ -588,12 +588,12 @@ function CalculatedNavPanel() {
               </div>
             </div>
             <div className="border-t border-slate-200 dark:border-slate-700/60 pt-2">
-              <Row label="Patrimônio bruto" value={`R$ ${fmt(L.gross_asset_value, 2)}`} bold />
+              <Row label="Patrimônio bruto" value={`$${fmt(L.gross_asset_value, 2)}`} bold />
             </div>
-            <Row label="(−) Taxa de administração acumulada" value={`R$ ${fmt(L.mgmt_fee_accrued, 2)}`} negative />
-            <Row label="(−) Provisão de taxa de performance" value={`R$ ${fmt(L.perf_fee_provision, 2)}`} negative />
+            <Row label="(−) Taxa de administração acumulada" value={`$${fmt(L.mgmt_fee_accrued, 2)}`} negative />
+            <Row label="(−) Provisão de taxa de performance" value={`$${fmt(L.perf_fee_provision, 2)}`} negative />
             <div className="border-t border-slate-200 dark:border-slate-700/60 pt-2">
-              <Row label="Patrimônio líquido" value={`R$ ${fmt(L.net_nav, 2)}`} bold />
+              <Row label="Patrimônio líquido" value={`$${fmt(L.net_nav, 2)}`} bold />
             </div>
           </div>
         </div>
@@ -604,15 +604,15 @@ function CalculatedNavPanel() {
             Taxas a Pagar (provisionado)
           </h3>
           <div className="space-y-2 text-sm">
-            <Row label="Taxa de adm. — acumulada" value={`R$ ${fmt(L.mgmt_fee_accrued, 2)}`} />
-            <Row label="Taxa de adm. — do dia" value={`R$ ${fmt(L.mgmt_fee_day, 2)}`} muted />
-            <Row label="Taxa de performance — provisão" value={`R$ ${fmt(L.perf_fee_provision, 2)}`} />
+            <Row label="Taxa de adm. — acumulada" value={`$${fmt(L.mgmt_fee_accrued, 2)}`} />
+            <Row label="Taxa de adm. — do dia" value={`$${fmt(L.mgmt_fee_day, 2)}`} muted />
+            <Row label="Taxa de performance — provisão" value={`$${fmt(L.perf_fee_provision, 2)}`} />
             <p className="text-[11px] text-slate-500 dark:text-slate-400 pt-1">
               Performance cristaliza ao fim de maio e novembro. Adm. acumulada{" "}
               {cfg.mgmt_fee_paid_through ? `desde ${fmtDate(cfg.mgmt_fee_paid_through)}` : "no mês corrente (paga mensalmente)"}.
             </p>
             <div className="border-t border-amber-200 dark:border-amber-500/20 pt-2">
-              <Row label="Total a pagar" value={`R$ ${fmt(data.total_fees_to_pay, 2)}`} bold />
+              <Row label="Total a pagar" value={`$${fmt(data.total_fees_to_pay, 2)}`} bold />
             </div>
           </div>
 
@@ -972,7 +972,7 @@ export default function IgfTrPage() {
               />
               <StatCard
                 label="Patrimônio (NAV)"
-                value={latest?.nav != null ? `R$ ${fmtM(latest.nav)}` : "—"}
+                value={latest?.nav != null ? `$${fmtM(latest.nav)}` : "—"}
                 sub={latest?.shares != null ? `${fmtM(latest.shares)} cotas` : undefined}
                 icon={DollarSign}
                 color="violet"
@@ -1092,8 +1092,8 @@ export default function IgfTrPage() {
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" className="dark:[stroke:#1e293b]" />
                       <XAxis dataKey="date" tick={{ fill: "#94a3b8", fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-                      <YAxis tick={{ fill: "#94a3b8", fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(v) => `R$ ${fmtM(v)}`} width={72} />
-                      <Tooltip content={<ChartTooltip formatter={(v: number) => `R$ ${fmtM(v)}`} />} />
+                      <YAxis tick={{ fill: "#94a3b8", fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(v) => `$${fmtM(v)}`} width={72} />
+                      <Tooltip content={<ChartTooltip formatter={(v: number) => `$${fmtM(v)}`} />} />
                       <Area type="monotone" dataKey="nav" name="Patrimônio" stroke="#8b5cf6" strokeWidth={2} fill="url(#navGrad)" dot={false} activeDot={{ r: 4, fill: "#8b5cf6" }} />
                     </AreaChart>
                   </ResponsiveContainer>
@@ -1110,7 +1110,7 @@ export default function IgfTrPage() {
                     />
                     <div className="flex items-center gap-2 mt-2">
                       <span className="w-3 h-3 rounded-sm bg-emerald-500/80 inline-block" />
-                      <span className="text-xs text-slate-500">Total: <strong className="text-emerald-600 dark:text-emerald-400">R$ {fmtM(totalSubs)}</strong></span>
+                      <span className="text-xs text-slate-500">Total: <strong className="text-emerald-600 dark:text-emerald-400">${fmtM(totalSubs)}</strong></span>
                     </div>
                   </div>
                   <RangeBar value={flowsRange} onChange={setFlowsRange} color="emerald" />
@@ -1123,7 +1123,7 @@ export default function IgfTrPage() {
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" className="dark:[stroke:#1e293b]" vertical={false} />
                       <XAxis dataKey="month" tick={{ fill: "#94a3b8", fontSize: 9 }} tickLine={false} axisLine={false} />
                       <YAxis tick={{ fill: "#94a3b8", fontSize: 9 }} tickLine={false} axisLine={false} tickFormatter={(v) => fmtM(v)} width={52} />
-                      <Tooltip content={<ChartTooltip formatter={(v: number) => `R$ ${fmtM(v)}`} />} />
+                      <Tooltip content={<ChartTooltip formatter={(v: number) => `$${fmtM(v)}`} />} />
                       <Bar dataKey="subscriptions" name="Captações" fill="#10b981" fillOpacity={0.85} radius={[3, 3, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -1148,7 +1148,7 @@ export default function IgfTrPage() {
                               {pct != null ? pct.toFixed(1) : "—"}%
                             </p>
                             <p className="text-[10px] text-slate-400">
-                              {latestAlloc.total != null ? `R$ ${fmtM(latestAlloc.total as number * pct / 100)}` : ""}
+                              {latestAlloc.total != null ? `$${fmtM(latestAlloc.total as number * pct / 100)}` : ""}
                             </p>
                           </div>
                         </div>
@@ -1158,7 +1158,7 @@ export default function IgfTrPage() {
                       <div>
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Total</p>
                         <p className="text-lg font-bold text-slate-900 dark:text-white tabular-nums">
-                          {latestAlloc.total != null ? `R$ ${fmtM(latestAlloc.total as number)}` : "—"}
+                          {latestAlloc.total != null ? `$${fmtM(latestAlloc.total as number)}` : "—"}
                         </p>
                         <p className="text-[10px] text-slate-400">{latestAlloc.date as string ? fmtDate(latestAlloc.date as string) : ""}</p>
                       </div>
