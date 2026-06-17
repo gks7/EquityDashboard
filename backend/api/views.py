@@ -757,16 +757,21 @@ class FundConsolidatedView(APIView):
         cfg = FundConfig.get_solo()
         fund = request.query_params.get('fund', cfg.fund)
 
+        def ff(qs):
+            # Apply the fund filter, but fall back to unfiltered when it matches
+            # nothing (the uploaded data labels the fund differently than cfg.fund).
+            if fund:
+                f = qs.filter(fund__icontains=fund)
+                if f.exists():
+                    return f
+            return qs
+
         # ── Official NAV / shares / NAVPS (latest NAVPosition row) ──────────────
-        nav_qs = NAVPosition.objects.filter(nav_per_share__isnull=False)
-        if fund:
-            nav_qs = nav_qs.filter(fund__icontains=fund)
+        nav_qs = ff(NAVPosition.objects.filter(nav_per_share__isnull=False))
         latest_nav = nav_qs.order_by('-date').first()
 
         # ── P&L from the official asset-position history (Sum of pnl_total) ─────
-        ap = AssetPositionHistOfficial.objects.all()
-        if fund:
-            ap = ap.filter(fund__icontains=fund)
+        ap = ff(AssetPositionHistOfficial.objects.all())
         latest_ap_date = ap.aggregate(m=Max('date'))['m']
 
         def pnl_sum(qs):
@@ -786,13 +791,18 @@ class FundConsolidatedView(APIView):
             accrued = round(calc['latest']['mgmt_fee_accrued'] + calc['latest']['perf_fee_provision'], 2)
 
         # ── Cash transactions grouped by type, to locate realized fees ──────────
-        cash = HistCashTransaction.objects.all()
-        if fund:
-            cash = cash.filter(fund__icontains=fund)
+        cash = ff(HistCashTransaction.objects.all())
         cash_types = [
             {'type': r['type'], 'total': round(r['total'] or 0.0, 2), 'count': r['n']}
             for r in cash.values('type').annotate(total=Sum('amount'), n=Count('id')).order_by('type')
         ]
+
+        # Distinct fund labels actually present, so we can see the real naming.
+        funds_seen = {
+            'nav': sorted(set(NAVPosition.objects.exclude(fund=None).values_list('fund', flat=True).distinct())),
+            'asset_pos': sorted(set(AssetPositionHistOfficial.objects.exclude(fund=None).values_list('fund', flat=True).distinct())),
+            'cash': sorted(set(HistCashTransaction.objects.exclude(fund=None).values_list('fund', flat=True).distinct())),
+        }
 
         return Response({
             'nav': latest_nav.nav if latest_nav else None,
@@ -808,6 +818,7 @@ class FundConsolidatedView(APIView):
                 'pnl_ytd': pnl_ytd,
                 'pnl_all': pnl_all,
                 'cash_types': cash_types,
+                'funds_seen': funds_seen,
             },
         })
 
