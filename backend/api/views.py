@@ -464,6 +464,40 @@ def _safe_bool(val):
     return None
 
 
+def _merge_hist_rows(model, objs, key_fields, reset=False):
+    """Merge uploaded rows into a historical table without wiping the whole base.
+
+    Deletes only the existing rows whose composite key (``key_fields``) also appears
+    in this batch, then bulk-inserts the batch. Rows whose key is not in the upload
+    are preserved — so the macro can send just the new days (or the full history) and
+    the previously-uploaded base is kept. Chunk-safe: a chunk only deletes the rows it
+    is about to re-insert, so earlier chunks of the same upload are never clobbered.
+
+    Pass ``reset=True`` (``?reset=1``) to wipe the table first, for a full rebuild.
+    """
+    if reset:
+        model.objects.all().delete()
+    if not objs:
+        return 0
+    incoming = {tuple(getattr(o, f) for f in key_fields) for o in objs}
+    # Narrow the scan to the values actually present in this batch (by date when the
+    # key has one, else by the first key field). Fall back to a full scan only when a
+    # narrowing value is null.
+    narrow = 'date' if 'date' in key_fields else key_fields[0]
+    values = {getattr(o, narrow) for o in objs}
+    scan = model.objects.all()
+    if None not in values:
+        scan = scan.filter(**{f'{narrow}__in': values})
+    stale_ids = [
+        row.id for row in scan.only('id', *key_fields).iterator()
+        if tuple(getattr(row, f) for f in key_fields) in incoming
+    ]
+    if stale_ids:
+        model.objects.filter(id__in=stale_ids).delete()
+    model.objects.bulk_create(objs)
+    return len(objs)
+
+
 class HistCashTransactionViewSet(viewsets.ViewSet):
     permission_classes = [AllowAny]
 
@@ -475,8 +509,7 @@ class HistCashTransactionViewSet(viewsets.ViewSet):
             if not data or not isinstance(data, list):
                 return Response({'error': 'Expected {"rows": [...]}'}, status=status.HTTP_400_BAD_REQUEST)
 
-            if request.query_params.get('append') != '1':
-                HistCashTransaction.objects.all().delete()
+            reset = request.query_params.get('reset') == '1'
             objs = []
             for row in data:
                 objs.append(HistCashTransaction(
@@ -492,8 +525,12 @@ class HistCashTransactionViewSet(viewsets.ViewSet):
                     obs=row.get('Obs') or None,
                     cmd=row.get('CMD') or None,
                 ))
-            HistCashTransaction.objects.bulk_create(objs)
-            return Response({'message': f'{len(objs)} cash transactions uploaded.'}, status=status.HTTP_201_CREATED)
+            _merge_hist_rows(
+                HistCashTransaction, objs,
+                ['date', 'excel_id', 'amount', 'type', 'cash_account', 'counterparty_account'],
+                reset=reset,
+            )
+            return Response({'message': f'{len(objs)} cash transactions merged.'}, status=status.HTTP_201_CREATED)
         except Exception as e:
             return Response({'error': str(e), 'traceback': traceback.format_exc()}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -509,8 +546,7 @@ class HistIndexPriceViewSet(viewsets.ViewSet):
             if not data or not isinstance(data, list):
                 return Response({'error': 'Expected {"rows": [...]}'}, status=status.HTTP_400_BAD_REQUEST)
 
-            if request.query_params.get('append') != '1':
-                HistIndexPrice.objects.all().delete()
+            reset = request.query_params.get('reset') == '1'
             objs = []
             for row in data:
                 objs.append(HistIndexPrice(
@@ -526,8 +562,12 @@ class HistIndexPriceViewSet(viewsets.ViewSet):
                     column1=row.get('Column1') or None,
                     column2=row.get('Column2') or None,
                 ))
-            HistIndexPrice.objects.bulk_create(objs)
-            return Response({'message': f'{len(objs)} index prices uploaded.'}, status=status.HTTP_201_CREATED)
+            _merge_hist_rows(
+                HistIndexPrice, objs,
+                ['date', 'pk_asset_info_id', 'fund', 'asset', 'info'],
+                reset=reset,
+            )
+            return Response({'message': f'{len(objs)} index prices merged.'}, status=status.HTTP_201_CREATED)
         except Exception as e:
             return Response({'error': str(e), 'traceback': traceback.format_exc()}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -543,8 +583,7 @@ class AssetPositionHistOfficialViewSet(viewsets.ViewSet):
             if not data or not isinstance(data, list):
                 return Response({'error': 'Expected {"rows": [...]}'}, status=status.HTTP_400_BAD_REQUEST)
 
-            if request.query_params.get('append') != '1':
-                AssetPositionHistOfficial.objects.all().delete()
+            reset = request.query_params.get('reset') == '1'
             objs = []
             for row in data:
                 objs.append(AssetPositionHistOfficial(
@@ -587,8 +626,12 @@ class AssetPositionHistOfficialViewSet(viewsets.ViewSet):
                     pnl_lending=_safe_float(row.get('Pnl Lending')),
                     pnl_total=_safe_float(row.get('Pnl Total')),
                 ))
-            AssetPositionHistOfficial.objects.bulk_create(objs)
-            return Response({'message': f'{len(objs)} asset positions uploaded.'}, status=status.HTTP_201_CREATED)
+            _merge_hist_rows(
+                AssetPositionHistOfficial, objs,
+                ['date', 'fund', 'portfolio', 'asset_group', 'broker', 'asset_market', 'asset'],
+                reset=reset,
+            )
+            return Response({'message': f'{len(objs)} asset positions merged.'}, status=status.HTTP_201_CREATED)
         except Exception as e:
             return Response({'error': str(e), 'traceback': traceback.format_exc()}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -604,9 +647,7 @@ class NAVPositionViewSet(viewsets.ViewSet):
             if not data or not isinstance(data, list):
                 return Response({'error': 'Expected {"rows": [...]}'}, status=status.HTTP_400_BAD_REQUEST)
 
-            if request.query_params.get('append') != '1':
-                NAVPosition.objects.all().delete()
-
+            reset = request.query_params.get('reset') == '1'
             objs = []
             for row in data:
                 objs.append(NAVPosition(
@@ -619,8 +660,8 @@ class NAVPositionViewSet(viewsets.ViewSet):
                     redemption_d0=_safe_float(row.get('Redemption D0')),
                     redemption_d1=_safe_float(row.get('Redemption D1')),
                 ))
-            NAVPosition.objects.bulk_create(objs)
-            return Response({'message': f'{len(objs)} NAV positions uploaded.'}, status=status.HTTP_201_CREATED)
+            _merge_hist_rows(NAVPosition, objs, ['date', 'fund'], reset=reset)
+            return Response({'message': f'{len(objs)} NAV positions merged.'}, status=status.HTTP_201_CREATED)
         except Exception as e:
             return Response({'error': str(e), 'traceback': traceback.format_exc()}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
