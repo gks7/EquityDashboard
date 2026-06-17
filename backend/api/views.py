@@ -739,6 +739,79 @@ class CalculatedNAVView(APIView):
         return Response(result)
 
 
+class FundConsolidatedView(APIView):
+    """
+    GET /api/igf-tr/consolidated/ — the official NAV bridged to an estimated current
+    value, derived entirely from already-uploaded data (NAVPosition + asset position
+    history + cash transactions + the calculated-NAV engine). Carries a ``_debug``
+    block while the exact definitions (P&L window, which cash type is a realized fee)
+    are being locked against the workbook's "Consolidated Information" block.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        from django.db.models import Sum, Max, Count
+        from finance.models import FundConfig, NAVPosition, AssetPositionHistOfficial, HistCashTransaction
+        from finance.services import compute_calculated_nav
+
+        cfg = FundConfig.get_solo()
+        fund = request.query_params.get('fund', cfg.fund)
+
+        # ── Official NAV / shares / NAVPS (latest NAVPosition row) ──────────────
+        nav_qs = NAVPosition.objects.filter(nav_per_share__isnull=False)
+        if fund:
+            nav_qs = nav_qs.filter(fund__icontains=fund)
+        latest_nav = nav_qs.order_by('-date').first()
+
+        # ── P&L from the official asset-position history (Sum of pnl_total) ─────
+        ap = AssetPositionHistOfficial.objects.all()
+        if fund:
+            ap = ap.filter(fund__icontains=fund)
+        latest_ap_date = ap.aggregate(m=Max('date'))['m']
+
+        def pnl_sum(qs):
+            return round(qs.aggregate(s=Sum('pnl_total'))['s'] or 0.0, 2)
+
+        pnl_day = pnl_mtd = pnl_ytd = pnl_all = 0.0
+        if latest_ap_date:
+            pnl_day = pnl_sum(ap.filter(date=latest_ap_date))
+            pnl_mtd = pnl_sum(ap.filter(date__year=latest_ap_date.year, date__month=latest_ap_date.month))
+            pnl_ytd = pnl_sum(ap.filter(date__year=latest_ap_date.year))
+            pnl_all = pnl_sum(ap)
+
+        # ── Accrued fees estimated by the calculated-NAV engine ─────────────────
+        calc = compute_calculated_nav()
+        accrued = None
+        if calc:
+            accrued = round(calc['latest']['mgmt_fee_accrued'] + calc['latest']['perf_fee_provision'], 2)
+
+        # ── Cash transactions grouped by type, to locate realized fees ──────────
+        cash = HistCashTransaction.objects.all()
+        if fund:
+            cash = cash.filter(fund__icontains=fund)
+        cash_types = [
+            {'type': r['type'], 'total': round(r['total'] or 0.0, 2), 'count': r['n']}
+            for r in cash.values('type').annotate(total=Sum('amount'), n=Count('id')).order_by('type')
+        ]
+
+        return Response({
+            'nav': latest_nav.nav if latest_nav else None,
+            'shares': latest_nav.shares if latest_nav else None,
+            'navps': latest_nav.nav_per_share if latest_nav else None,
+            'nav_date': latest_nav.date.isoformat() if latest_nav and latest_nav.date else None,
+            'accrued_fees': accrued,
+            '_debug': {
+                'fund_filter': fund,
+                'latest_ap_date': latest_ap_date.isoformat() if latest_ap_date else None,
+                'pnl_day': pnl_day,
+                'pnl_mtd': pnl_mtd,
+                'pnl_ytd': pnl_ytd,
+                'pnl_all': pnl_all,
+                'cash_types': cash_types,
+            },
+        })
+
+
 class FundConfigView(APIView):
     """
     GET  /api/fund-config/  — current calculated-NAV parameters.
