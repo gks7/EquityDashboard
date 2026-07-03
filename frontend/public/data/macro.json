@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-02T18:56:21Z",
+  "generated_at": "2026-07-03T18:45:31Z",
   "rolling_window_years": 10,
   "recession_months": [
     "2020-03",
@@ -305,10 +305,6 @@
       "name": "3M Treasury",
       "points": [
         {
-          "month": "2020-07",
-          "value": 0.09
-        },
-        {
           "month": "2020-08",
           "value": 0.11
         },
@@ -591,6 +587,10 @@
         {
           "month": "2026-06",
           "value": 3.87
+        },
+        {
+          "month": "2026-07",
+          "value": 3.85
         }
       ]
     },
@@ -598,10 +598,6 @@
       "id": "DGS2",
       "name": "2Y Treasury",
       "points": [
-        {
-          "month": "2020-07",
-          "value": 0.11
-        },
         {
           "month": "2020-08",
           "value": 0.14
@@ -885,6 +881,10 @@
         {
           "month": "2026-06",
           "value": 4.14
+        },
+        {
+          "month": "2026-07",
+          "value": 4.17
         }
       ]
     },
@@ -892,10 +892,6 @@
       "id": "DGS10",
       "name": "10Y Treasury",
       "points": [
-        {
-          "month": "2020-07",
-          "value": 0.55
-        },
         {
           "month": "2020-08",
           "value": 0.72
@@ -1179,6 +1175,10 @@
         {
           "month": "2026-06",
           "value": 4.44
+        },
+        {
+          "month": "2026-07",
+          "value": 4.48
         }
       ]
     },
@@ -1186,10 +1186,6 @@
       "id": "DFII10",
       "name": "10Y Real Yield",
       "points": [
-        {
-          "month": "2020-07",
-          "value": -1.0
-        },
         {
           "month": "2020-08",
           "value": -1.08
@@ -1473,6 +1469,10 @@
         {
           "month": "2026-06",
           "value": 2.2
+        },
+        {
+          "month": "2026-07",
+          "value": 2.25
         }
       ]
     },
@@ -1920,7 +1920,7 @@
         },
         {
           "month": "2026-07",
-          "value": 0.76
+          "value": 0.75
         }
       ]
     }
@@ -5265,7 +5265,7 @@
           "transform_label": "%",
           "bad_when_high": true,
           "frequency": "D",
-          "latest_value": 2.2,
+          "latest_value": 2.22,
           "latest_month": "2026-07",
           "sparkline": [
             {
@@ -5362,7 +5362,7 @@
             },
             {
               "date": "2026-07",
-              "value": 2.2
+              "value": 2.22
             }
           ],
           "cells": [
@@ -5794,9 +5794,9 @@
             },
             {
               "month": "2026-07",
-              "value": 2.2,
-              "z": 0.394,
-              "color": "#fec76e"
+              "value": 2.22,
+              "z": 0.478,
+              "color": "#fec46c"
             }
           ]
         }
@@ -12869,7 +12869,7 @@
           "transform_label": "%",
           "bad_when_high": true,
           "frequency": "D",
-          "latest_value": 2.74,
+          "latest_value": 2.75,
           "latest_month": "2026-07",
           "sparkline": [
             {
@@ -12966,7 +12966,7 @@
             },
             {
               "date": "2026-07",
-              "value": 2.74
+              "value": 2.75
             }
           ],
           "cells": [
@@ -13398,9 +13398,9 @@
             },
             {
               "month": "2026-07",
-              "value": 2.74,
-              "z": -1.028,
-              "color": "#72acd0"
+              "value": 2.75,
+              "z": -1.006,
+              "color": "#74add1"
             }
           ]
         },
@@ -13953,7 +13953,7 @@
           "transform_label": "%",
           "bad_when_high": false,
           "frequency": "D",
-          "latest_value": 0.31,
+          "latest_value": 0.35,
           "latest_month": "2026-07",
           "sparkline": [
             {
@@ -14050,7 +14050,7 @@
             },
             {
               "date": "2026-07",
-              "value": 0.31
+              "value": 0.35
             }
           ],
           "cells": [
@@ -14482,9 +14482,9 @@
             },
             {
               "month": "2026-07",
-              "value": 0.31,
-              "z": -0.071,
-              "color": "#fed575"
+              "value": 0.35,
+              "z": -0.0,
+              "color": "#fed876"
             }
           ]
         }
