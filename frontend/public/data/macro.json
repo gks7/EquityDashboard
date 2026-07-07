@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-06T19:13:52Z",
+  "generated_at": "2026-07-07T19:19:49Z",
   "rolling_window_years": 10,
   "recession_months": [
     "2020-03",
@@ -590,7 +590,7 @@
         },
         {
           "month": "2026-07",
-          "value": 3.85
+          "value": 3.82
         }
       ]
     },
@@ -884,7 +884,7 @@
         },
         {
           "month": "2026-07",
-          "value": 4.17
+          "value": 4.14
         }
       ]
     },
@@ -1178,7 +1178,7 @@
         },
         {
           "month": "2026-07",
-          "value": 4.48
+          "value": 4.49
         }
       ]
     },
@@ -1472,7 +1472,7 @@
         },
         {
           "month": "2026-07",
-          "value": 2.25
+          "value": 2.26
         }
       ]
     },
@@ -1766,7 +1766,7 @@
         },
         {
           "month": "2026-07",
-          "value": 2.23
+          "value": 2.24
         }
       ]
     },
@@ -5265,7 +5265,7 @@
           "transform_label": "%",
           "bad_when_high": true,
           "frequency": "D",
-          "latest_value": 2.22,
+          "latest_value": 2.21,
           "latest_month": "2026-07",
           "sparkline": [
             {
@@ -5362,7 +5362,7 @@
             },
             {
               "date": "2026-07",
-              "value": 2.22
+              "value": 2.21
             }
           ],
           "cells": [
@@ -5794,9 +5794,9 @@
             },
             {
               "month": "2026-07",
-              "value": 2.22,
-              "z": 0.478,
-              "color": "#fec46c"
+              "value": 2.21,
+              "z": 0.436,
+              "color": "#fec66d"
             }
           ]
         }
@@ -12869,7 +12869,7 @@
           "transform_label": "%",
           "bad_when_high": true,
           "frequency": "D",
-          "latest_value": 2.74,
+          "latest_value": 2.72,
           "latest_month": "2026-07",
           "sparkline": [
             {
@@ -12966,7 +12966,7 @@
             },
             {
               "date": "2026-07",
-              "value": 2.74
+              "value": 2.72
             }
           ],
           "cells": [
@@ -13398,9 +13398,9 @@
             },
             {
               "month": "2026-07",
-              "value": 2.74,
-              "z": -1.028,
-              "color": "#72acd0"
+              "value": 2.72,
+              "z": -1.072,
+              "color": "#6fa9cf"
             }
           ]
         },
