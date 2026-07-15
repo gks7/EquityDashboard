@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-14T18:37:12Z",
+  "generated_at": "2026-07-15T18:36:42Z",
   "rolling_window_years": 10,
   "recession_months": [
     "2020-03",
@@ -590,7 +590,7 @@
         },
         {
           "month": "2026-07",
-          "value": 3.85
+          "value": 3.89
         }
       ]
     },
@@ -884,7 +884,7 @@
         },
         {
           "month": "2026-07",
-          "value": 4.21
+          "value": 4.26
         }
       ]
     },
@@ -1178,7 +1178,7 @@
         },
         {
           "month": "2026-07",
-          "value": 4.56
+          "value": 4.62
         }
       ]
     },
@@ -1472,7 +1472,7 @@
         },
         {
           "month": "2026-07",
-          "value": 2.32
+          "value": 2.36
         }
       ]
     },
@@ -1766,7 +1766,7 @@
         },
         {
           "month": "2026-07",
-          "value": 2.26
+          "value": 2.25
         }
       ]
     },
@@ -1920,7 +1920,7 @@
         },
         {
           "month": "2026-07",
-          "value": 0.78
+          "value": 0.79
         }
       ]
     }
@@ -5265,7 +5265,7 @@
           "transform_label": "%",
           "bad_when_high": true,
           "frequency": "D",
-          "latest_value": 2.21,
+          "latest_value": 2.22,
           "latest_month": "2026-07",
           "sparkline": [
             {
@@ -5362,7 +5362,7 @@
             },
             {
               "date": "2026-07",
-              "value": 2.21
+              "value": 2.22
             }
           ],
           "cells": [
@@ -5794,9 +5794,9 @@
             },
             {
               "month": "2026-07",
-              "value": 2.21,
-              "z": 0.436,
-              "color": "#fec66d"
+              "value": 2.22,
+              "z": 0.478,
+              "color": "#fec46c"
             }
           ]
         }
@@ -12869,7 +12869,7 @@
           "transform_label": "%",
           "bad_when_high": true,
           "frequency": "D",
-          "latest_value": 2.69,
+          "latest_value": 2.72,
           "latest_month": "2026-07",
           "sparkline": [
             {
@@ -12966,7 +12966,7 @@
             },
             {
               "date": "2026-07",
-              "value": 2.69
+              "value": 2.72
             }
           ],
           "cells": [
@@ -13398,9 +13398,9 @@
             },
             {
               "month": "2026-07",
-              "value": 2.69,
-              "z": -1.137,
-              "color": "#6aa6cd"
+              "value": 2.72,
+              "z": -1.072,
+              "color": "#6fa9cf"
             }
           ]
         },
@@ -13411,7 +13411,7 @@
           "transform_label": "Index",
           "bad_when_high": true,
           "frequency": "W",
-          "latest_value": -0.52,
+          "latest_value": -0.54,
           "latest_month": "2026-07",
           "sparkline": [
             {
@@ -13420,11 +13420,11 @@
             },
             {
               "date": "2024-09",
-              "value": -0.43
+              "value": -0.42
             },
             {
               "date": "2024-10",
-              "value": -0.45
+              "value": -0.44
             },
             {
               "date": "2024-11",
@@ -13452,11 +13452,11 @@
             },
             {
               "date": "2025-05",
-              "value": -0.47
+              "value": -0.46
             },
             {
               "date": "2025-06",
-              "value": -0.5
+              "value": -0.49
             },
             {
               "date": "2025-07",
@@ -13464,11 +13464,11 @@
             },
             {
               "date": "2025-08",
-              "value": -0.53
+              "value": -0.52
             },
             {
               "date": "2025-09",
-              "value": -0.53
+              "value": -0.52
             },
             {
               "date": "2025-10",
@@ -13480,7 +13480,7 @@
             },
             {
               "date": "2025-12",
-              "value": -0.54
+              "value": -0.53
             },
             {
               "date": "2026-01",
@@ -13488,11 +13488,11 @@
             },
             {
               "date": "2026-02",
-              "value": -0.51
+              "value": -0.5
             },
             {
               "date": "2026-03",
-              "value": -0.46
+              "value": -0.45
             },
             {
               "date": "2026-04",
@@ -13500,7 +13500,7 @@
             },
             {
               "date": "2026-05",
-              "value": -0.5
+              "value": -0.49
             },
             {
               "date": "2026-06",
@@ -13508,441 +13508,441 @@
             },
             {
               "date": "2026-07",
-              "value": -0.52
+              "value": -0.54
             }
           ],
           "cells": [
             {
               "month": "2020-08",
               "value": -0.51,
-              "z": -0.039,
-              "color": "#f9d67a"
+              "z": -0.026,
+              "color": "#fad778"
             },
             {
               "month": "2020-09",
               "value": -0.49,
-              "z": 0.059,
-              "color": "#fed675"
+              "z": 0.071,
+              "color": "#fed575"
             },
             {
               "month": "2020-10",
               "value": -0.51,
-              "z": -0.022,
-              "color": "#fbd778"
+              "z": -0.01,
+              "color": "#fdd877"
             },
             {
               "month": "2020-11",
               "value": -0.57,
-              "z": -0.355,
-              "color": "#cdc996"
+              "z": -0.347,
+              "color": "#cec996"
             },
             {
               "month": "2020-12",
               "value": -0.6,
-              "z": -0.559,
-              "color": "#b1c0a9"
+              "z": -0.545,
+              "color": "#b3c1a8"
             },
             {
               "month": "2021-01",
               "value": -0.62,
-              "z": -0.642,
-              "color": "#a5bcb0"
+              "z": -0.628,
+              "color": "#a7bdaf"
             },
             {
               "month": "2021-02",
               "value": -0.63,
-              "z": -0.683,
-              "color": "#a0bbb4"
+              "z": -0.669,
+              "color": "#a2bbb3"
             },
             {
               "month": "2021-03",
               "value": -0.65,
-              "z": -0.8,
-              "color": "#90b6bf"
+              "z": -0.786,
+              "color": "#92b6be"
             },
             {
               "month": "2021-04",
               "value": -0.68,
-              "z": -0.978,
-              "color": "#77aecf"
+              "z": -0.964,
+              "color": "#79afce"
             },
             {
               "month": "2021-05",
               "value": -0.69,
-              "z": -1.029,
-              "color": "#72acd0"
+              "z": -1.015,
+              "color": "#73acd1"
             },
             {
               "month": "2021-06",
               "value": -0.69,
-              "z": -0.978,
-              "color": "#77aecf"
+              "z": -0.965,
+              "color": "#79afce"
             },
             {
               "month": "2021-07",
-              "value": -0.66,
-              "z": -0.793,
-              "color": "#91b6be"
+              "value": -0.65,
+              "z": -0.781,
+              "color": "#92b6bd"
             },
             {
               "month": "2021-08",
               "value": -0.65,
-              "z": -0.737,
-              "color": "#98b8b9"
+              "z": -0.725,
+              "color": "#9ab9b8"
             },
             {
               "month": "2021-09",
               "value": -0.65,
-              "z": -0.764,
-              "color": "#95b7bc"
+              "z": -0.751,
+              "color": "#96b8ba"
             },
             {
               "month": "2021-10",
               "value": -0.62,
-              "z": -0.573,
-              "color": "#afbfaa"
+              "z": -0.555,
+              "color": "#b1c0a8"
             },
             {
               "month": "2021-11",
               "value": -0.55,
-              "z": -0.131,
-              "color": "#ecd282"
+              "z": -0.12,
+              "color": "#edd381"
             },
             {
               "month": "2021-12",
               "value": -0.56,
-              "z": -0.144,
-              "color": "#ead283"
+              "z": -0.133,
+              "color": "#ecd282"
             },
             {
               "month": "2022-01",
               "value": -0.54,
-              "z": -0.039,
-              "color": "#f9d67a"
+              "z": -0.022,
+              "color": "#fbd778"
             },
             {
               "month": "2022-02",
               "value": -0.44,
-              "z": 0.61,
+              "z": 0.624,
               "color": "#fdbe69"
             },
             {
               "month": "2022-03",
               "value": -0.37,
-              "z": 1.016,
-              "color": "#fcac60"
+              "z": 1.029,
+              "color": "#fcaa5f"
             },
             {
               "month": "2022-04",
               "value": -0.34,
-              "z": 1.251,
-              "color": "#f38950"
+              "z": 1.256,
+              "color": "#f3884f"
             },
             {
               "month": "2022-05",
               "value": -0.26,
-              "z": 1.737,
-              "color": "#e1402e"
+              "z": 1.746,
+              "color": "#e13f2e"
             },
             {
               "month": "2022-06",
               "value": -0.17,
-              "z": 2.257,
+              "z": 2.263,
               "color": "#d7191c"
             },
             {
               "month": "2022-07",
               "value": -0.22,
-              "z": 1.927,
-              "color": "#da2421"
+              "z": 1.94,
+              "color": "#d92220"
             },
             {
               "month": "2022-08",
-              "value": -0.23,
-              "z": 1.858,
-              "color": "#dc2e26"
+              "value": -0.22,
+              "z": 1.865,
+              "color": "#dc2d25"
             },
             {
               "month": "2022-09",
-              "value": -0.11,
-              "z": 2.487,
+              "value": -0.1,
+              "z": 2.49,
               "color": "#d7191c"
             },
             {
               "month": "2022-10",
-              "value": -0.13,
-              "z": 2.3,
+              "value": -0.12,
+              "z": 2.304,
               "color": "#d7191c"
             },
             {
               "month": "2022-11",
               "value": -0.18,
-              "z": 1.933,
-              "color": "#da2321"
+              "z": 1.937,
+              "color": "#d92220"
             },
             {
               "month": "2022-12",
               "value": -0.22,
-              "z": 1.652,
-              "color": "#e44d34"
+              "z": 1.663,
+              "color": "#e44b33"
             },
             {
               "month": "2023-01",
-              "value": -0.31,
-              "z": 1.158,
-              "color": "#f79656"
+              "value": -0.3,
+              "z": 1.171,
+              "color": "#f69455"
             },
             {
               "month": "2023-02",
               "value": -0.27,
-              "z": 1.341,
-              "color": "#f07b49"
+              "z": 1.348,
+              "color": "#f07a49"
             },
             {
               "month": "2023-03",
               "value": -0.15,
-              "z": 1.946,
-              "color": "#d92120"
+              "z": 1.954,
+              "color": "#d9201f"
             },
             {
               "month": "2023-04",
               "value": -0.19,
-              "z": 1.7,
-              "color": "#e24631"
+              "z": 1.703,
+              "color": "#e24530"
             },
             {
               "month": "2023-05",
               "value": -0.21,
-              "z": 1.544,
-              "color": "#e85d3b"
+              "z": 1.553,
+              "color": "#e85c3b"
             },
             {
               "month": "2023-06",
               "value": -0.23,
-              "z": 1.44,
-              "color": "#ec6d43"
+              "z": 1.444,
+              "color": "#ec6c42"
             },
             {
               "month": "2023-07",
               "value": -0.28,
-              "z": 1.139,
-              "color": "#f89957"
+              "z": 1.144,
+              "color": "#f89857"
             },
             {
               "month": "2023-08",
-              "value": -0.34,
-              "z": 0.833,
-              "color": "#fdb565"
+              "value": -0.33,
+              "z": 0.846,
+              "color": "#fdb464"
             },
             {
               "month": "2023-09",
               "value": -0.31,
-              "z": 0.931,
-              "color": "#fdb162"
+              "z": 0.943,
+              "color": "#fdb062"
             },
             {
               "month": "2023-10",
-              "value": -0.29,
-              "z": 1.06,
-              "color": "#fba55d"
+              "value": -0.28,
+              "z": 1.07,
+              "color": "#faa45c"
             },
             {
               "month": "2023-11",
               "value": -0.32,
-              "z": 0.856,
+              "z": 0.868,
               "color": "#fdb464"
             },
             {
               "month": "2023-12",
-              "value": -0.37,
-              "z": 0.598,
+              "value": -0.36,
+              "z": 0.606,
               "color": "#fdbf69"
             },
             {
               "month": "2024-01",
-              "value": -0.4,
-              "z": 0.42,
+              "value": -0.39,
+              "z": 0.434,
               "color": "#fec66d"
             },
             {
               "month": "2024-02",
-              "value": -0.43,
-              "z": 0.24,
-              "color": "#fece71"
+              "value": -0.42,
+              "z": 0.255,
+              "color": "#fecd71"
             },
             {
               "month": "2024-03",
               "value": -0.43,
-              "z": 0.198,
-              "color": "#fed072"
+              "z": 0.208,
+              "color": "#fecf72"
             },
             {
               "month": "2024-04",
-              "value": -0.41,
-              "z": 0.293,
-              "color": "#fecc70"
-            },
-            {
-              "month": "2024-05",
               "value": -0.41,
               "z": 0.302,
               "color": "#fecb70"
             },
             {
+              "month": "2024-05",
+              "value": -0.41,
+              "z": 0.312,
+              "color": "#fecb6f"
+            },
+            {
               "month": "2024-06",
               "value": -0.38,
-              "z": 0.453,
+              "z": 0.461,
               "color": "#fec56c"
             },
             {
               "month": "2024-07",
               "value": -0.36,
-              "z": 0.559,
-              "color": "#fdc16a"
+              "z": 0.567,
+              "color": "#fdc06a"
             },
             {
               "month": "2024-08",
               "value": -0.39,
-              "z": 0.36,
-              "color": "#fec96e"
+              "z": 0.375,
+              "color": "#fec86e"
             },
             {
               "month": "2024-09",
-              "value": -0.43,
-              "z": 0.13,
-              "color": "#fed373"
+              "value": -0.42,
+              "z": 0.147,
+              "color": "#fed273"
             },
             {
               "month": "2024-10",
-              "value": -0.45,
-              "z": 0.016,
-              "color": "#fed776"
+              "value": -0.44,
+              "z": 0.028,
+              "color": "#fed775"
             },
             {
               "month": "2024-11",
               "value": -0.47,
-              "z": -0.178,
-              "color": "#e5d086"
+              "z": -0.166,
+              "color": "#e7d185"
             },
             {
               "month": "2024-12",
               "value": -0.48,
-              "z": -0.239,
-              "color": "#ddce8c"
+              "z": -0.226,
+              "color": "#dfce8b"
             },
             {
               "month": "2025-01",
               "value": -0.51,
-              "z": -0.388,
-              "color": "#c8c799"
+              "z": -0.368,
+              "color": "#cbc897"
             },
             {
               "month": "2025-02",
               "value": -0.48,
-              "z": -0.217,
-              "color": "#e0cf8a"
+              "z": -0.198,
+              "color": "#e3cf88"
             },
             {
               "month": "2025-03",
               "value": -0.41,
-              "z": 0.212,
-              "color": "#fecf72"
+              "z": 0.226,
+              "color": "#fece71"
             },
             {
               "month": "2025-04",
               "value": -0.39,
-              "z": 0.322,
+              "z": 0.336,
               "color": "#feca6f"
             },
             {
               "month": "2025-05",
-              "value": -0.47,
-              "z": -0.149,
-              "color": "#e9d284"
+              "value": -0.46,
+              "z": -0.139,
+              "color": "#ebd283"
             },
             {
               "month": "2025-06",
-              "value": -0.5,
-              "z": -0.339,
-              "color": "#cfc995"
+              "value": -0.49,
+              "z": -0.322,
+              "color": "#d2ca93"
             },
             {
               "month": "2025-07",
               "value": -0.52,
-              "z": -0.475,
-              "color": "#bcc4a1"
+              "z": -0.458,
+              "color": "#bfc4a0"
             },
             {
               "month": "2025-08",
-              "value": -0.53,
-              "z": -0.525,
-              "color": "#b6c1a6"
+              "value": -0.52,
+              "z": -0.507,
+              "color": "#b8c2a4"
             },
             {
               "month": "2025-09",
-              "value": -0.53,
-              "z": -0.505,
-              "color": "#b8c2a4"
+              "value": -0.52,
+              "z": -0.488,
+              "color": "#bbc3a2"
             },
             {
               "month": "2025-10",
               "value": -0.51,
-              "z": -0.422,
-              "color": "#c4c69c"
+              "z": -0.411,
+              "color": "#c5c69b"
             },
             {
               "month": "2025-11",
               "value": -0.51,
-              "z": -0.393,
-              "color": "#c8c79a"
+              "z": -0.377,
+              "color": "#cac898"
             },
             {
               "month": "2025-12",
-              "value": -0.54,
-              "z": -0.558,
-              "color": "#b1c0a9"
+              "value": -0.53,
+              "z": -0.541,
+              "color": "#b3c1a7"
             },
             {
               "month": "2026-01",
               "value": -0.56,
-              "z": -0.713,
-              "color": "#9cb9b7"
+              "z": -0.695,
+              "color": "#9ebab5"
             },
             {
               "month": "2026-02",
-              "value": -0.51,
-              "z": -0.349,
-              "color": "#cec996"
+              "value": -0.5,
+              "z": -0.332,
+              "color": "#d0ca94"
             },
             {
               "month": "2026-03",
-              "value": -0.46,
-              "z": -0.039,
-              "color": "#f9d67a"
+              "value": -0.45,
+              "z": -0.022,
+              "color": "#fbd778"
             },
             {
               "month": "2026-04",
               "value": -0.49,
-              "z": -0.252,
-              "color": "#dbcd8d"
+              "z": -0.241,
+              "color": "#ddce8c"
             },
             {
               "month": "2026-05",
-              "value": -0.5,
-              "z": -0.277,
-              "color": "#d8cc8f"
+              "value": -0.49,
+              "z": -0.266,
+              "color": "#d9cd8e"
             },
             {
               "month": "2026-06",
               "value": -0.51,
-              "z": -0.319,
-              "color": "#d2ca93"
+              "z": -0.352,
+              "color": "#cdc996"
             },
             {
               "month": "2026-07",
-              "value": -0.52,
-              "z": -0.374,
-              "color": "#cac898"
+              "value": -0.54,
+              "z": -0.518,
+              "color": "#b7c2a5"
             }
           ]
         },
@@ -13953,7 +13953,7 @@
           "transform_label": "%",
           "bad_when_high": false,
           "frequency": "D",
-          "latest_value": 0.36,
+          "latest_value": 0.4,
           "latest_month": "2026-07",
           "sparkline": [
             {
@@ -14050,7 +14050,7 @@
             },
             {
               "date": "2026-07",
-              "value": 0.36
+              "value": 0.4
             }
           ],
           "cells": [
@@ -14482,9 +14482,9 @@
             },
             {
               "month": "2026-07",
-              "value": 0.36,
-              "z": 0.017,
-              "color": "#fcd778"
+              "value": 0.4,
+              "z": 0.088,
+              "color": "#f2d47e"
             }
           ]
         }
