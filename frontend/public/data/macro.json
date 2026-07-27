@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-26T18:31:06Z",
+  "generated_at": "2026-07-27T18:54:44Z",
   "rolling_window_years": 10,
   "recession_months": [
     "2020-03",
@@ -1920,7 +1920,7 @@
         },
         {
           "month": "2026-07",
-          "value": 0.79
+          "value": 0.8
         }
       ]
     }
@@ -12869,7 +12869,7 @@
           "transform_label": "%",
           "bad_when_high": true,
           "frequency": "D",
-          "latest_value": 2.77,
+          "latest_value": 2.79,
           "latest_month": "2026-07",
           "sparkline": [
             {
@@ -12966,7 +12966,7 @@
             },
             {
               "date": "2026-07",
-              "value": 2.77
+              "value": 2.79
             }
           ],
           "cells": [
@@ -13398,9 +13398,9 @@
             },
             {
               "month": "2026-07",
-              "value": 2.77,
-              "z": -0.962,
-              "color": "#79afce"
+              "value": 2.79,
+              "z": -0.918,
+              "color": "#7fb1ca"
             }
           ]
         },
