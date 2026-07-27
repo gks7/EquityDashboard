@@ -18,7 +18,7 @@ Option Explicit
 '   5. Run UploadAlphaToDashboard
 ' ============================================================
 
-Private Const BACKEND_URL As String = "https://equitydashboard-production-6f9d.up.railway.app"
+Private Const BACKEND_URL As String = "https://satisfied-mercy-production.up.railway.app"
 Private Const ALPHA_USERNAME As String = ""    ' optional: hardcode your username
 Private Const ALPHA_PASSWORD As String = ""    ' optional: hardcode your password
 
