@@ -1,13 +1,40 @@
+import math
+
 from rest_framework import serializers
 from finance.models import Stock, InvestmentThesis, Estimate5Y, PortfolioItem, ValuationModel, PortfolioSnapshot
 from django.contrib.auth.models import User
+
+
+def json_safe(value):
+    """Recursively replace NaN / Infinity floats with None.
+
+    DRF's JSONRenderer uses ``allow_nan=False``, so a single non-finite float
+    anywhere in the payload raises ``ValueError: Out of range float values are
+    not JSON compliant`` and the whole list endpoint returns HTTP 500. Postgres
+    stores those values without complaining, so bad rows can accumulate quietly.
+    This keeps one poisoned record from taking the entire response down with it.
+    """
+    if isinstance(value, float):
+        return value if math.isfinite(value) else None
+    if isinstance(value, dict):
+        return {k: json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [json_safe(v) for v in value]
+    return value
+
+
+class JsonSafeSerializerMixin:
+    """Scrubs non-finite floats out of the serialized output."""
+
+    def to_representation(self, instance):
+        return json_safe(super().to_representation(instance))
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'first_name', 'last_name']
 
-class Estimate5YSerializer(serializers.ModelSerializer):
+class Estimate5YSerializer(JsonSafeSerializerMixin, serializers.ModelSerializer):
     target_price = serializers.ReadOnlyField()
     implied_total_value = serializers.ReadOnlyField()
     implied_5y_return_pct = serializers.ReadOnlyField()
@@ -34,7 +61,7 @@ class ValuationModelSerializer(serializers.ModelSerializer):
         fields = ['model_data', 'updated_at']
 
 
-class StockSerializer(serializers.ModelSerializer):
+class StockSerializer(JsonSafeSerializerMixin, serializers.ModelSerializer):
     theses = InvestmentThesisSerializer(many=True, read_only=True)
     valuation_model = ValuationModelSerializer(read_only=True)
     consensus_target_pe = serializers.ReadOnlyField()
@@ -50,7 +77,7 @@ class PortfolioSnapshotSerializer(serializers.ModelSerializer):
         model = PortfolioSnapshot
         fields = '__all__'
 
-class PortfolioItemSerializer(serializers.ModelSerializer):
+class PortfolioItemSerializer(JsonSafeSerializerMixin, serializers.ModelSerializer):
     stock_details = StockSerializer(source='stock', read_only=True)
     stock_id = serializers.PrimaryKeyRelatedField(
         queryset=Stock.objects.all(), source='stock', write_only=True, required=False, allow_null=True

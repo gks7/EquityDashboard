@@ -1,6 +1,25 @@
 from .models import Stock
 from django.utils import timezone
 import datetime
+import math
+
+
+def finite(val):
+    """Coerce a value to a JSON-safe float, or None.
+
+    Postgres happily stores NaN / Infinity in a ``double precision`` column, but
+    DRF's JSONRenderer runs with ``allow_nan=False`` and raises
+    ``ValueError: Out of range float values are not JSON compliant`` while
+    rendering. A single poisoned row therefore returns HTTP 500 for *every*
+    endpoint that serializes it. Normalise on write instead.
+    """
+    if val is None:
+        return None
+    try:
+        f = float(val)
+    except (TypeError, ValueError):
+        return None
+    return f if math.isfinite(f) else None
 
 
 def compute_calculated_nav(as_of=None):
@@ -295,20 +314,22 @@ def update_stock_price(ticker_symbol: str):
             stock.company_name = full_info.get('shortName', full_info.get('longName', symbol))
             stock.sector = full_info.get('sector', 'Unknown')
             stock.industry = full_info.get('industry', 'Unknown')
-            stock.forward_pe = full_info.get('forwardPE', None)
+            stock.forward_pe = finite(full_info.get('forwardPE'))
         
-        # current_price can sometimes come back as None if market is acting up
-        current_price = info.get('last_price')
+        # current_price can come back as None *or* NaN when the market is acting up.
+        # NaN is truthy, so a bare `if not current_price` lets it straight through.
+        current_price = finite(info.get('last_price'))
         if not current_price:
-            # Fallback
-            current_price = yf_ticker.history(period='1d')['Close'].iloc[-1] if not yf_ticker.history(period='1d').empty else 0.0
-            
-        stock.current_price = current_price
+            # Fallback — fetch the daily history once, not twice.
+            hist = yf_ticker.history(period='1d')
+            current_price = finite(hist['Close'].iloc[-1]) if not hist.empty else 0.0
+
+        stock.current_price = current_price if current_price is not None else 0.0
 
         # Get previous close for daily P&L calculation
-        prev_close = info.get('previous_close') or info.get('regularMarketPreviousClose')
+        prev_close = finite(info.get('previous_close')) or finite(info.get('regularMarketPreviousClose'))
         if prev_close:
-            stock.previous_close = float(prev_close)
+            stock.previous_close = prev_close
         
         # Fetch historical financials (Income Statement)
         try:

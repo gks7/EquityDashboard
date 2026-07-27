@@ -26,7 +26,7 @@ Sub UploadToDashboard()
     Dim StartBytes() As Byte
     Dim EndBytes() As Byte
 
-    BackendURL = "https://equitydashboard-production-6f9d.up.railway.app/api/snapshots/upload_excel/"
+    BackendURL = "https://satisfied-mercy-production.up.railway.app/api/snapshots/upload_excel/"
 
     ' 1. FORCE LOCAL COPY (Bypasses SharePoint URL issues)
     TempPath = Environ("TEMP") & "\" & ThisWorkbook.Name
