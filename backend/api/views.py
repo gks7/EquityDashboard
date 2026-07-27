@@ -283,7 +283,20 @@ class PortfolioSnapshotViewSet(viewsets.ModelViewSet):
                     eps_lt_growth=eps_lt_growth if eps_lt_growth else None
                 )
                 items_to_create.append(item)
-                
+
+            # An empty parse must not leave a snapshot behind: the UI always jumps to
+            # the most recent one, so a blank snapshot silently hides the real data and
+            # the VBA macro still reports "Upload Successful". Fail loudly instead.
+            if not items_to_create:
+                snapshot.delete()
+                return Response({
+                    "error": (
+                        "No holdings recognised in the sheet — nothing was saved. "
+                        "Check that the header row contains 'Ticker' and 'Quantity'."
+                    ),
+                    "columns_detected": df.columns.tolist(),
+                }, status=status.HTTP_400_BAD_REQUEST)
+
             PortfolioItem.objects.bulk_create(items_to_create)
 
             # Update stock prices in background (best-effort, don't block the response)
