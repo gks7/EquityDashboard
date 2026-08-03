@@ -402,6 +402,20 @@ class FundConfig(models.Model):
     # Performance fee crystallizes bi-annually (end of May / end of November).
     perf_fee_paid_through = models.DateField(blank=True, null=True)
 
+    # Price at which a ManualFundFlow is converted into shares. Funds differ on this,
+    # so it is a setting rather than a hard-coded rule:
+    #   PREV_COTA — the previous day's closing cota (D0 priced at D-1)
+    #   SAME_COTA — the event's own day cota, measured excluding the flow itself
+    FLOW_PREV_COTA = 'prev_cota'
+    FLOW_SAME_COTA = 'same_cota'
+    FLOW_CONVENTION_CHOICES = [
+        (FLOW_PREV_COTA, "Cota do dia anterior (D0 pela cota de D-1)"),
+        (FLOW_SAME_COTA, "Cota do próprio dia (ex-fluxo)"),
+    ]
+    flow_share_convention = models.CharField(
+        max_length=20, choices=FLOW_CONVENTION_CHOICES, default=FLOW_PREV_COTA,
+    )
+
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -437,6 +451,47 @@ class DailyCash(models.Model):
 
     def __str__(self):
         return f"Cash {self.date}: {self.cash}"
+
+
+class ManualFundFlow(models.Model):
+    """
+    Subscription / redemption entered by hand for a single day, in the fund base
+    currency.
+
+    Official flows arrive with the administrator's `NAVPosition` upload, which stopped
+    being refreshed — so for dates past that upload there is no flow data at all. These
+    entries fill that gap and feed `services.compute_unified_fund_series`, where they do
+    two things for the estimated period:
+
+      * strip the flow out of the day's return, so money moving in or out is not
+        mistaken for investment performance;
+      * issue/cancel shares at that day's cota, so the share count (and therefore the
+        total NAV) tracks capital events instead of being frozen at `FundConfig.shares`.
+
+    Amounts are positive magnitudes: `subscription` is money in, `redemption` money out.
+
+    NOTE: the cash itself must *also* be reflected in the portfolio for that day —
+    either in `DailyCash` or already invested into positions. The gross asset value is
+    built from those sources, so an entry here without the matching cash would
+    understate the day's return.
+    """
+    date = models.DateField(unique=True, db_index=True)
+    subscription = models.FloatField(default=0.0)   # money in (positive)
+    redemption = models.FloatField(default=0.0)     # money out (positive)
+    note = models.CharField(max_length=255, blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['date']
+        verbose_name_plural = "Manual fund flows"
+
+    @property
+    def net_flow(self):
+        """Signed cash movement for the day: positive in, negative out."""
+        return (self.subscription or 0.0) - (self.redemption or 0.0)
+
+    def __str__(self):
+        return f"Flow {self.date}: +{self.subscription} / -{self.redemption}"
 
 
 class MoatRanking(models.Model):

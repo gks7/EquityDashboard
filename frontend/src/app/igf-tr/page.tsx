@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   ResponsiveContainer, LineChart, Line, AreaChart, Area,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
 } from "recharts";
 import { TrendingUp, TrendingDown, Activity, DollarSign, RefreshCcw, ChevronDown, ArrowUpDown, Settings } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
@@ -21,6 +21,26 @@ interface NAVPositionRow {
   subscription_d0: number | null;
   redemption_d0: number | null;
   redemption_d1: number | null;
+  /** True on points extrapolated from Portfolio snapshots (past the last official upload). */
+  is_estimated?: boolean;
+}
+
+/**
+ * Official administrator history chain-linked onto the calculated-NAV estimate, so the
+ * cota/NAV series continues past the last NAVPosition upload. Built server-side by
+ * `finance.services.compute_unified_fund_series`.
+ */
+interface UnifiedSeries {
+  series: NAVPositionRow[];
+  official_through: string | null;
+  estimated_from: string | null;
+  splice_cota: number | null;
+  shares_carried: number | null;
+  /** Share count at the last estimated point, after any manual capital events. */
+  shares_latest: number | null;
+  has_estimate: boolean;
+  flows_estimated: boolean;
+  manual_flows_applied: number;
 }
 
 interface IndexPriceRow {
@@ -37,6 +57,7 @@ interface IgfData {
   available_funds: string[];
   available_assets: string[];
   available_infos: string[];
+  unified?: UnifiedSeries | null;
 }
 
 // ─── Calculated NAV (cota calculada) ───────────────────────────────────────────
@@ -53,6 +74,10 @@ interface CalcNavPoint {
   perf_fee_provision: number;
   net_nav: number;
   net_cota: number;
+  /** Share count used to price this day, including any manual capital event settled on it. */
+  shares: number;
+  /** Signed cash movement settled on this day (positive in, negative out); null when none. */
+  net_flow: number | null;
   daily_return_pct: number | null;
 }
 
@@ -67,6 +92,8 @@ interface FundConfig {
   ytd_base_cota: number | null;
   mgmt_fee_paid_through: string | null;
   perf_fee_paid_through: string | null;
+  /** Price a ManualFundFlow converts into shares at: "prev_cota" | "same_cota". */
+  flow_share_convention: string;
 }
 
 interface CalcNavData {
@@ -513,6 +540,20 @@ function CalculatedNavPanel() {
                   />
                 </div>
               ))}
+              {/* Price at which a manual capital event converts into shares */}
+              <div className="flex flex-col gap-1 pt-1 border-t border-slate-200 dark:border-slate-700/60">
+                <label className="text-xs text-slate-500 dark:text-slate-400">
+                  Cota de emissão (captação/resgate)
+                </label>
+                <select
+                  value={form.flow_share_convention ?? "prev_cota"}
+                  onChange={(e) => setForm((f) => ({ ...f, flow_share_convention: e.target.value }))}
+                  className="w-full px-2 py-1 text-xs rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                >
+                  <option value="prev_cota">Cota do dia anterior (D0 por D-1)</option>
+                  <option value="same_cota">Cota do próprio dia (ex-fluxo)</option>
+                </select>
+              </div>
               <button
                 onClick={saveSettings}
                 disabled={savingCfg}
@@ -645,6 +686,174 @@ function Row({ label, value, bold, negative, muted }: {
   );
 }
 
+// ─── Manual fund flows (captações / resgates) ────────────────────────────────
+
+interface ManualFlow {
+  date: string;
+  subscription: number;
+  redemption: number;
+  note: string | null;
+}
+
+/**
+ * Hand entry for capital events past the last administrator upload. The official flow
+ * feed stopped, so without these the estimated series has no way to tell a subscription
+ * apart from investment performance.
+ */
+function ManualFlowsPanel({ onSaved }: { onSaved?: () => void }) {
+  const [flows, setFlows] = useState<ManualFlow[]>([]);
+  const [convention, setConvention] = useState<string>("prev_cota");
+  const [date, setDate] = useState("");
+  const [subscription, setSubscription] = useState("");
+  const [redemption, setRedemption] = useState("");
+  const [note, setNote] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      const res = await authFetch(`${API_BASE}/igf-tr/manual-flows/`);
+      if (res.ok) setFlows(await res.json());
+    } catch { /* leave the list as-is; the form still works */ }
+    try {
+      // Read the issuance convention so the note below states the rule actually in use.
+      const res = await authFetch(`${API_BASE}/fund-config/`);
+      if (res.ok) {
+        const cfg: FundConfig = await res.json();
+        if (cfg.flow_share_convention) setConvention(cfg.flow_share_convention);
+      }
+    } catch { /* keep the default label */ }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const save = async () => {
+    setErr(null);
+    if (!date) { setErr("Informe a data."); return; }
+    const subs = parseFloat(subscription) || 0;
+    const redemps = parseFloat(redemption) || 0;
+    if (subs < 0 || redemps < 0) { setErr("Use valores positivos."); return; }
+    if (!subs && !redemps) { setErr("Informe uma captação ou um resgate."); return; }
+
+    setSaving(true);
+    try {
+      const res = await authFetch(`${API_BASE}/igf-tr/manual-flows/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date, subscription: subs, redemption: redemps, note }),
+      });
+      if (res.ok) {
+        setSubscription(""); setRedemption(""); setNote("");
+        await load();
+        onSaved?.();
+      } else {
+        const j = await res.json().catch(() => ({}));
+        setErr(j.error || `Erro (HTTP ${res.status})`);
+      }
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : "Erro ao salvar");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const remove = async (d: string) => {
+    try {
+      const res = await authFetch(`${API_BASE}/igf-tr/manual-flows/?date=${encodeURIComponent(d)}`, {
+        method: "DELETE",
+      });
+      if (res.ok) { await load(); onSaved?.(); }
+    } catch { /* ignore — the row stays until the next successful load */ }
+  };
+
+  const cardCls = "rounded-xl border border-slate-200 dark:border-slate-800/60 bg-white dark:bg-slate-900/50 shadow-sm";
+  const inputCls = "px-2 py-1.5 text-sm rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white";
+
+  return (
+    <div className={`${cardCls} p-6`}>
+      <SectionHeader
+        title="Captações e Resgates (manual)"
+        subtitle="Eventos de capital após o último dado do administrador — usados para emitir/cancelar cotas e separar fluxo de performance"
+      />
+
+      <div className="mt-4 flex flex-wrap items-end gap-3">
+        <div className="flex flex-col gap-1">
+          <label className="text-[11px] text-slate-500 dark:text-slate-400">Data</label>
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputCls} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-[11px] text-emerald-600 dark:text-emerald-400">Captação ($)</label>
+          <input type="number" step="0.01" min="0" placeholder="0,00" value={subscription}
+            onChange={(e) => setSubscription(e.target.value)} className={`${inputCls} w-36 text-right`} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-[11px] text-rose-600 dark:text-rose-400">Resgate ($)</label>
+          <input type="number" step="0.01" min="0" placeholder="0,00" value={redemption}
+            onChange={(e) => setRedemption(e.target.value)} className={`${inputCls} w-36 text-right`} />
+        </div>
+        <div className="flex flex-col gap-1 flex-1 min-w-[10rem]">
+          <label className="text-[11px] text-slate-500 dark:text-slate-400">Observação</label>
+          <input type="text" placeholder="opcional" value={note}
+            onChange={(e) => setNote(e.target.value)} className={`${inputCls} w-full`} />
+        </div>
+        <button onClick={save} disabled={saving}
+          className="px-3.5 py-2 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 transition-colors">
+          {saving ? "Salvando…" : "Lançar"}
+        </button>
+      </div>
+
+      {err && <p className="mt-2 text-xs text-rose-600 dark:text-rose-400">{err}</p>}
+
+      <p className="mt-3 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+        Cotas emitidas/canceladas pela{" "}
+        <strong>
+          {convention === "same_cota" ? "cota do próprio dia (ex-fluxo)" : "cota do dia anterior"}
+        </strong>{" "}
+        — ajustável em &quot;Parâmetros&quot;. <strong>O caixa do evento também precisa estar refletido
+        no dia</strong> — no campo Caixa acima ou já aplicado nas posições — senão o retorno do dia
+        sai subestimado. Não ajuste também o parâmetro &quot;Cotas&quot; para o mesmo evento: seria
+        contado duas vezes.
+      </p>
+
+      {flows.length > 0 && (
+        <div className="mt-4 border-t border-slate-200 dark:border-slate-800/60 pt-3">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-[11px] uppercase tracking-wider text-slate-400">
+                <th className="text-left font-semibold pb-2">Data</th>
+                <th className="text-right font-semibold pb-2">Captação</th>
+                <th className="text-right font-semibold pb-2">Resgate</th>
+                <th className="text-left font-semibold pb-2 pl-4">Obs.</th>
+                <th className="pb-2" />
+              </tr>
+            </thead>
+            <tbody>
+              {flows.map((f) => (
+                <tr key={f.date} className="border-t border-slate-100 dark:border-slate-800/40">
+                  <td className="py-1.5 text-slate-700 dark:text-slate-200">{fmtDate(f.date)}</td>
+                  <td className="py-1.5 text-right tabular-nums text-emerald-600 dark:text-emerald-400">
+                    {f.subscription ? `$${fmt(f.subscription, 2)}` : "—"}
+                  </td>
+                  <td className="py-1.5 text-right tabular-nums text-rose-600 dark:text-rose-400">
+                    {f.redemption ? `$${fmt(f.redemption, 2)}` : "—"}
+                  </td>
+                  <td className="py-1.5 pl-4 text-slate-500 dark:text-slate-400 text-xs">{f.note || "—"}</td>
+                  <td className="py-1.5 text-right">
+                    <button onClick={() => remove(f.date)}
+                      className="text-xs text-slate-400 hover:text-rose-500 transition-colors">
+                      remover
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function IgfTrPage() {
@@ -706,14 +915,25 @@ export default function IgfTrPage() {
   }, [selectedFund]);
 
   // ── Sorted NAV positions ────────────────────────────────────────────────────
-  const navRows = useMemo(
-    () => [...(data?.nav_positions ?? [])].sort((a, b) => a.date.localeCompare(b.date)),
-    [data]
-  );
+  // Prefer the unified series (official history chain-linked onto the calculated
+  // estimate) so cota / NAV / KPIs continue past the last administrator upload.
+  // Falls back to the raw official rows when the splice isn't available.
+  const unified = data?.unified ?? null;
+
+  const navRows = useMemo(() => {
+    const rows = unified?.series?.length ? unified.series : (data?.nav_positions ?? []);
+    return [...rows].sort((a, b) => a.date.localeCompare(b.date));
+  }, [unified, data]);
+
+  /** Last date backed by the official upload — everything after it is estimated. */
+  const officialThrough = unified?.official_through ?? null;
+  const hasEstimate = !!unified?.has_estimate;
 
   // ── Cota series ────────────────────────────────────────────────────────────
   const cotaSeries = useMemo(
-    () => navRows.filter((r) => r.nav_per_share != null).map((r) => ({ date: r.date, value: r.nav_per_share! })),
+    () => navRows
+      .filter((r) => r.nav_per_share != null)
+      .map((r) => ({ date: r.date, value: r.nav_per_share!, isEstimated: !!r.is_estimated })),
     [navRows]
   );
 
@@ -731,16 +951,31 @@ export default function IgfTrPage() {
     const idxBase = idxAtStart?.flt_value ?? null;
     const idxMap = new Map(indexRows.map((r) => [r.date, r.flt_value]));
 
-    return filtered.map((p) => {
+    // Index of the last official point, so the dashed estimated line can start there
+    // and visually connect to the solid official line instead of floating detached.
+    let lastOfficialIdx = -1;
+    filtered.forEach((p, i) => { if (!p.isEstimated) lastOfficialIdx = i; });
+
+    return filtered.map((p, i) => {
       const idxVal = idxBase != null ? idxMap.get(p.date) : undefined;
+      const pct = parseFloat(((p.value / cotaBase - 1) * 100).toFixed(4));
       return {
         date: fmtDate(p.date),
         rawDate: p.date,
-        fundo: parseFloat(((p.value / cotaBase - 1) * 100).toFixed(4)),
+        // Split across two keys so the estimated tail renders dashed. The splice
+        // point itself belongs to both so the segments join.
+        fundo: p.isEstimated ? undefined : pct,
+        fundoEst: p.isEstimated || i === lastOfficialIdx ? pct : undefined,
+        isEstimated: p.isEstimated,
         indice: idxVal != null && idxBase != null ? parseFloat(((idxVal / idxBase - 1) * 100).toFixed(4)) : undefined,
       };
     });
   }, [cotaSeries, cotaRange, compareIndex, data]);
+
+  const cotaHasEstimatedInRange = useMemo(
+    () => cotaChartData.some((p) => p.isEstimated),
+    [cotaChartData]
+  );
 
   // Ticks aligned to the last data point of each month (used for grid + X-axis labels)
   const cotaMonthEndTicks = useMemo(() => {
@@ -755,7 +990,7 @@ export default function IgfTrPage() {
 
   const cotaDomain = useMemo((): [number, number] => {
     const values = cotaChartData.flatMap((p) =>
-      [p.fundo, p.indice].filter((v): v is number => v != null)
+      [p.fundo, p.fundoEst, p.indice].filter((v): v is number => v != null)
     );
     if (!values.length) return [-1, 1];
     const min = Math.min(...values);
@@ -766,12 +1001,19 @@ export default function IgfTrPage() {
 
   // ── Flows chart data (monthly aggregation) ─────────────────────────────────
   const flowsChartData = useMemo(() => {
-    const byMonth: Record<string, { subscriptions: number; redemptions: number }> = {};
+    const byMonth: Record<string, { subscriptions: number; redemptions: number; manual: boolean }> = {};
     for (const row of navRows) {
+      // Past the official cutoff the only flow data is what was entered by hand, so an
+      // estimated row counts only when it actually carries an amount. Rows with null
+      // flows are skipped rather than folded in as zeros — "unknown" is not "no flows".
+      const hasFlow = row.subscription_d0 != null || row.redemption_d0 != null;
+      if (row.is_estimated && !hasFlow) continue;
+
       const monthKey = row.date.slice(0, 7);
-      if (!byMonth[monthKey]) byMonth[monthKey] = { subscriptions: 0, redemptions: 0 };
+      if (!byMonth[monthKey]) byMonth[monthKey] = { subscriptions: 0, redemptions: 0, manual: false };
       byMonth[monthKey].subscriptions += row.subscription_d0 ?? 0;
       byMonth[monthKey].redemptions += Math.abs(row.redemption_d0 ?? 0) + Math.abs(row.redemption_d1 ?? 0);
+      if (row.is_estimated) byMonth[monthKey].manual = true;
     }
     const sorted = Object.entries(byMonth)
       .sort(([a], [b]) => a.localeCompare(b))
@@ -779,15 +1021,34 @@ export default function IgfTrPage() {
         date: month,
         month: fmtMonthYear(month + "-01"),
         subscriptions: v.subscriptions,
+        manual: v.manual,
       }));
     return filterByRange(sorted, flowsRange);
   }, [navRows, flowsRange]);
 
   // ── NAV chart data ─────────────────────────────────────────────────────────
   const navChartData = useMemo(() => {
-    const series = navRows.filter((r) => r.nav != null).map((r) => ({ date: r.date, nav: r.nav! }));
-    return filterByRange(series, navRange).map((p) => ({ date: fmtDate(p.date), nav: p.nav }));
+    const series = navRows
+      .filter((r) => r.nav != null)
+      .map((r) => ({ date: r.date, nav: r.nav!, isEstimated: !!r.is_estimated }));
+    const filtered = filterByRange(series, navRange);
+
+    // Same two-key split as the cota chart so the estimated tail renders dashed.
+    let lastOfficialIdx = -1;
+    filtered.forEach((p, i) => { if (!p.isEstimated) lastOfficialIdx = i; });
+
+    return filtered.map((p, i) => ({
+      date: fmtDate(p.date),
+      nav: p.isEstimated ? undefined : p.nav,
+      navEst: p.isEstimated || i === lastOfficialIdx ? p.nav : undefined,
+      isEstimated: p.isEstimated,
+    }));
   }, [navRows, navRange]);
+
+  const navHasEstimatedInRange = useMemo(
+    () => navChartData.some((p) => p.isEstimated),
+    [navChartData]
+  );
 
   // ── KPI stats ──────────────────────────────────────────────────────────────
   const latest = navRows[navRows.length - 1] ?? null;
@@ -798,13 +1059,30 @@ export default function IgfTrPage() {
   const cotaChangePct = cotaChange != null && prev?.nav_per_share
     ? (cotaChange / prev.nav_per_share) * 100 : null;
 
-  const ytdReturn = useMemo(() => {
+  // Period returns off the unified series, so they run to the latest estimated point
+  // instead of stopping at the last administrator upload.
+  //
+  // Base = last cota strictly *before* the period, so the move into the first day of
+  // the period counts (matching compute_calculated_nav); falls back to the first
+  // observation inside the period when no prior point exists.
+  const periodReturn = useCallback((granularity: "month" | "year"): number | null => {
     if (!cotaSeries.length || latest?.nav_per_share == null) return null;
-    const year = new Date(cotaSeries[cotaSeries.length - 1].date).getFullYear();
-    const ytdStart = cotaSeries.find((p) => new Date(p.date).getFullYear() === year);
-    if (!ytdStart) return null;
-    return ((latest.nav_per_share / ytdStart.value) - 1) * 100;
+    const key = (d: string) => (granularity === "year" ? d.slice(0, 4) : d.slice(0, 7));
+    const currentKey = key(cotaSeries[cotaSeries.length - 1].date);
+
+    let base: number | null = null;
+    let firstInPeriod: number | null = null;
+    for (const p of cotaSeries) {
+      if (key(p.date) < currentKey) base = p.value;
+      else if (firstInPeriod == null) firstInPeriod = p.value;
+    }
+    const ref = base ?? firstInPeriod;
+    if (!ref) return null;
+    return ((latest.nav_per_share / ref) - 1) * 100;
   }, [cotaSeries, latest]);
+
+  const mtdReturn = useMemo(() => periodReturn("month"), [periodReturn]);
+  const ytdReturn = useMemo(() => periodReturn("year"), [periodReturn]);
 
   const totalSubs = useMemo(() => flowsChartData.reduce((s, r) => s + r.subscriptions, 0), [flowsChartData]);
 
@@ -944,12 +1222,36 @@ export default function IgfTrPage() {
 
         {!loading && !error && data && (
           <>
+            {/* Splice notice — makes clear where official data ends and the estimate begins */}
+            {hasEstimate && officialThrough && (
+              <div className="rounded-xl border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 px-4 py-3 flex items-start gap-3">
+                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                <p className="text-xs text-amber-800 dark:text-amber-200 leading-relaxed">
+                  <span className="font-semibold">Série emendada.</span>{" "}
+                  Dados oficiais do administrador até <span className="font-semibold">{fmtDate(officialThrough)}</span>.
+                  A partir daí a cota é <span className="font-semibold">estimada</span> a partir dos preços dos
+                  Portfolio snapshots, encadeada pelo retorno diário sobre a última cota oficial (linha tracejada).
+                  {unified?.shares_latest != null && (
+                    <> O NAV estimado usa {fmtM(unified.shares_latest)} cotas
+                    {unified.manual_flows_applied ? (
+                      <>, já incluindo {unified.manual_flows_applied} lançamento
+                      {unified.manual_flows_applied > 1 ? "s" : ""} manual
+                      {unified.manual_flows_applied > 1 ? "is" : ""} de capital.</>
+                    ) : (
+                      <> (última quantidade oficial). Captações ou resgates após o corte só entram se lançados
+                      abaixo — sem isso, o dinheiro que entrar aparece como performance.</>
+                    )}</>
+                  )}
+                </p>
+              </div>
+            )}
+
             {/* KPI Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
               <StatCard
-                label="Cota Atual (NAV/Cota)"
+                label={latest?.is_estimated ? "Cota Atual (Estimada)" : "Cota Atual (NAV/Cota)"}
                 value={latest?.nav_per_share != null ? fmtSig(latest.nav_per_share, 4) : "—"}
-                sub={latest?.date ? fmtDate(latest.date) : undefined}
+                sub={latest?.date ? `${fmtDate(latest.date)}${latest?.is_estimated ? " · est." : ""}` : undefined}
                 icon={Activity}
                 trend="neutral"
                 color="blue"
@@ -963,15 +1265,23 @@ export default function IgfTrPage() {
                 color={cotaChange != null && cotaChange >= 0 ? "emerald" : "rose"}
               />
               <StatCard
+                label="Retorno MTD"
+                value={mtdReturn != null ? `${mtdReturn >= 0 ? "+" : ""}${mtdReturn.toFixed(2)}%` : "—"}
+                sub={`Acumulado no mês${latest?.is_estimated ? " · est." : ""}`}
+                icon={mtdReturn != null && mtdReturn >= 0 ? TrendingUp : TrendingDown}
+                trend={mtdReturn != null ? (mtdReturn >= 0 ? "up" : "down") : "neutral"}
+                color={mtdReturn != null && mtdReturn >= 0 ? "emerald" : "rose"}
+              />
+              <StatCard
                 label="Retorno YTD"
                 value={ytdReturn != null ? `${ytdReturn >= 0 ? "+" : ""}${ytdReturn.toFixed(2)}%` : "—"}
-                sub="Acumulado no ano"
-                icon={TrendingUp}
+                sub={`Acumulado no ano${latest?.is_estimated ? " · est." : ""}`}
+                icon={ytdReturn != null && ytdReturn >= 0 ? TrendingUp : TrendingDown}
                 trend={ytdReturn != null ? (ytdReturn >= 0 ? "up" : "down") : "neutral"}
                 color={ytdReturn != null && ytdReturn >= 0 ? "emerald" : "rose"}
               />
               <StatCard
-                label="Patrimônio (NAV)"
+                label={latest?.is_estimated ? "Patrimônio (Estimado)" : "Patrimônio (NAV)"}
                 value={latest?.nav != null ? `$${fmtM(latest.nav)}` : "—"}
                 sub={latest?.shares != null ? `${fmtM(latest.shares)} cotas` : undefined}
                 icon={DollarSign}
@@ -981,6 +1291,9 @@ export default function IgfTrPage() {
 
             {/* Cota Calculada (Estimada) — NAV from daily prices, net of fees */}
             <CalculatedNavPanel />
+
+            {/* Manual capital events — only relevant once the official feed has stopped */}
+            {hasEstimate && <ManualFlowsPanel onSaved={fetchData} />}
 
 
             {/* Histórico de Cotas — large line chart */}
@@ -1009,17 +1322,25 @@ export default function IgfTrPage() {
                 </div>
               </div>
 
-              {/* Legend when comparing */}
-              {isCompareMode && (
-                <div className="flex items-center gap-5 mb-4">
+              {/* Legend when comparing and/or when the estimated tail is on screen */}
+              {(isCompareMode || cotaHasEstimatedInRange) && (
+                <div className="flex items-center gap-5 mb-4 flex-wrap">
                   <span className="flex items-center gap-1.5 text-xs text-slate-500">
                     <span className="w-5 h-0.5 rounded bg-blue-500 inline-block" />
-                    IGF TR
+                    IGF TR {cotaHasEstimatedInRange && <span className="text-slate-400">(oficial)</span>}
                   </span>
-                  <span className="flex items-center gap-1.5 text-xs text-slate-500">
-                    <span className="w-5 h-0.5 rounded bg-orange-400 inline-block" style={{ borderTop: "2px dashed #fb923c" }} />
-                    {indexDisplayName(compareIndex!)}
-                  </span>
+                  {cotaHasEstimatedInRange && (
+                    <span className="flex items-center gap-1.5 text-xs text-slate-500">
+                      <span className="w-5 inline-block" style={{ borderTop: "2px dashed #8b5cf6" }} />
+                      IGF TR (estimado{officialThrough ? ` · após ${fmtDate(officialThrough)}` : ""})
+                    </span>
+                  )}
+                  {isCompareMode && (
+                    <span className="flex items-center gap-1.5 text-xs text-slate-500">
+                      <span className="w-5 inline-block" style={{ borderTop: "2px dashed #fb923c" }} />
+                      {indexDisplayName(compareIndex!)}
+                    </span>
+                  )}
                 </div>
               )}
 
@@ -1059,6 +1380,9 @@ export default function IgfTrPage() {
                       }
                     />
                     <Line type="monotone" dataKey="fundo" name="IGF TR" stroke="url(#cotaGrad)" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: "#3b82f6" }} />
+                    {cotaHasEstimatedInRange && (
+                      <Line type="monotone" dataKey="fundoEst" name="IGF TR (estimado)" stroke="#8b5cf6" strokeWidth={2} strokeDasharray="4 3" dot={false} activeDot={{ r: 4, fill: "#8b5cf6" }} connectNulls />
+                    )}
                     {isCompareMode && (
                       <Line type="monotone" dataKey="indice" name={indexDisplayName(compareIndex!)} stroke="#fb923c" strokeWidth={1.5} strokeDasharray="5 3" dot={false} activeDot={{ r: 4, fill: "#fb923c" }} connectNulls />
                     )}
@@ -1075,7 +1399,9 @@ export default function IgfTrPage() {
                 <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
                   <SectionHeader
                     title="Patrimônio Líquido (NAV)"
-                    subtitle="Evolução do patrimônio total do fundo"
+                    subtitle={navHasEstimatedInRange
+                      ? `Evolução do patrimônio — tracejado estimado após ${officialThrough ? fmtDate(officialThrough) : "o último dado oficial"}`
+                      : "Evolução do patrimônio total do fundo"}
                   />
                   <RangeBar value={navRange} onChange={setNavRange} color="violet" />
                 </div>
@@ -1095,6 +1421,9 @@ export default function IgfTrPage() {
                       <YAxis tick={{ fill: "#94a3b8", fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(v) => `$${fmtM(v)}`} width={72} />
                       <Tooltip content={<ChartTooltip formatter={(v: number) => `$${fmtM(v)}`} />} />
                       <Area type="monotone" dataKey="nav" name="Patrimônio" stroke="#8b5cf6" strokeWidth={2} fill="url(#navGrad)" dot={false} activeDot={{ r: 4, fill: "#8b5cf6" }} />
+                      {navHasEstimatedInRange && (
+                        <Area type="monotone" dataKey="navEst" name="Patrimônio (estimado)" stroke="#8b5cf6" strokeWidth={2} strokeDasharray="4 3" fill="url(#navGrad)" fillOpacity={0.5} dot={false} activeDot={{ r: 4, fill: "#8b5cf6" }} connectNulls />
+                      )}
                     </AreaChart>
                   </ResponsiveContainer>
                 )}
@@ -1106,11 +1435,21 @@ export default function IgfTrPage() {
                   <div>
                     <SectionHeader
                       title="Captações por Mês"
-                      subtitle="Subscription D0 — fluxo mensal de aplicações"
+                      subtitle={hasEstimate && officialThrough
+                        ? `Oficial até ${fmtDate(officialThrough)}; depois somente lançamentos manuais`
+                        : "Subscription D0 — fluxo mensal de aplicações"}
                     />
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className="w-3 h-3 rounded-sm bg-emerald-500/80 inline-block" />
-                      <span className="text-xs text-slate-500">Total: <strong className="text-emerald-600 dark:text-emerald-400">${fmtM(totalSubs)}</strong></span>
+                    <div className="flex items-center gap-3 mt-2 flex-wrap">
+                      <span className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-sm bg-emerald-500/80 inline-block" />
+                        <span className="text-xs text-slate-500">Total: <strong className="text-emerald-600 dark:text-emerald-400">${fmtM(totalSubs)}</strong></span>
+                      </span>
+                      {flowsChartData.some((m) => m.manual) && (
+                        <span className="flex items-center gap-2">
+                          <span className="w-3 h-3 rounded-sm bg-sky-400/80 inline-block" />
+                          <span className="text-xs text-slate-500">Lançamento manual</span>
+                        </span>
+                      )}
                     </div>
                   </div>
                   <RangeBar value={flowsRange} onChange={setFlowsRange} color="emerald" />
@@ -1124,7 +1463,12 @@ export default function IgfTrPage() {
                       <XAxis dataKey="month" tick={{ fill: "#94a3b8", fontSize: 9 }} tickLine={false} axisLine={false} />
                       <YAxis tick={{ fill: "#94a3b8", fontSize: 9 }} tickLine={false} axisLine={false} tickFormatter={(v) => fmtM(v)} width={52} />
                       <Tooltip content={<ChartTooltip formatter={(v: number) => `$${fmtM(v)}`} />} />
-                      <Bar dataKey="subscriptions" name="Captações" fill="#10b981" fillOpacity={0.85} radius={[3, 3, 0, 0]} />
+                      {/* Manual (post-cutoff) months are tinted so they aren't read as official */}
+                      <Bar dataKey="subscriptions" name="Captações" fill="#10b981" fillOpacity={0.85} radius={[3, 3, 0, 0]}>
+                        {flowsChartData.map((m) => (
+                          <Cell key={m.date} fill={m.manual ? "#38bdf8" : "#10b981"} />
+                        ))}
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 )}
@@ -1414,7 +1758,9 @@ export default function IgfTrPage() {
           </>
         )}
 
-        {!loading && !error && data && !data.nav_positions.length && (
+        {/* navRows, not nav_positions — the unified series can carry estimated points
+            even when no official upload exists, and that isn't "no data". */}
+        {!loading && !error && data && !navRows.length && (
           <div className={`${cardCls} p-12 text-center`}>
             <ArrowUpDown className="w-10 h-10 text-slate-400 mx-auto mb-4" />
             <p className="text-slate-700 dark:text-slate-300 font-semibold text-base mb-1">Nenhum dado encontrado</p>

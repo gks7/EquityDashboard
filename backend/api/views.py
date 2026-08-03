@@ -684,6 +684,11 @@ class IgfTrView(APIView):
     GET /api/igf-tr/
     Returns all data needed for the IGF TR dashboard.
     Primary data source is NAVPosition; HistIndexPrice supplies benchmark comparison series.
+
+    ``unified`` additionally carries the official NAVPosition history chain-linked onto
+    the calculated-NAV estimate (from Portfolio snapshots), so the cota/NAV series
+    continues past the last administrator upload. See
+    ``finance.services.compute_unified_fund_series``.
     """
     permission_classes = [AllowAny]
 
@@ -720,12 +725,21 @@ class IgfTrView(APIView):
             HistIndexPrice.objects.exclude(info=None).values_list('info', flat=True).distinct()
         )
 
+        # Official history spliced onto the calculated estimate. Kept in its own key
+        # so 'nav_positions' stays strictly the administrator data.
+        from finance.services import compute_unified_fund_series
+        try:
+            unified = compute_unified_fund_series(fund=fund_filter)
+        except Exception:
+            unified = None
+
         return Response({
             'nav_positions': nav_positions,
             'index_prices': index_prices,
             'available_funds': available_funds,
             'available_assets': available_assets,
             'available_infos': available_infos,
+            'unified': unified,
         })
 
 
@@ -863,6 +877,16 @@ class FundConfigView(APIView):
                 cfg.trading_days = int(val)
         if 'fund' in request.data and request.data.get('fund'):
             cfg.fund = str(request.data.get('fund'))
+        if 'flow_share_convention' in request.data:
+            from finance.models import FundConfig as FC
+            val = str(request.data.get('flow_share_convention') or '')
+            valid = {c[0] for c in FC.FLOW_CONVENTION_CHOICES}
+            if val not in valid:
+                return Response(
+                    {'error': f"flow_share_convention must be one of {sorted(valid)}."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            cfg.flow_share_convention = val
         # Nullable base cotas — an empty value clears the override (back to automatic).
         for f in ['mtd_base_cota', 'ytd_base_cota']:
             if f in request.data:
@@ -886,6 +910,7 @@ class FundConfigView(APIView):
             'ytd_base_cota': cfg.ytd_base_cota,
             'mgmt_fee_paid_through': cfg.mgmt_fee_paid_through.isoformat() if cfg.mgmt_fee_paid_through else None,
             'perf_fee_paid_through': cfg.perf_fee_paid_through.isoformat() if cfg.perf_fee_paid_through else None,
+            'flow_share_convention': cfg.flow_share_convention,
         }
 
 
@@ -913,6 +938,65 @@ class DailyCashView(APIView):
             cash = 0.0
         obj, _ = DailyCash.objects.update_or_create(date=d, defaults={'cash': cash})
         return Response({'date': obj.date.isoformat(), 'cash': obj.cash}, status=status.HTTP_200_OK)
+
+
+class ManualFlowsView(APIView):
+    """
+    GET    /api/igf-tr/manual-flows/  — list all hand-entered capital events.
+    POST   /api/igf-tr/manual-flows/  — upsert {date, subscription, redemption, note}.
+    DELETE /api/igf-tr/manual-flows/?date=YYYY-MM-DD — remove one entry.
+
+    Fills the flow gap left by the stalled administrator upload; consumed by
+    ``finance.services.compute_unified_fund_series``. Amounts are positive magnitudes.
+    """
+
+    def get(self, request):
+        from finance.models import ManualFundFlow
+        rows = list(ManualFundFlow.objects.order_by('date').values(
+            'date', 'subscription', 'redemption', 'note'))
+        for r in rows:
+            if r['date']:
+                r['date'] = r['date'].isoformat()
+        return Response(rows)
+
+    def post(self, request):
+        from finance.models import ManualFundFlow
+        d = _parse_date(request.data.get('date'))
+        if d is None:
+            return Response({'error': 'A valid date is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        subs = _safe_float(request.data.get('subscription')) or 0.0
+        redemps = _safe_float(request.data.get('redemption')) or 0.0
+        # Stored as positive magnitudes so the sign convention lives in one place
+        # (services.compute_unified_fund_series), not in whatever the caller typed.
+        if subs < 0 or redemps < 0:
+            return Response(
+                {'error': 'subscription and redemption must be positive amounts.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        obj, _ = ManualFundFlow.objects.update_or_create(
+            date=d,
+            defaults={
+                'subscription': subs,
+                'redemption': redemps,
+                'note': (request.data.get('note') or '')[:255] or None,
+            },
+        )
+        return Response({
+            'date': obj.date.isoformat(),
+            'subscription': obj.subscription,
+            'redemption': obj.redemption,
+            'note': obj.note,
+        }, status=status.HTTP_200_OK)
+
+    def delete(self, request):
+        from finance.models import ManualFundFlow
+        d = _parse_date(request.query_params.get('date'))
+        if d is None:
+            return Response({'error': 'A valid date is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        deleted, _ = ManualFundFlow.objects.filter(date=d).delete()
+        return Response({'deleted': deleted}, status=status.HTTP_200_OK)
 
 
 class AssetBreakdownView(APIView):
