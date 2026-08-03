@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('finance', '0018_fundconfig_base_cotas'),
+        ('finance', '0019_clean_nonfinite_stocks'),
     ]
 
     operations = [
