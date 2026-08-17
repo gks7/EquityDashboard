@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-16T17:42:58Z",
+  "generated_at": "2026-08-17T17:54:15Z",
   "rolling_window_years": 10,
   "recession_months": [],
   "bond_chart": {
@@ -1917,7 +1917,7 @@
         },
         {
           "month": "2026-08",
-          "value": 0.79
+          "value": 0.8
         }
       ]
     }
@@ -12864,7 +12864,7 @@
           "transform_label": "%",
           "bad_when_high": true,
           "frequency": "D",
-          "latest_value": 2.71,
+          "latest_value": 2.67,
           "latest_month": "2026-08",
           "sparkline": [
             {
@@ -12961,7 +12961,7 @@
             },
             {
               "date": "2026-08",
-              "value": 2.71
+              "value": 2.67
             }
           ],
           "cells": [
@@ -13393,9 +13393,9 @@
             },
             {
               "month": "2026-08",
-              "value": 2.71,
-              "z": -1.058,
-              "color": "#70aacf"
+              "value": 2.67,
+              "z": -1.146,
+              "color": "#69a6cd"
             }
           ]
         },
