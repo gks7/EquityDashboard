@@ -134,15 +134,6 @@ const groupColor = (g: string, idx: number) => GROUP_PALETTE[g] ?? FALLBACK_PALE
 const fmt = (n: number | null | undefined, decimals = 2) =>
   n == null ? "—" : n.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 
-const fmtSig = (n: number | null | undefined, sig = 4): string => {
-  if (n == null || !isFinite(n)) return "—";
-  if (n === 0) return (0).toLocaleString("en-US", { minimumFractionDigits: sig - 1, maximumFractionDigits: sig - 1 });
-  const rounded = Number(n.toPrecision(sig));
-  const magnitude = Math.floor(Math.log10(Math.abs(rounded)));
-  const decimals = Math.max(0, sig - 1 - magnitude);
-  return rounded.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-};
-
 const fmtM = (n: number) => {
   const abs = Math.abs(n);
   if (abs >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B`;
@@ -1050,39 +1041,6 @@ export default function IgfTrPage() {
     [navChartData]
   );
 
-  // ── KPI stats ──────────────────────────────────────────────────────────────
-  const latest = navRows[navRows.length - 1] ?? null;
-  const prev = navRows[navRows.length - 2] ?? null;
-
-  const cotaChange = latest?.nav_per_share != null && prev?.nav_per_share != null
-    ? latest.nav_per_share - prev.nav_per_share : null;
-  const cotaChangePct = cotaChange != null && prev?.nav_per_share
-    ? (cotaChange / prev.nav_per_share) * 100 : null;
-
-  // Period returns off the unified series, so they run to the latest estimated point
-  // instead of stopping at the last administrator upload.
-  //
-  // Base = last cota strictly *before* the period, so the move into the first day of
-  // the period counts (matching compute_calculated_nav); falls back to the first
-  // observation inside the period when no prior point exists.
-  const periodReturn = useCallback((granularity: "month" | "year"): number | null => {
-    if (!cotaSeries.length || latest?.nav_per_share == null) return null;
-    const key = (d: string) => (granularity === "year" ? d.slice(0, 4) : d.slice(0, 7));
-    const currentKey = key(cotaSeries[cotaSeries.length - 1].date);
-
-    let base: number | null = null;
-    let firstInPeriod: number | null = null;
-    for (const p of cotaSeries) {
-      if (key(p.date) < currentKey) base = p.value;
-      else if (firstInPeriod == null) firstInPeriod = p.value;
-    }
-    const ref = base ?? firstInPeriod;
-    if (!ref) return null;
-    return ((latest.nav_per_share / ref) - 1) * 100;
-  }, [cotaSeries, latest]);
-
-  const mtdReturn = useMemo(() => periodReturn("month"), [periodReturn]);
-  const ytdReturn = useMemo(() => periodReturn("year"), [periodReturn]);
 
   const totalSubs = useMemo(() => flowsChartData.reduce((s, r) => s + r.subscriptions, 0), [flowsChartData]);
 
@@ -1245,49 +1203,6 @@ export default function IgfTrPage() {
                 </p>
               </div>
             )}
-
-            {/* KPI Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-              <StatCard
-                label={latest?.is_estimated ? "Cota Atual (Estimada)" : "Cota Atual (NAV/Cota)"}
-                value={latest?.nav_per_share != null ? fmtSig(latest.nav_per_share, 4) : "—"}
-                sub={latest?.date ? `${fmtDate(latest.date)}${latest?.is_estimated ? " · est." : ""}` : undefined}
-                icon={Activity}
-                trend="neutral"
-                color="blue"
-              />
-              <StatCard
-                label="Variação no Dia"
-                value={cotaChange != null ? `${cotaChange >= 0 ? "+" : ""}${fmtSig(cotaChange, 4)}` : "—"}
-                sub={cotaChangePct != null ? `${cotaChangePct >= 0 ? "+" : ""}${fmtSig(cotaChangePct, 4)}%` : undefined}
-                icon={cotaChange != null && cotaChange >= 0 ? TrendingUp : TrendingDown}
-                trend={cotaChange != null ? (cotaChange >= 0 ? "up" : "down") : "neutral"}
-                color={cotaChange != null && cotaChange >= 0 ? "emerald" : "rose"}
-              />
-              <StatCard
-                label="Retorno MTD"
-                value={mtdReturn != null ? `${mtdReturn >= 0 ? "+" : ""}${mtdReturn.toFixed(2)}%` : "—"}
-                sub={`Acumulado no mês${latest?.is_estimated ? " · est." : ""}`}
-                icon={mtdReturn != null && mtdReturn >= 0 ? TrendingUp : TrendingDown}
-                trend={mtdReturn != null ? (mtdReturn >= 0 ? "up" : "down") : "neutral"}
-                color={mtdReturn != null && mtdReturn >= 0 ? "emerald" : "rose"}
-              />
-              <StatCard
-                label="Retorno YTD"
-                value={ytdReturn != null ? `${ytdReturn >= 0 ? "+" : ""}${ytdReturn.toFixed(2)}%` : "—"}
-                sub={`Acumulado no ano${latest?.is_estimated ? " · est." : ""}`}
-                icon={ytdReturn != null && ytdReturn >= 0 ? TrendingUp : TrendingDown}
-                trend={ytdReturn != null ? (ytdReturn >= 0 ? "up" : "down") : "neutral"}
-                color={ytdReturn != null && ytdReturn >= 0 ? "emerald" : "rose"}
-              />
-              <StatCard
-                label={latest?.is_estimated ? "Patrimônio (Estimado)" : "Patrimônio (NAV)"}
-                value={latest?.nav != null ? `$${fmtM(latest.nav)}` : "—"}
-                sub={latest?.shares != null ? `${fmtM(latest.shares)} cotas` : undefined}
-                icon={DollarSign}
-                color="violet"
-              />
-            </div>
 
             {/* Cota Calculada (Estimada) — NAV from daily prices, net of fees */}
             <CalculatedNavPanel />
