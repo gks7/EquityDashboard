@@ -29,8 +29,10 @@ def compute_calculated_nav(as_of=None):
 
     For each PortfolioSnapshot (one per trading day) the gross asset value is the
     sum of every item's market value plus that day's cash balance (carried forward
-    when missing). Daily management fee accrues at ``mgmt_fee_rate / trading_days``
-    of the gross asset value; the running accrued amount (since ``mgmt_fee_paid_through``)
+    when missing). A snapshot with nothing priced (a failed or empty upload) reuses
+    the previous day's asset value and is flagged ``prices_stale``, rather than being
+    read as a portfolio worth zero. Daily management fee accrues at
+    ``mgmt_fee_rate / trading_days`` of the gross asset value; the running accrued amount (since ``mgmt_fee_paid_through``)
     is the unpaid management-fee liability. The performance-fee provision is
     ``perf_fee_rate`` of the cota gain above the high-water mark (measured net of the
     accrued management fee), multiplied by the shares outstanding.
@@ -72,6 +74,9 @@ def compute_calculated_nav(as_of=None):
     # stored market_value; fall back to quantity * price * cross_usd when absent.
     snapshot_ids = [s.id for s in snapshots]
     asset_value_by_snapshot = {sid: 0.0 for sid in snapshot_ids}
+    # How many items actually carried a usable value, so a day whose upload landed
+    # empty can be told apart from a day that genuinely priced to zero.
+    priced_items_by_snapshot = {sid: 0 for sid in snapshot_ids}
     items = PortfolioItem.objects.filter(snapshot_id__in=snapshot_ids).values(
         'snapshot_id', 'market_value', 'price', 'quantity', 'cross_usd'
     )
@@ -83,6 +88,8 @@ def compute_calculated_nav(as_of=None):
             cross = it['cross_usd'] if it['cross_usd'] is not None else 1.0
             mv = qty * price * cross
         asset_value_by_snapshot[it['snapshot_id']] += mv or 0.0
+        if mv:
+            priced_items_by_snapshot[it['snapshot_id']] += 1
 
     # Cash per date, carried forward.
     cash_rows = list(DailyCash.objects.order_by('date').values('date', 'cash'))
@@ -132,9 +139,28 @@ def compute_calculated_nav(as_of=None):
     mgmt_accrued = 0.0
     prev_net_cota = None
     shares_running = shares
+    last_assets = None
 
     for snap in snapshots:
         assets = asset_value_by_snapshot.get(snap.id, 0.0)
+
+        # A snapshot with nothing priced means the upload for that day failed or
+        # landed empty -- not that the portfolio was worth zero. Taken at face value
+        # it drives the cota to roughly minus the accrued fee and prints a -100% day.
+        # Treat the prices as simply unavailable and hold the previous day's asset
+        # value, so the cota comes out flat (it still moves by that day's management
+        # fee, which does accrue regardless of whether we priced the book).
+        prices_stale = False
+        if not priced_items_by_snapshot.get(snap.id):
+            if last_assets is None:
+                # Nothing earlier to carry: the day is unobservable, so drop it
+                # rather than invent a level for it.
+                continue
+            assets = last_assets
+            prices_stale = True
+        else:
+            last_assets = assets
+
         cash = cash_for(snap.date)
         gav = assets + cash
 
@@ -198,7 +224,15 @@ def compute_calculated_nav(as_of=None):
             'shares': round(shares_day, 4),
             'net_flow': round(net_flow, 2) if net_flow else None,
             'daily_return_pct': round(daily_return, 4) if daily_return is not None else None,
+            # True when this day had no usable prices and reuses the previous day's
+            # asset value (see the carry-forward above).
+            'prices_stale': prices_stale,
         })
+
+    # Every snapshot could have been empty (nothing to carry from), leaving no
+    # observable day at all.
+    if not series:
+        return None
 
     latest = series[-1]
     prev = series[-2] if len(series) > 1 else None

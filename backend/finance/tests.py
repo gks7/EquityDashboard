@@ -134,3 +134,57 @@ class CalculatedNavTests(TestCase):
 
         r = compute_calculated_nav()
         self.assertEqual(r['latest']['cash'], 500_000.0)
+
+    def test_empty_snapshot_carries_prices_forward(self):
+        # An upload that lands with no items is missing data, not a portfolio worth
+        # zero. Read literally it drives the cota to minus the accrued fee and prints
+        # a -100% day, then a five-figure percent bounce the day after.
+        for day, mv in [(11, 10_000_000), (12, 10_100_000), (13, None), (14, 10_200_000)]:
+            snap = PortfolioSnapshot.objects.create(date=datetime.date(2026, 6, day))
+            if mv is not None:
+                PortfolioItem.objects.create(snapshot=snap, ticker='AAA', quantity=1, market_value=mv)
+        self.cfg.mgmt_fee_rate = 0.0  # isolate the carry-forward from fee accrual
+        self.cfg.save()
+
+        by_date = {r['date']: r for r in compute_calculated_nav()['series']}
+        stale, prior, after = by_date['2026-06-13'], by_date['2026-06-12'], by_date['2026-06-14']
+
+        self.assertTrue(stale['prices_stale'])
+        self.assertFalse(prior['prices_stale'])
+        self.assertFalse(after['prices_stale'])
+        # Held flat at the previous day's value, so no fake move in or out of it.
+        self.assertEqual(stale['asset_value'], prior['asset_value'])
+        self.assertEqual(stale['net_cota'], prior['net_cota'])
+        self.assertAlmostEqual(stale['daily_return_pct'], 0.0, places=6)
+        self.assertAlmostEqual(
+            after['daily_return_pct'], (10_200_000 / 10_100_000 - 1) * 100, places=4
+        )
+
+    def test_empty_snapshot_still_accrues_management_fee(self):
+        # The fee accrues whether or not we managed to price the book that day, so the
+        # carried day charges one more day of it against the held asset value.
+        for day, mv in [(11, 10_000_000), (12, None)]:
+            snap = PortfolioSnapshot.objects.create(date=datetime.date(2026, 6, day))
+            if mv is not None:
+                PortfolioItem.objects.create(snapshot=snap, ticker='AAA', quantity=1, market_value=mv)
+        self.cfg.mgmt_fee_paid_through = datetime.date(2026, 6, 10)
+        self.cfg.save()
+
+        r = compute_calculated_nav()
+        one_day = 10_000_000 * 0.01 / 255
+        self.assertAlmostEqual(r['latest']['mgmt_fee_day'], round(one_day, 2), places=2)
+        self.assertAlmostEqual(r['latest']['mgmt_fee_accrued'], round(one_day * 2, 2), places=2)
+
+    def test_leading_empty_snapshot_is_dropped(self):
+        # Nothing earlier to carry, so the day is unobservable rather than flat.
+        PortfolioSnapshot.objects.create(date=datetime.date(2026, 6, 11))
+        s2 = PortfolioSnapshot.objects.create(date=datetime.date(2026, 6, 12))
+        PortfolioItem.objects.create(snapshot=s2, ticker='AAA', quantity=1, market_value=10_000_000)
+
+        dates = [r['date'] for r in compute_calculated_nav()['series']]
+        self.assertEqual(dates, ['2026-06-12'])
+
+    def test_all_snapshots_empty_returns_none(self):
+        PortfolioSnapshot.objects.create(date=datetime.date(2026, 6, 11))
+        PortfolioSnapshot.objects.create(date=datetime.date(2026, 6, 12))
+        self.assertIsNone(compute_calculated_nav())
