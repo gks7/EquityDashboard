@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-21T17:54:58Z",
+  "generated_at": "2026-08-22T17:44:28Z",
   "rolling_window_years": 10,
   "recession_months": [],
   "bond_chart": {
@@ -587,7 +587,7 @@
         },
         {
           "month": "2026-08",
-          "value": 3.86
+          "value": 3.87
         }
       ]
     },
@@ -1175,7 +1175,7 @@
         },
         {
           "month": "2026-08",
-          "value": 4.65
+          "value": 4.69
         }
       ]
     },
