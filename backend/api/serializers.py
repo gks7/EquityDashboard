@@ -190,3 +190,115 @@ class CRMMeetingSerializer(serializers.ModelSerializer):
         if attendees is not None:
             instance.attendees.set(attendees)
         return instance
+
+
+# ── Investment committee serializers ─────────────────────────────────────────
+
+from django.db import transaction
+
+from api.models import CommitteeMeeting, CommitteeDecision, CommitteeActionItem
+
+
+class CommitteeDecisionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CommitteeDecision
+        fields = [
+            'id', 'asset', 'asset_class', 'action', 'target_weight_pct',
+            'limit_price', 'rationale', 'owner', 'due_date', 'status', 'order',
+        ]
+
+
+class CommitteeActionItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CommitteeActionItem
+        fields = ['id', 'task', 'owner', 'due_date', 'done', 'order']
+
+
+class OpenDecisionSerializer(serializers.ModelSerializer):
+    """A still-open decision, carrying enough of its meeting to be actionable."""
+    meeting_id = serializers.IntegerField(source='meeting.id', read_only=True)
+    meeting_date = serializers.DateField(source='meeting.date', read_only=True)
+
+    class Meta:
+        model = CommitteeDecision
+        fields = [
+            'id', 'meeting_id', 'meeting_date', 'asset', 'asset_class', 'action',
+            'target_weight_pct', 'limit_price', 'owner', 'due_date', 'status',
+        ]
+
+
+class CommitteeMeetingSerializer(serializers.ModelSerializer):
+    decisions = CommitteeDecisionSerializer(many=True, required=False)
+    action_items = CommitteeActionItemSerializer(many=True, required=False)
+    author_name = serializers.SerializerMethodField()
+    pending_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CommitteeMeeting
+        fields = [
+            'id', 'date', 'title', 'attendees', 'status', 'stance',
+            'macro_view', 'portfolio_view', 'risks', 'notes', 'target_allocation',
+            'author', 'author_name', 'decisions', 'action_items', 'pending_count',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['author']
+
+    def get_author_name(self, obj):
+        if not obj.author:
+            return ''
+        full = f"{obj.author.first_name} {obj.author.last_name}".strip()
+        return full or obj.author.username
+
+    def get_pending_count(self, obj):
+        open_states = (CommitteeDecision.STATUS_PENDING, CommitteeDecision.STATUS_PARTIAL)
+        return sum(1 for d in obj.decisions.all() if d.status in open_states)
+
+    def validate_target_allocation(self, value):
+        if value in (None, ''):
+            return None
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("Expected an object of sleeve -> weight.")
+        for sleeve, weight in value.items():
+            if weight in (None, ''):
+                continue
+            try:
+                float(weight)
+            except (TypeError, ValueError):
+                raise serializers.ValidationError(f"Weight for '{sleeve}' is not a number.")
+        return value
+
+    @transaction.atomic
+    def create(self, validated_data):
+        decisions = validated_data.pop('decisions', [])
+        action_items = validated_data.pop('action_items', [])
+        meeting = CommitteeMeeting.objects.create(**validated_data)
+        self._write_children(meeting, decisions, action_items)
+        return meeting
+
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        decisions = validated_data.pop('decisions', None)
+        action_items = validated_data.pop('action_items', None)
+        for attr, val in validated_data.items():
+            setattr(instance, attr, val)
+        instance.save()
+        self._write_children(instance, decisions, action_items)
+        return instance
+
+    @staticmethod
+    def _write_children(meeting, decisions, action_items):
+        # The client always PUTs the complete lists, so children are replaced
+        # wholesale — a row deleted in the UI has to disappear here too. Row order
+        # is taken from the payload rather than trusted from the client.
+        if decisions is not None:
+            meeting.decisions.all().delete()
+            CommitteeDecision.objects.bulk_create([
+                CommitteeDecision(meeting=meeting, **{**d, 'order': i})
+                for i, d in enumerate(decisions)
+            ])
+        if action_items is not None:
+            meeting.action_items.all().delete()
+            CommitteeActionItem.objects.bulk_create([
+                CommitteeActionItem(meeting=meeting, **{**a, 'order': i})
+                for i, a in enumerate(action_items)
+            ])

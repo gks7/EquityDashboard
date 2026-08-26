@@ -19,6 +19,7 @@ from rest_framework.test import APIClient
 
 from api.serializers import PortfolioItemSerializer, StockSerializer, json_safe
 from finance.management.commands.clean_nonfinite_stocks import _bad, _scrub_json
+from api.models import CommitteeDecision
 from finance.models import PortfolioItem, PortfolioSnapshot, Stock
 from finance.services import finite
 
@@ -272,3 +273,87 @@ class DataMigrationTests(TestCase):
 
         loader = MigrationLoader(connection)
         self.assertIn(("finance", "0019_clean_nonfinite_stocks"), loader.graph.nodes)
+
+
+class CommitteeMeetingTests(TestCase):
+    """Minutes are saved as one payload: header + decisions + follow-ups."""
+
+    def setUp(self):
+        self.user = User.objects.create_user("analyst", password="pw", first_name="Ana", last_name="Lista")
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+
+    def _payload(self, **over):
+        base = {
+            "date": "2026-08-26",
+            "title": "Committee 26 Aug",
+            "attendees": "GS, RS",
+            "status": "final",
+            "stance": "neutral",
+            "macro_view": "Fed on hold.",
+            "target_allocation": {"equities": 55, "fixed_income": 30, "cash": 15},
+            "decisions": [
+                {"asset": "NVDA US", "action": "trim", "target_weight_pct": 4.0,
+                 "rationale": "Size got too big.", "owner": "GS", "status": "pending"},
+                {"asset": "LQD US", "action": "add", "target_weight_pct": 6.0, "status": "executed"},
+            ],
+            "action_items": [
+                {"task": "Update the credit deck", "owner": "Ana", "done": False},
+            ],
+        }
+        base.update(over)
+        return base
+
+    def test_create_persists_nested_children_and_author(self):
+        res = self.client.post("/api/committee/meetings/", self._payload(), format="json")
+        self.assertEqual(res.status_code, 201, res.content)
+        body = res.json()
+        self.assertEqual(len(body["decisions"]), 2)
+        self.assertEqual(len(body["action_items"]), 1)
+        self.assertEqual(body["author_name"], "Ana Lista")
+        self.assertEqual(body["pending_count"], 1)   # the executed one does not count
+        self.assertEqual([d["order"] for d in body["decisions"]], [0, 1])
+
+    def test_update_replaces_children_so_deleted_rows_disappear(self):
+        created = self.client.post("/api/committee/meetings/", self._payload(), format="json").json()
+        payload = self._payload(decisions=[
+            {"asset": "NVDA US", "action": "trim", "target_weight_pct": 4.0, "status": "executed"},
+        ], action_items=[])
+        res = self.client.put(f"/api/committee/meetings/{created['id']}/", payload, format="json")
+        self.assertEqual(res.status_code, 200, res.content)
+        body = res.json()
+        self.assertEqual(len(body["decisions"]), 1)
+        self.assertEqual(body["action_items"], [])
+        self.assertEqual(body["pending_count"], 0)
+        self.assertEqual(CommitteeDecision.objects.count(), 1)
+
+    def test_open_decisions_skips_executed_and_watch_only_lines(self):
+        self.client.post("/api/committee/meetings/", self._payload(decisions=[
+            {"asset": "NVDA US", "action": "trim", "status": "pending"},
+            {"asset": "LQD US", "action": "add", "status": "executed"},
+            {"asset": "TSLA US", "action": "watch", "status": "pending"},
+            {"asset": "IEF US", "action": "buy", "status": "partial"},
+        ]), format="json")
+        res = self.client.get("/api/committee/meetings/open-decisions/")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual({d["asset"] for d in res.json()}, {"NVDA US", "IEF US"})
+        self.assertEqual(res.json()[0]["meeting_date"], "2026-08-26")
+
+    def test_search_matches_a_decision_asset(self):
+        self.client.post("/api/committee/meetings/", self._payload(), format="json")
+        res = self.client.get("/api/committee/meetings/?search=NVDA")
+        self.assertEqual(len(res.json()), 1)
+        self.assertEqual(len(self.client.get("/api/committee/meetings/?search=PETR").json()), 0)
+
+    def test_non_numeric_allocation_weight_is_rejected(self):
+        res = self.client.post(
+            "/api/committee/meetings/",
+            self._payload(target_allocation={"equities": "muito"}),
+            format="json",
+        )
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("target_allocation", res.json())
+
+    def test_requires_authentication(self):
+        res = APIClient().get("/api/committee/meetings/")
+        self.assertEqual(res.status_code, 401)

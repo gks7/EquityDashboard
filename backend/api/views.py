@@ -1553,3 +1553,58 @@ class AlphaAnalysisView(APIView):
             "max_drawdown_in_band": max_drawdown,
             "histogram": histogram,
         })
+
+
+# ── Investment committee ─────────────────────────────────────────────────────
+
+from api.models import CommitteeMeeting, CommitteeDecision
+from api.serializers import CommitteeMeetingSerializer, OpenDecisionSerializer
+
+
+class CommitteeMeetingViewSet(viewsets.ModelViewSet):
+    """Weekly committee minutes, decisions and follow-ups nested in one payload."""
+
+    queryset = (
+        CommitteeMeeting.objects
+        .select_related('author')
+        .prefetch_related('decisions', 'action_items')
+    )
+    serializer_class = CommitteeMeetingSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user if self.request.user.is_authenticated else None)
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        meeting_status = self.request.query_params.get('status')
+        if meeting_status in (CommitteeMeeting.STATUS_DRAFT, CommitteeMeeting.STATUS_FINAL):
+            qs = qs.filter(status=meeting_status)
+        year = self.request.query_params.get('year')
+        if year and year.isdigit():
+            qs = qs.filter(date__year=int(year))
+        search = self.request.query_params.get('search')
+        if search:
+            from django.db.models import Q
+            qs = qs.filter(
+                Q(title__icontains=search) |
+                Q(attendees__icontains=search) |
+                Q(macro_view__icontains=search) |
+                Q(portfolio_view__icontains=search) |
+                Q(risks__icontains=search) |
+                Q(notes__icontains=search) |
+                Q(decisions__asset__icontains=search) |
+                Q(decisions__rationale__icontains=search)
+            ).distinct()
+        return qs
+
+    @action(detail=False, methods=['get'], url_path='open-decisions')
+    def open_decisions(self, request):
+        """Everything the committee decided that has not been executed yet."""
+        qs = (
+            CommitteeDecision.objects
+            .filter(status__in=[CommitteeDecision.STATUS_PENDING, CommitteeDecision.STATUS_PARTIAL])
+            .exclude(action__in=[CommitteeDecision.ACTION_HOLD, CommitteeDecision.ACTION_WATCH])
+            .select_related('meeting')
+            .order_by('due_date', '-meeting__date', 'order')
+        )
+        return Response(OpenDecisionSerializer(qs, many=True).data)

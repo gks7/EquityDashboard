@@ -9,6 +9,7 @@ from api.views import (
     CalculatedNAVView, FundConfigView, DailyCashView, ManualFlowsView, FundConsolidatedView,
     TrackEventView, AdminOverviewView,
     CRMContactViewSet, CRMMeetingViewSet,
+    CommitteeMeetingViewSet,
     AlphaUploadView, AlphaStocksView, AlphaAnalysisView,
 )
 
@@ -26,6 +27,7 @@ router.register(r'hist/asset-positions', AssetPositionHistOfficialViewSet, basen
 router.register(r'hist/nav-positions', NAVPositionViewSet, basename='hist-nav-positions')
 router.register(r'crm/contacts', CRMContactViewSet, basename='crm-contacts')
 router.register(r'crm/meetings', CRMMeetingViewSet, basename='crm-meetings')
+router.register(r'committee/meetings', CommitteeMeetingViewSet, basename='committee-meetings')
 
 urlpatterns = [
     path('', include(router.urls)),
