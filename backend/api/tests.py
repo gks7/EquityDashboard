@@ -187,6 +187,68 @@ class UploadExcelEmptyTests(TestCase):
         self.assertEqual(res.json()["items_created"], 1)
 
 
+class UploadExcelYTDTests(TestCase):
+    """CHG_PCT_YTD is optional and arrives either as a fraction or in percent units."""
+
+    def _upload(self, rows):
+        res = APIClient().post(
+            "/api/snapshots/upload_excel/",
+            {"file": _workbook(rows)},
+            format="multipart",
+        )
+        self.assertEqual(res.status_code, 201, res.content)
+        return PortfolioItem.objects.latest("id")
+
+    def test_fraction_is_scaled_to_percent(self):
+        # Percent-formatted Excel cells reach pandas as 0.1234 = 12.34%
+        item = self._upload([
+            ["Ticker", "Quantity", "PX_LAST", "CHG_PCT_YTD"],
+            ["PETR4 BZ", 100, 38.5, 0.1234],
+        ])
+        self.assertAlmostEqual(item.chg_pct_ytd, 12.34, places=4)
+
+    def test_percent_units_pass_through(self):
+        item = self._upload([
+            ["Ticker", "Quantity", "PX_LAST", "CHG_PCT_YTD"],
+            ["PETR4 BZ", 100, 38.5, -12.34],
+        ])
+        self.assertAlmostEqual(item.chg_pct_ytd, -12.34, places=4)
+
+    def test_missing_column_stays_null(self):
+        item = self._upload([
+            ["Ticker", "Quantity", "PX_LAST"],
+            ["PETR4 BZ", 100, 38.5],
+        ])
+        self.assertIsNone(item.chg_pct_ytd)
+
+    def test_bloomberg_na_stays_null(self):
+        # Corporate bonds do not support CHG_PCT_YTD — a fake 0.00% would read as flat.
+        for na in ("#N/A N/A", "#N/A Field Not Applicable", "#N/A Invalid Security"):
+            with self.subTest(na=na):
+                item = self._upload([
+                    ["Ticker", "Quantity", "PX_LAST", "CHG_PCT_YTD"],
+                    ["XS1234567890 Corp", 100, 98.5, na],
+                ])
+                self.assertIsNone(item.chg_pct_ytd)
+
+    def test_blank_cell_stays_null(self):
+        item = self._upload([
+            ["Ticker", "Quantity", "PX_LAST", "CHG_PCT_YTD"],
+            ["LQD US", 100, 108.2, 0.0812],
+            ["XS1234567890 Corp", 100, 98.5, None],
+        ])
+        self.assertIsNone(item.chg_pct_ytd)
+        etf = PortfolioItem.objects.get(ticker="LQD US")
+        self.assertAlmostEqual(etf.chg_pct_ytd, 8.12, places=4)
+
+    def test_zero_ytd_is_kept_as_zero(self):
+        item = self._upload([
+            ["Ticker", "Quantity", "PX_LAST", "CHG_PCT_YTD"],
+            ["PETR4 BZ", 100, 38.5, 0],
+        ])
+        self.assertEqual(item.chg_pct_ytd, 0.0)
+
+
 class DataMigrationTests(TestCase):
     """The 0019 migration duplicates the scrubbing logic on purpose — migrations
     must not import app code that can change under them. Keep the two in sync."""

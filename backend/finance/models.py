@@ -73,6 +73,7 @@ class PortfolioItem(models.Model):
     market_value = models.FloatField(blank=True, null=True)
     chg_pct_1d = models.FloatField(blank=True, null=True)
     pnl_1d = models.FloatField(blank=True, null=True)
+    chg_pct_ytd = models.FloatField(blank=True, null=True)  # CHG_PCT_YTD, stored in percent units
     
     # Valuation
     pe_next_12_months = models.FloatField(blank=True, null=True)

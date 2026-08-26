@@ -40,6 +40,7 @@ export interface PortfolioHolding {
   specific_type: string | null;
   chg_pct_1d: number | null;
   pnl_1d: number | null;
+  chg_pct_ytd: number | null;
   pe_next_12_months: number | null;
   best_eps: number | null;
   eps_lt_growth: number | null;
@@ -449,6 +450,10 @@ export default function DashboardPage() {
         case "pnl_1d":
           av = a.pnl_1d || 0;
           bv = b.pnl_1d || 0;
+          break;
+        case "ytd":
+          av = a.chg_pct_ytd ?? 0;
+          bv = b.chg_pct_ytd ?? 0;
           break;
         case "pe":
           av = a.pe_next_12_months || 0;
@@ -864,6 +869,7 @@ export default function DashboardPage() {
                       ["current_value", "Mkt Value"],
                       ["chg_1d", "1D %"],
                       ["pnl_1d", "1D PnL"],
+                      ["ytd", "YTD %"],
                       ["total_pnl", "Total PnL %"],
                       ["pe", "NTM P/E"],
                       ["eps_growth", "EPS Growth"],
@@ -925,6 +931,18 @@ export default function DashboardPage() {
                         >
                           {(item.pnl_1d || 0) > 0 ? "+" : ""}
                           {Math.round(item.pnl_1d || 0).toLocaleString()}
+                        </td>
+                        <td
+                          className={`px-4 py-3 text-right font-medium ${item.chg_pct_ytd == null
+                            ? "text-slate-400"
+                            : item.chg_pct_ytd >= 0
+                              ? "text-emerald-600"
+                              : "text-rose-600"
+                            }`}
+                        >
+                          {item.chg_pct_ytd == null
+                            ? "—"
+                            : `${item.chg_pct_ytd > 0 ? "+" : ""}${item.chg_pct_ytd.toFixed(2)}%`}
                         </td>
                         <td
                           className={`px-4 py-3 text-right font-bold ${item.unrealized_pl_pct >= 0 ? "text-emerald-600" : "text-rose-600"
@@ -996,7 +1014,7 @@ export default function DashboardPage() {
                   </div>
 
                   {/* Row 2: Key metrics */}
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-4 gap-2">
                     <div>
                       <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-0.5">1D Chg</p>
                       <p className={`text-xs font-bold tabular-nums ${(item.chg_pct_1d || 0) >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
@@ -1007,6 +1025,12 @@ export default function DashboardPage() {
                       <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-0.5">1D PnL</p>
                       <p className={`text-xs font-bold tabular-nums ${(item.pnl_1d || 0) >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
                         {(item.pnl_1d || 0) > 0 ? "+" : ""}{Math.round(item.pnl_1d || 0).toLocaleString()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-0.5">YTD</p>
+                      <p className={`text-xs font-bold tabular-nums ${item.chg_pct_ytd == null ? "text-slate-400" : item.chg_pct_ytd >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                        {item.chg_pct_ytd == null ? "—" : `${item.chg_pct_ytd > 0 ? "+" : ""}${item.chg_pct_ytd.toFixed(1)}%`}
                       </p>
                     </div>
                     <div>
@@ -1388,6 +1412,7 @@ export default function DashboardPage() {
                         ["current_value", "Mkt Value"],
                         ["chg_1d", "1D %"],
                         ["pnl_1d", "1D PnL"],
+                        ["ytd", "YTD %"],
                         ["total_pnl", "Total PnL %"],
                         ["rating", "Rating"],
                         ["ytw", "YTW"],
@@ -1430,6 +1455,18 @@ export default function DashboardPage() {
                         >
                           {(item.pnl_1d || 0) > 0 ? "+" : ""}
                           {Math.round(item.pnl_1d || 0).toLocaleString()}
+                        </td>
+                        <td
+                          className={`px-4 py-3 text-right font-medium ${item.chg_pct_ytd == null
+                            ? "text-slate-400"
+                            : item.chg_pct_ytd >= 0
+                              ? "text-emerald-600"
+                              : "text-rose-600"
+                            }`}
+                        >
+                          {item.chg_pct_ytd == null
+                            ? "—"
+                            : `${item.chg_pct_ytd > 0 ? "+" : ""}${item.chg_pct_ytd.toFixed(2)}%`}
                         </td>
                         <td
                           className={`px-4 py-3 text-right font-bold ${item.unrealized_pl_pct >= 0 ? "text-emerald-600" : "text-rose-600"
@@ -1476,7 +1513,7 @@ export default function DashboardPage() {
                   </div>
 
                   {/* Row 2: PnL metrics */}
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-4 gap-2">
                     <div>
                       <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-0.5">1D Chg</p>
                       <p className={`text-xs font-bold tabular-nums ${(item.chg_pct_1d || 0) >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
@@ -1487,6 +1524,12 @@ export default function DashboardPage() {
                       <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-0.5">1D PnL</p>
                       <p className={`text-xs font-bold tabular-nums ${(item.pnl_1d || 0) >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
                         {(item.pnl_1d || 0) > 0 ? "+" : ""}{Math.round(item.pnl_1d || 0).toLocaleString()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-0.5">YTD</p>
+                      <p className={`text-xs font-bold tabular-nums ${item.chg_pct_ytd == null ? "text-slate-400" : item.chg_pct_ytd >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                        {item.chg_pct_ytd == null ? "—" : `${item.chg_pct_ytd > 0 ? "+" : ""}${item.chg_pct_ytd.toFixed(1)}%`}
                       </p>
                     </div>
                     <div>

@@ -28,6 +28,7 @@ interface PortfolioItem {
     market_value: number | null;
     chg_pct_1d: number | null;
     pnl_1d: number | null;
+    chg_pct_ytd: number | null;
     pe_next_12_months: number | null;
     best_eps: number | null;
     eps_lt_growth: number | null;
@@ -222,6 +223,7 @@ export default function PortfolioPage() {
                 case 'current_value': aValue = a.current_value; bValue = b.current_value; break;
                 case 'pnl_1d': aValue = a.pnl_1d || 0; bValue = b.pnl_1d || 0; break;
                 case 'chg_pct_1d': aValue = a.chg_pct_1d || 0; bValue = b.chg_pct_1d || 0; break;
+                case 'chg_pct_ytd': aValue = a.chg_pct_ytd ?? 0; bValue = b.chg_pct_ytd ?? 0; break;
                 case 'duration': aValue = a.duration || 0; bValue = b.duration || 0; break;
                 case 'ytw': aValue = a.yield_to_worst || 0; bValue = b.yield_to_worst || 0; break;
                 case 'total_pnl_pct': aValue = a.unrealized_pl_pct || 0; bValue = b.unrealized_pl_pct || 0; break;
@@ -330,6 +332,7 @@ export default function PortfolioPage() {
                                             <th className="px-4 py-3 text-right cursor-pointer group font-bold" onClick={() => requestSort('current_value')}>Market Value <SortIndicator columnKey="current_value" /></th>
                                             <th className="px-4 py-3 text-right cursor-pointer group" onClick={() => requestSort('chg_pct_1d')}>1D % <SortIndicator columnKey="chg_pct_1d" /></th>
                                             <th className="px-4 py-3 text-right cursor-pointer group" onClick={() => requestSort('pnl_1d')}>1D PnL <SortIndicator columnKey="pnl_1d" /></th>
+                                            <th className="px-4 py-3 text-right cursor-pointer group" onClick={() => requestSort('chg_pct_ytd')}>YTD % <SortIndicator columnKey="chg_pct_ytd" /></th>
                                             <th className="px-4 py-3 text-right cursor-pointer group" onClick={() => requestSort('total_pnl_pct')}>Total PnL % <SortIndicator columnKey="total_pnl_pct" /></th>
                                             <th className="px-4 py-3 text-right cursor-pointer group" onClick={() => requestSort('pe_next_12_months')}>NTM P/E <SortIndicator columnKey="pe_next_12_months" /></th>
                                             <th className="px-4 py-3 text-right cursor-pointer group" onClick={() => requestSort('eps_growth')}>EPS Growth <SortIndicator columnKey="eps_growth" /></th>
@@ -368,6 +371,9 @@ export default function PortfolioPage() {
                                                 </td>
                                                 <td className={`px-4 py-3 text-right font-medium ${(item.pnl_1d || 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                                                     {(item.pnl_1d || 0) > 0 ? '+' : ''}{Math.round(item.pnl_1d || 0).toLocaleString()}
+                                                </td>
+                                                <td className={`px-4 py-3 text-right font-medium ${item.chg_pct_ytd == null ? 'text-slate-400' : item.chg_pct_ytd >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                    {item.chg_pct_ytd == null ? '-' : `${item.chg_pct_ytd > 0 ? '+' : ''}${item.chg_pct_ytd.toFixed(2)}%`}
                                                 </td>
                                                 <td className={`px-4 py-3 text-right font-bold ${item.unrealized_pl_pct >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                                                     {item.average_cost > 0 ? `${item.unrealized_pl_pct > 0 ? '+' : ''}${item.unrealized_pl_pct.toFixed(1)}%` : '-'}
@@ -414,6 +420,7 @@ export default function PortfolioPage() {
                                             <th className="px-4 py-3 text-right cursor-pointer group font-bold" onClick={() => requestSort('current_value')}>Market Value <SortIndicator columnKey="current_value" /></th>
                                             <th className="px-4 py-3 text-right cursor-pointer group" onClick={() => requestSort('chg_pct_1d')}>1D % <SortIndicator columnKey="chg_pct_1d" /></th>
                                             <th className="px-4 py-3 text-right cursor-pointer group" onClick={() => requestSort('pnl_1d')}>1D PnL <SortIndicator columnKey="pnl_1d" /></th>
+                                            <th className="px-4 py-3 text-right cursor-pointer group" onClick={() => requestSort('chg_pct_ytd')}>YTD % <SortIndicator columnKey="chg_pct_ytd" /></th>
                                             <th className="px-4 py-3 text-right cursor-pointer group" onClick={() => requestSort('total_pnl_pct')}>Total PnL % <SortIndicator columnKey="total_pnl_pct" /></th>
                                             <th className="px-4 py-3 text-right cursor-pointer group bg-amber-50/30 dark:bg-amber-900/10" onClick={() => requestSort('rating')}>Rating <SortIndicator columnKey="rating" /></th>
                                             <th className="px-4 py-3 text-right cursor-pointer group bg-amber-50/30 dark:bg-amber-900/10" onClick={() => requestSort('ytw')}>Yield to Worst <SortIndicator columnKey="ytw" /></th>
@@ -447,6 +454,9 @@ export default function PortfolioPage() {
                                                 </td>
                                                 <td className={`px-4 py-3 text-right font-medium ${(item.pnl_1d || 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                                                     {(item.pnl_1d || 0) > 0 ? '+' : ''}{Math.round(item.pnl_1d || 0).toLocaleString()}
+                                                </td>
+                                                <td className={`px-4 py-3 text-right font-medium ${item.chg_pct_ytd == null ? 'text-slate-400' : item.chg_pct_ytd >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                    {item.chg_pct_ytd == null ? '-' : `${item.chg_pct_ytd > 0 ? '+' : ''}${item.chg_pct_ytd.toFixed(2)}%`}
                                                 </td>
                                                 <td className={`px-4 py-3 text-right font-bold ${item.unrealized_pl_pct >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                                                     {item.average_cost > 0 ? `${item.unrealized_pl_pct > 0 ? '+' : ''}${item.unrealized_pl_pct.toFixed(1)}%` : '-'}

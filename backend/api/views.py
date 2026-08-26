@@ -235,11 +235,36 @@ class PortfolioSnapshotViewSet(viewsets.ModelViewSet):
                 cross_usd = get_float('Cross USD') or 1.0
                 market_value = get_float('Market Value')
                 
-                chg_pct_1d = get_float('CHG_PCT_1D')
-                # If chg_pct represents percentage as 0.01 = 1%, convert string like "0.59%" 
-                if chg_pct_1d and '%' not in str(row.get('CHG_PCT_1D', '')) and chg_pct_1d < 1:
-                    chg_pct_1d = chg_pct_1d * 100 # converting decimal to percent format for display
-                
+                def percent_or_none(col):
+                    # Returns None — not 0.0 — for a blank cell or a Bloomberg error
+                    # string ("#N/A Field Not Applicable" is what corporate bonds give
+                    # back for CHG_PCT_YTD), so the UI can tell "no data" from "flat".
+                    raw = row.get(col) if col else None
+                    if raw is None or pd.isna(raw):
+                        return None
+                    txt = str(raw).strip()
+                    if not txt or txt.startswith('#'):
+                        return None
+                    try:
+                        val = float(txt.replace('%', '').replace(',', ''))
+                    except ValueError:
+                        return None
+                    # Percent-formatted Excel cells arrive as fractions (0.0059 = 0.59%),
+                    # while a plain Bloomberg number is already in percent units (0.59).
+                    if val and '%' not in txt and abs(val) < 1:
+                        val = val * 100
+                    return val
+
+                chg_pct_1d = percent_or_none('CHG_PCT_1D') or 0.0
+
+                # YTD return per name. Optional column, and null per row wherever
+                # Bloomberg has no YTD for that security (corporate bonds).
+                ytd_col = next(
+                    (c for c in ('CHG_PCT_YTD', 'ReturnYTD', 'YTD %', 'YTD') if c in df.columns),
+                    None,
+                )
+                chg_pct_ytd = percent_or_none(ytd_col)
+
                 pnl_1d = get_float('1 day PnL')
                 pe_next_12_months = get_float('BEST_EST_PE_4QTRS') or get_float('P/E Next 12 Quarters')
                 yield_to_worst = get_float('INDEX_YIELD_TO_WORST') or get_float('YIELD_TO_WORST') 
@@ -275,6 +300,7 @@ class PortfolioSnapshotViewSet(viewsets.ModelViewSet):
                     market_value=market_value,
                     chg_pct_1d=chg_pct_1d,
                     pnl_1d=pnl_1d,
+                    chg_pct_ytd=chg_pct_ytd,
                     pe_next_12_months=pe_next_12_months,
                     yield_to_worst=yield_to_worst,
                     duration=duration,
