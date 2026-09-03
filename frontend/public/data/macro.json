@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-02T19:58:13Z",
+  "generated_at": "2026-09-03T20:01:44Z",
   "rolling_window_years": 10,
   "recession_months": [],
   "bond_chart": {
@@ -302,10 +302,6 @@
       "name": "3M Treasury",
       "points": [
         {
-          "month": "2020-09",
-          "value": 0.1
-        },
-        {
           "month": "2020-10",
           "value": 0.09
         },
@@ -588,6 +584,10 @@
         {
           "month": "2026-08",
           "value": 3.91
+        },
+        {
+          "month": "2026-09",
+          "value": 3.92
         }
       ]
     },
@@ -595,10 +595,6 @@
       "id": "DGS2",
       "name": "2Y Treasury",
       "points": [
-        {
-          "month": "2020-09",
-          "value": 0.13
-        },
         {
           "month": "2020-10",
           "value": 0.14
@@ -882,6 +878,10 @@
         {
           "month": "2026-08",
           "value": 4.34
+        },
+        {
+          "month": "2026-09",
+          "value": 4.39
         }
       ]
     },
@@ -889,10 +889,6 @@
       "id": "DGS10",
       "name": "10Y Treasury",
       "points": [
-        {
-          "month": "2020-09",
-          "value": 0.69
-        },
         {
           "month": "2020-10",
           "value": 0.88
@@ -1176,6 +1172,10 @@
         {
           "month": "2026-08",
           "value": 4.75
+        },
+        {
+          "month": "2026-09",
+          "value": 4.79
         }
       ]
     },
@@ -1183,10 +1183,6 @@
       "id": "DFII10",
       "name": "10Y Real Yield",
       "points": [
-        {
-          "month": "2020-09",
-          "value": -0.94
-        },
         {
           "month": "2020-10",
           "value": -0.82
@@ -1469,6 +1465,10 @@
         },
         {
           "month": "2026-08",
+          "value": 2.44
+        },
+        {
+          "month": "2026-09",
           "value": 2.44
         }
       ]
@@ -1763,7 +1763,7 @@
         },
         {
           "month": "2026-09",
-          "value": 2.35
+          "value": 2.34
         }
       ]
     },
@@ -6888,7 +6888,7 @@
           "transform_label": "Thousands",
           "bad_when_high": true,
           "frequency": "W",
-          "latest_value": 203.0,
+          "latest_value": 206.0,
           "latest_month": "2026-08",
           "sparkline": [
             {
@@ -6985,7 +6985,7 @@
             },
             {
               "date": "2026-08",
-              "value": 203.0
+              "value": 206.0
             }
           ],
           "cells": [
@@ -7417,9 +7417,9 @@
             },
             {
               "month": "2026-08",
-              "value": 203.0,
-              "z": -0.271,
-              "color": "#d9cc8f"
+              "value": 206.0,
+              "z": -0.266,
+              "color": "#d9cd8e"
             }
           ]
         },
@@ -12318,13 +12318,9 @@
           "transform_label": "%",
           "bad_when_high": true,
           "frequency": "W",
-          "latest_value": 6.66,
-          "latest_month": "2026-08",
+          "latest_value": 6.71,
+          "latest_month": "2026-09",
           "sparkline": [
-            {
-              "date": "2024-09",
-              "value": 6.08
-            },
             {
               "date": "2024-10",
               "value": 6.72
@@ -12416,15 +12412,13 @@
             {
               "date": "2026-08",
               "value": 6.66
+            },
+            {
+              "date": "2026-09",
+              "value": 6.71
             }
           ],
           "cells": [
-            {
-              "month": "2020-09",
-              "value": 2.9,
-              "z": -2.405,
-              "color": "#2c7bb6"
-            },
             {
               "month": "2020-10",
               "value": 2.81,
@@ -12850,6 +12844,12 @@
               "value": 6.66,
               "z": 1.12,
               "color": "#f89c59"
+            },
+            {
+              "month": "2026-09",
+              "value": 6.71,
+              "z": 1.133,
+              "color": "#f89a58"
             }
           ]
         }
@@ -12865,7 +12865,7 @@
           "transform_label": "%",
           "bad_when_high": true,
           "frequency": "D",
-          "latest_value": 2.65,
+          "latest_value": 2.66,
           "latest_month": "2026-09",
           "sparkline": [
             {
@@ -12962,7 +12962,7 @@
             },
             {
               "date": "2026-09",
-              "value": 2.65
+              "value": 2.66
             }
           ],
           "cells": [
@@ -13394,9 +13394,9 @@
             },
             {
               "month": "2026-09",
-              "value": 2.65,
-              "z": -1.135,
-              "color": "#6aa6cd"
+              "value": 2.66,
+              "z": -1.112,
+              "color": "#6ca7ce"
             }
           ]
         },
