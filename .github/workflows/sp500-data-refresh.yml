@@ -1,0 +1,67 @@
+name: S&P 500 data refresh
+
+on:
+  # 02:15 UTC = 23:15 in Sao Paulo. Most 10-Q/10-K filings land on EDGAR
+  # between 16:00 and 18:00 ET, so each run picks up the same day's filings.
+  schedule:
+    - cron: "15 2 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sp500-data-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements-sp500.txt
+
+      - name: Unit tests
+        run: python -m unittest discover -s backend/scripts/sp500/tests -t .
+
+      # Yesterday's per-company extracts: used only when the SEC is
+      # unreachable for a company, so one failed request never drops it.
+      - name: Restore SEC cache
+        uses: actions/cache@v4
+        with:
+          path: .cache/sp500
+          key: sp500-sec-${{ github.run_id }}
+          restore-keys: sp500-sec-
+
+      - name: Refresh S&P 500 data
+        env:
+          SEC_USER_AGENT: "Igfwm gabriel@igfwm.com"
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+        run: python -m backend.scripts.sp500.run --out frontend/public/data/sp500.json --cache .cache/sp500
+
+      - name: Commit updated data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend/public/data/sp500.json backend/scripts/sp500/data/
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore(sp500): daily data refresh $(date -u +%Y-%m-%d)"
+            for i in 1 2 3; do
+              git pull --rebase && git push && exit 0
+              sleep 15
+            done
+            exit 1
+          fi
