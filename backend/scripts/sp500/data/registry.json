@@ -4,7 +4,7 @@
   "current": true,
   "name": "Abbott Laboratories",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "2834",
   "ticker": "ABT"
  },
  "0000002488": {
@@ -12,7 +12,7 @@
   "current": true,
   "name": "Advanced Micro Devices",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3674",
   "ticker": "AMD"
  },
  "0000002969": {
@@ -20,7 +20,7 @@
   "current": true,
   "name": "Air Products",
   "sector": "Materials",
-  "sic": null,
+  "sic": "2810",
   "ticker": "APD"
  },
  "0000004127": {
@@ -28,7 +28,7 @@
   "current": true,
   "name": "Skyworks Solutions",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3674",
   "ticker": "SWKS"
  },
  "0000004281": {
@@ -39,7 +39,7 @@
   "current": true,
   "name": "Howmet Aerospace",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3350",
   "ticker": "HWM"
  },
  "0000004447": {
@@ -54,7 +54,7 @@
   "current": true,
   "name": "American Electric Power",
   "sector": "Utilities",
-  "sic": null,
+  "sic": "4911",
   "ticker": "AEP"
  },
  "0000004962": {
@@ -62,7 +62,7 @@
   "current": true,
   "name": "American Express",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6199",
   "ticker": "AXP"
  },
  "0000004977": {
@@ -70,7 +70,7 @@
   "current": true,
   "name": "Aflac",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6321",
   "ticker": "AFL"
  },
  "0000005272": {
@@ -78,7 +78,7 @@
   "current": true,
   "name": "American International Group",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6331",
   "ticker": "AIG"
  },
  "0000005513": {
@@ -100,7 +100,7 @@
   "current": true,
   "name": "Analog Devices",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3674",
   "ticker": "ADI"
  },
  "0000006951": {
@@ -108,7 +108,7 @@
   "current": true,
   "name": "Applied Materials",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3674",
   "ticker": "AMAT"
  },
  "0000007084": {
@@ -116,7 +116,7 @@
   "current": true,
   "name": "Archer Daniels Midland",
   "sector": "Consumer Staples",
-  "sic": null,
+  "sic": "2070",
   "ticker": "ADM"
  },
  "0000008670": {
@@ -124,7 +124,7 @@
   "current": true,
   "name": "Automatic Data Processing",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "7374",
   "ticker": "ADP"
  },
  "0000008818": {
@@ -132,7 +132,7 @@
   "current": true,
   "name": "Avery Dennison",
   "sector": "Materials",
-  "sic": null,
+  "sic": "2670",
   "ticker": "AVY"
  },
  "0000009389": {
@@ -140,7 +140,7 @@
   "current": true,
   "name": "Ball Corporation",
   "sector": "Materials",
-  "sic": null,
+  "sic": "3411",
   "ticker": "BALL"
  },
  "0000010456": {
@@ -148,7 +148,7 @@
   "current": true,
   "name": "Baxter International",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "3841",
   "ticker": "BAX"
  },
  "0000010795": {
@@ -156,7 +156,7 @@
   "current": true,
   "name": "Becton Dickinson",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "3841",
   "ticker": "BDX"
  },
  "0000011544": {
@@ -164,7 +164,7 @@
   "current": true,
   "name": "W. R. Berkley Corporation",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6331",
   "ticker": "WRB"
  },
  "0000012208": {
@@ -186,7 +186,7 @@
   "current": true,
   "name": "Boeing",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3721",
   "ticker": "BA"
  },
  "0000014272": {
@@ -194,7 +194,7 @@
   "current": true,
   "name": "Bristol Myers Squibb",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "2834",
   "ticker": "BMY"
  },
  "0000014693": {
@@ -202,7 +202,7 @@
   "current": true,
   "name": "Brown–Forman",
   "sector": "Consumer Staples",
-  "sic": null,
+  "sic": "2080",
   "ticker": "BF.B"
  },
  "0000016732": {
@@ -217,7 +217,7 @@
   "current": true,
   "name": "Constellation Brands",
   "sector": "Consumer Staples",
-  "sic": null,
+  "sic": "2080",
   "ticker": "STZ"
  },
  "0000018230": {
@@ -225,7 +225,7 @@
   "current": true,
   "name": "Caterpillar Inc.",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3531",
   "ticker": "CAT"
  },
  "0000018926": {
@@ -240,7 +240,7 @@
   "current": true,
   "name": "JPMorgan Chase",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6021",
   "ticker": "JPM"
  },
  "0000020286": {
@@ -248,7 +248,7 @@
   "current": true,
   "name": "Cincinnati Financial",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6331",
   "ticker": "CINF"
  },
  "0000021076": {
@@ -256,7 +256,7 @@
   "current": true,
   "name": "Clorox",
   "sector": "Consumer Staples",
-  "sic": null,
+  "sic": "2842",
   "ticker": "CLX"
  },
  "0000021344": {
@@ -264,7 +264,7 @@
   "current": true,
   "name": "Coca-Cola Company (The)",
   "sector": "Consumer Staples",
-  "sic": null,
+  "sic": "2080",
   "ticker": "KO"
  },
  "0000021665": {
@@ -272,7 +272,7 @@
   "current": true,
   "name": "Colgate-Palmolive",
   "sector": "Consumer Staples",
-  "sic": null,
+  "sic": "2844",
   "ticker": "CL"
  },
  "0000023217": {
@@ -294,7 +294,7 @@
   "current": true,
   "name": "Corning Inc.",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3357",
   "ticker": "GLW"
  },
  "0000026172": {
@@ -302,7 +302,7 @@
   "current": true,
   "name": "Cummins",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3510",
   "ticker": "CMI"
  },
  "0000027419": {
@@ -310,7 +310,7 @@
   "current": true,
   "name": "Target Corporation",
   "sector": "Consumer Staples",
-  "sic": null,
+  "sic": "5331",
   "ticker": "TGT"
  },
  "0000027904": {
@@ -318,7 +318,7 @@
   "current": true,
   "name": "Delta Air Lines",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "4512",
   "ticker": "DAL"
  },
  "0000028412": {
@@ -333,7 +333,7 @@
   "current": true,
   "name": "Dollar General",
   "sector": "Consumer Staples",
-  "sic": null,
+  "sic": "5331",
   "ticker": "DG"
  },
  "0000029905": {
@@ -341,7 +341,7 @@
   "current": true,
   "name": "Dover Corporation",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3530",
   "ticker": "DOV"
  },
  "0000029989": {
@@ -349,7 +349,7 @@
   "current": true,
   "name": "Omnicom Group",
   "sector": "Communication Services",
-  "sic": null,
+  "sic": "7311",
   "ticker": "OMC"
  },
  "0000030625": {
@@ -364,7 +364,7 @@
   "current": true,
   "name": "Ecolab",
   "sector": "Materials",
-  "sic": null,
+  "sic": "2840",
   "ticker": "ECL"
  },
  "0000031791": {
@@ -372,7 +372,7 @@
   "current": true,
   "name": "Revvity",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "3826",
   "ticker": "RVTY"
  },
  "0000032604": {
@@ -380,7 +380,7 @@
   "current": true,
   "name": "Emerson Electric",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3600",
   "ticker": "EMR"
  },
  "0000033185": {
@@ -388,7 +388,7 @@
   "current": true,
   "name": "Equifax",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "7320",
   "ticker": "EFX"
  },
  "0000033213": {
@@ -396,7 +396,7 @@
   "current": true,
   "name": "EQT Corporation",
   "sector": "Energy",
-  "sic": null,
+  "sic": "1311",
   "ticker": "EQT"
  },
  "0000034903": {
@@ -404,7 +404,7 @@
   "current": true,
   "name": "Federal Realty Investment Trust",
   "sector": "Real Estate",
-  "sic": null,
+  "sic": "6798",
   "ticker": "FRT"
  },
  "0000035527": {
@@ -412,7 +412,7 @@
   "current": true,
   "name": "Fifth Third Bancorp",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6022",
   "ticker": "FITB"
  },
  "0000036104": {
@@ -420,7 +420,7 @@
   "current": true,
   "name": "U.S. Bancorp",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6021",
   "ticker": "USB"
  },
  "0000036270": {
@@ -428,7 +428,7 @@
   "current": true,
   "name": "M&T Bank",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6022",
   "ticker": "MTB"
  },
  "0000037785": {
@@ -443,7 +443,7 @@
   "current": true,
   "name": "Ford Motor Company",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "3711",
   "ticker": "F"
  },
  "0000038777": {
@@ -451,7 +451,7 @@
   "current": true,
   "name": "Franklin Resources",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6282",
   "ticker": "BEN"
  },
  "0000039911": {
@@ -466,7 +466,7 @@
   "current": true,
   "name": "General Dynamics",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3730",
   "ticker": "GD"
  },
  "0000040545": {
@@ -474,7 +474,7 @@
   "current": true,
   "name": "GE Aerospace",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3600",
   "ticker": "GE"
  },
  "0000040704": {
@@ -482,7 +482,7 @@
   "current": true,
   "name": "General Mills",
   "sector": "Consumer Staples",
-  "sic": null,
+  "sic": "2040",
   "ticker": "GIS"
  },
  "0000040987": {
@@ -490,7 +490,7 @@
   "current": true,
   "name": "Genuine Parts Company",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "5013",
   "ticker": "GPC"
  },
  "0000045012": {
@@ -498,7 +498,7 @@
   "current": true,
   "name": "Halliburton",
   "sector": "Energy",
-  "sic": null,
+  "sic": "1389",
   "ticker": "HAL"
  },
  "0000046080": {
@@ -506,7 +506,7 @@
   "current": true,
   "name": "Hasbro",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "3944",
   "ticker": "HAS"
  },
  "0000046765": {
@@ -521,7 +521,7 @@
   "current": true,
   "name": "Hershey Company (The)",
   "sector": "Consumer Staples",
-  "sic": null,
+  "sic": "2060",
   "ticker": "HSY"
  },
  "0000047217": {
@@ -529,7 +529,7 @@
   "current": true,
   "name": "HP Inc.",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3570",
   "ticker": "HPQ"
  },
  "0000048039": {
@@ -544,7 +544,7 @@
   "current": true,
   "name": "Hormel Foods",
   "sector": "Consumer Staples",
-  "sic": null,
+  "sic": "2011",
   "ticker": "HRL"
  },
  "0000048898": {
@@ -552,7 +552,7 @@
   "current": true,
   "name": "Hubbell Incorporated",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3670",
   "ticker": "HUBB"
  },
  "0000049071": {
@@ -560,7 +560,7 @@
   "current": true,
   "name": "Humana",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "6324",
   "ticker": "HUM"
  },
  "0000049196": {
@@ -568,7 +568,7 @@
   "current": true,
   "name": "Huntington Bancshares",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6021",
   "ticker": "HBAN"
  },
  "0000049826": {
@@ -576,7 +576,7 @@
   "current": true,
   "name": "Illinois Tool Works",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3560",
   "ticker": "ITW"
  },
  "0000050863": {
@@ -584,7 +584,7 @@
   "current": true,
   "name": "Intel",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3674",
   "ticker": "INTC"
  },
  "0000051143": {
@@ -592,7 +592,7 @@
   "current": true,
   "name": "IBM",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3570",
   "ticker": "IBM"
  },
  "0000051253": {
@@ -600,7 +600,7 @@
   "current": true,
   "name": "International Flavors & Fragrances",
   "sector": "Materials",
-  "sic": null,
+  "sic": "2860",
   "ticker": "IFF"
  },
  "0000051434": {
@@ -608,7 +608,7 @@
   "current": true,
   "name": "International Paper",
   "sector": "Materials",
-  "sic": null,
+  "sic": "2621",
   "ticker": "IP"
  },
  "0000051644": {
@@ -623,7 +623,7 @@
   "current": true,
   "name": "Jacobs Solutions",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "1600",
   "ticker": "J"
  },
  "0000054480": {
@@ -645,7 +645,7 @@
   "current": true,
   "name": "Kimberly-Clark",
   "sector": "Consumer Staples",
-  "sic": null,
+  "sic": "2670",
   "ticker": "KMB"
  },
  "0000056873": {
@@ -653,7 +653,7 @@
   "current": true,
   "name": "Kroger",
   "sector": "Consumer Staples",
-  "sic": null,
+  "sic": "5411",
   "ticker": "KR"
  },
  "0000058492": {
@@ -668,7 +668,7 @@
   "current": true,
   "name": "Lilly (Eli)",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "2834",
   "ticker": "LLY"
  },
  "0000059558": {
@@ -683,7 +683,7 @@
   "current": true,
   "name": "Loews Corporation",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6331",
   "ticker": "L"
  },
  "0000060667": {
@@ -691,7 +691,7 @@
   "current": true,
   "name": "Lowe's",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "5211",
   "ticker": "LOW"
  },
  "0000062709": {
@@ -699,7 +699,7 @@
   "current": true,
   "name": "Marsh McLennan",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6411",
   "ticker": "MRSH"
  },
  "0000062996": {
@@ -707,7 +707,7 @@
   "current": true,
   "name": "Masco",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3430",
   "ticker": "MAS"
  },
  "0000063276": {
@@ -722,7 +722,7 @@
   "current": true,
   "name": "McCormick & Company",
   "sector": "Consumer Staples",
-  "sic": null,
+  "sic": "2090",
   "ticker": "MKC"
  },
  "0000063908": {
@@ -730,7 +730,7 @@
   "current": true,
   "name": "McDonald's",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "5812",
   "ticker": "MCD"
  },
  "0000064040": {
@@ -738,7 +738,7 @@
   "current": true,
   "name": "S&P Global",
   "sector": "Financials",
-  "sic": null,
+  "sic": "7320",
   "ticker": "SPGI"
  },
  "0000064803": {
@@ -746,7 +746,7 @@
   "current": true,
   "name": "CVS Health",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "5912",
   "ticker": "CVS"
  },
  "0000065984": {
@@ -754,7 +754,7 @@
   "current": true,
   "name": "Entergy",
   "sector": "Utilities",
-  "sic": null,
+  "sic": "4911",
   "ticker": "ETR"
  },
  "0000066740": {
@@ -762,7 +762,7 @@
   "current": true,
   "name": "3M",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3841",
   "ticker": "MMM"
  },
  "0000068505": {
@@ -770,7 +770,7 @@
   "current": true,
   "name": "Motorola Solutions",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3663",
   "ticker": "MSI"
  },
  "0000070858": {
@@ -778,7 +778,7 @@
   "current": true,
   "name": "Bank of America",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6021",
   "ticker": "BAC"
  },
  "0000072207": {
@@ -793,7 +793,7 @@
   "current": true,
   "name": "Nordson Corporation",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3569",
   "ticker": "NDSN"
  },
  "0000072333": {
@@ -808,7 +808,7 @@
   "current": true,
   "name": "Eversource Energy",
   "sector": "Utilities",
-  "sic": null,
+  "sic": "4911",
   "ticker": "ES"
  },
  "0000072903": {
@@ -816,7 +816,7 @@
   "current": true,
   "name": "Xcel Energy",
   "sector": "Utilities",
-  "sic": null,
+  "sic": "4931",
   "ticker": "XEL"
  },
  "0000072971": {
@@ -824,7 +824,7 @@
   "current": true,
   "name": "Wells Fargo",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6021",
   "ticker": "WFC"
  },
  "0000073124": {
@@ -832,7 +832,7 @@
   "current": true,
   "name": "Northern Trust",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6022",
   "ticker": "NTRS"
  },
  "0000073309": {
@@ -840,7 +840,7 @@
   "current": true,
   "name": "Nucor",
   "sector": "Materials",
-  "sic": null,
+  "sic": "3312",
   "ticker": "NUE"
  },
  "0000074208": {
@@ -848,7 +848,7 @@
   "current": true,
   "name": "UDR, Inc.",
   "sector": "Real Estate",
-  "sic": null,
+  "sic": "6798",
   "ticker": "UDR"
  },
  "0000075362": {
@@ -856,7 +856,7 @@
   "current": true,
   "name": "Paccar",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3711",
   "ticker": "PCAR"
  },
  "0000075677": {
@@ -864,7 +864,7 @@
   "current": true,
   "name": "Packaging Corporation of America",
   "sector": "Materials",
-  "sic": null,
+  "sic": "2650",
   "ticker": "PKG"
  },
  "0000076334": {
@@ -872,7 +872,7 @@
   "current": true,
   "name": "Parker Hannifin",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3490",
   "ticker": "PH"
  },
  "0000077360": {
@@ -880,7 +880,7 @@
   "current": true,
   "name": "Pentair",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3550",
   "ticker": "PNR"
  },
  "0000077476": {
@@ -888,7 +888,7 @@
   "current": true,
   "name": "PepsiCo",
   "sector": "Consumer Staples",
-  "sic": null,
+  "sic": "2080",
   "ticker": "PEP"
  },
  "0000078003": {
@@ -896,7 +896,7 @@
   "current": true,
   "name": "Pfizer",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "2834",
   "ticker": "PFE"
  },
  "0000078239": {
@@ -911,7 +911,7 @@
   "current": true,
   "name": "Brown & Brown",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6411",
   "ticker": "BRO"
  },
  "0000079879": {
@@ -919,7 +919,7 @@
   "current": true,
   "name": "PPG Industries",
   "sector": "Materials",
-  "sic": null,
+  "sic": "2851",
   "ticker": "PPG"
  },
  "0000080424": {
@@ -927,7 +927,7 @@
   "current": true,
   "name": "Procter & Gamble",
   "sector": "Consumer Staples",
-  "sic": null,
+  "sic": "2840",
   "ticker": "PG"
  },
  "0000080661": {
@@ -935,7 +935,7 @@
   "current": true,
   "name": "Progressive Corporation",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6331",
   "ticker": "PGR"
  },
  "0000084839": {
@@ -943,7 +943,7 @@
   "current": true,
   "name": "Rollins, Inc.",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "7340",
   "ticker": "ROL"
  },
  "0000086312": {
@@ -951,7 +951,7 @@
   "current": true,
   "name": "Travelers Companies (The)",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6331",
   "ticker": "TRV"
  },
  "0000087347": {
@@ -959,7 +959,7 @@
   "current": true,
   "name": "Schlumberger",
   "sector": "Energy",
-  "sic": null,
+  "sic": "1389",
   "ticker": "SLB"
  },
  "0000089800": {
@@ -967,7 +967,7 @@
   "current": true,
   "name": "Sherwin-Williams",
   "sector": "Materials",
-  "sic": null,
+  "sic": "5200",
   "ticker": "SHW"
  },
  "0000091142": {
@@ -975,7 +975,7 @@
   "current": true,
   "name": "A. O. Smith",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3630",
   "ticker": "AOS"
  },
  "0000091419": {
@@ -983,7 +983,7 @@
   "current": true,
   "name": "J.M. Smucker Company (The)",
   "sector": "Consumer Staples",
-  "sic": null,
+  "sic": "2033",
   "ticker": "SJM"
  },
  "0000091440": {
@@ -991,7 +991,7 @@
   "current": true,
   "name": "Snap-on",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3420",
   "ticker": "SNA"
  },
  "0000091576": {
@@ -999,7 +999,7 @@
   "current": true,
   "name": "KeyCorp",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6021",
   "ticker": "KEY"
  },
  "0000092122": {
@@ -1007,7 +1007,7 @@
   "current": true,
   "name": "Southern Company",
   "sector": "Utilities",
-  "sic": null,
+  "sic": "4911",
   "ticker": "SO"
  },
  "0000092230": {
@@ -1015,7 +1015,7 @@
   "current": true,
   "name": "Truist Financial",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6021",
   "ticker": "TFC"
  },
  "0000092380": {
@@ -1023,7 +1023,7 @@
   "current": true,
   "name": "Southwest Airlines",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "4512",
   "ticker": "LUV"
  },
  "0000093410": {
@@ -1031,7 +1031,7 @@
   "current": true,
   "name": "Chevron Corporation",
   "sector": "Energy",
-  "sic": null,
+  "sic": "2911",
   "ticker": "CVX"
  },
  "0000093556": {
@@ -1039,7 +1039,7 @@
   "current": true,
   "name": "Stanley Black & Decker",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3420",
   "ticker": "SWK"
  },
  "0000093751": {
@@ -1047,7 +1047,7 @@
   "current": true,
   "name": "State Street Corporation",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6022",
   "ticker": "STT"
  },
  "0000096021": {
@@ -1055,7 +1055,7 @@
   "current": true,
   "name": "Sysco",
   "sector": "Consumer Staples",
-  "sic": null,
+  "sic": "5140",
   "ticker": "SYY"
  },
  "0000096223": {
@@ -1077,7 +1077,7 @@
   "current": true,
   "name": "Teradyne",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3825",
   "ticker": "TER"
  },
  "0000097476": {
@@ -1085,7 +1085,7 @@
   "current": true,
   "name": "Texas Instruments",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3674",
   "ticker": "TXN"
  },
  "0000097745": {
@@ -1093,7 +1093,7 @@
   "current": true,
   "name": "Thermo Fisher Scientific",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "3829",
   "ticker": "TMO"
  },
  "0000098246": {
@@ -1108,7 +1108,7 @@
   "current": true,
   "name": "Tyson Foods",
   "sector": "Consumer Staples",
-  "sic": null,
+  "sic": "2015",
   "ticker": "TSN"
  },
  "0000100517": {
@@ -1116,7 +1116,7 @@
   "current": true,
   "name": "United Airlines Holdings",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "4512",
   "ticker": "UAL"
  },
  "0000100885": {
@@ -1124,7 +1124,7 @@
   "current": true,
   "name": "Union Pacific Corporation",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "4011",
   "ticker": "UNP"
  },
  "0000101778": {
@@ -1139,7 +1139,7 @@
   "current": true,
   "name": "RTX Corporation",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3724",
   "ticker": "RTX"
  },
  "0000103379": {
@@ -1154,7 +1154,7 @@
   "current": true,
   "name": "Walmart",
   "sector": "Consumer Staples",
-  "sic": null,
+  "sic": "5331",
   "ticker": "WMT"
  },
  "0000105634": {
@@ -1162,7 +1162,7 @@
   "current": true,
   "name": "Emcor",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "1731",
   "ticker": "EME"
  },
  "0000105770": {
@@ -1170,7 +1170,7 @@
   "current": true,
   "name": "West Pharmaceutical Services",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "3841",
   "ticker": "WST"
  },
  "0000106040": {
@@ -1178,7 +1178,7 @@
   "current": true,
   "name": "Western Digital",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3572",
   "ticker": "WDC"
  },
  "0000106535": {
@@ -1186,7 +1186,7 @@
   "current": true,
   "name": "Weyerhaeuser",
   "sector": "Real Estate",
-  "sic": null,
+  "sic": "6798",
   "ticker": "WY"
  },
  "0000106640": {
@@ -1201,7 +1201,7 @@
   "current": true,
   "name": "Williams Companies",
   "sector": "Energy",
-  "sic": null,
+  "sic": "4922",
   "ticker": "WMB"
  },
  "0000109198": {
@@ -1209,7 +1209,7 @@
   "current": true,
   "name": "TJX Companies",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "5651",
   "ticker": "TJX"
  },
  "0000109380": {
@@ -1224,7 +1224,7 @@
   "current": true,
   "name": "Johnson & Johnson",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "2834",
   "ticker": "JNJ"
  },
  "0000202058": {
@@ -1232,7 +1232,7 @@
   "current": true,
   "name": "L3Harris",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3812",
   "ticker": "LHX"
  },
  "0000203527": {
@@ -1247,7 +1247,7 @@
   "current": true,
   "name": "Textron",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3720",
   "ticker": "TXT"
  },
  "0000277135": {
@@ -1255,7 +1255,7 @@
   "current": true,
   "name": "W. W. Grainger",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "5000",
   "ticker": "GWW"
  },
  "0000277948": {
@@ -1263,7 +1263,7 @@
   "current": true,
   "name": "CSX Corporation",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "4011",
   "ticker": "CSX"
  },
  "0000310158": {
@@ -1271,7 +1271,7 @@
   "current": true,
   "name": "Merck & Co.",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "2834",
   "ticker": "MRK"
  },
  "0000310764": {
@@ -1279,7 +1279,7 @@
   "current": true,
   "name": "Stryker Corporation",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "3841",
   "ticker": "SYK"
  },
  "0000313616": {
@@ -1287,7 +1287,7 @@
   "current": true,
   "name": "Danaher Corporation",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "3823",
   "ticker": "DHR"
  },
  "0000313927": {
@@ -1295,7 +1295,7 @@
   "current": true,
   "name": "Church & Dwight",
   "sector": "Consumer Staples",
-  "sic": null,
+  "sic": "2840",
   "ticker": "CHD"
  },
  "0000315189": {
@@ -1303,7 +1303,7 @@
   "current": true,
   "name": "Deere & Company",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3523",
   "ticker": "DE"
  },
  "0000315213": {
@@ -1318,7 +1318,7 @@
   "current": true,
   "name": "Aon plc",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6411",
   "ticker": "AON"
  },
  "0000316709": {
@@ -1326,7 +1326,7 @@
   "current": true,
   "name": "Charles Schwab Corporation",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6211",
   "ticker": "SCHW"
  },
  "0000318154": {
@@ -1334,7 +1334,7 @@
   "current": true,
   "name": "Amgen",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "2836",
   "ticker": "AMGN"
  },
  "0000319201": {
@@ -1342,7 +1342,7 @@
   "current": true,
   "name": "KLA Corporation",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3827",
   "ticker": "KLAC"
  },
  "0000320187": {
@@ -1350,7 +1350,7 @@
   "current": true,
   "name": "Nike, Inc.",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "3021",
   "ticker": "NKE"
  },
  "0000320193": {
@@ -1358,7 +1358,7 @@
   "current": true,
   "name": "Apple Inc.",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3571",
   "ticker": "AAPL"
  },
  "0000320335": {
@@ -1366,7 +1366,7 @@
   "current": true,
   "name": "Globe Life",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6311",
   "ticker": "GL"
  },
  "0000352541": {
@@ -1374,7 +1374,7 @@
   "current": true,
   "name": "Alliant Energy",
   "sector": "Utilities",
-  "sic": null,
+  "sic": "4931",
   "ticker": "LNT"
  },
  "0000352915": {
@@ -1382,7 +1382,7 @@
   "current": true,
   "name": "Universal Health Services",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "8062",
   "ticker": "UHS"
  },
  "0000354190": {
@@ -1390,7 +1390,7 @@
   "current": true,
   "name": "Arthur J. Gallagher & Co.",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6411",
   "ticker": "AJG"
  },
  "0000354908": {
@@ -1405,7 +1405,7 @@
   "current": true,
   "name": "Home Depot (The)",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "5211",
   "ticker": "HD"
  },
  "0000701985": {
@@ -1420,7 +1420,7 @@
   "current": true,
   "name": "Norfolk Southern",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "4011",
   "ticker": "NSC"
  },
  "0000707549": {
@@ -1428,7 +1428,7 @@
   "current": true,
   "name": "Lam Research",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3559",
   "ticker": "LRCX"
  },
  "0000711404": {
@@ -1436,7 +1436,7 @@
   "current": true,
   "name": "Cooper Companies (The)",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "3851",
   "ticker": "COO"
  },
  "0000712515": {
@@ -1451,7 +1451,7 @@
   "current": true,
   "name": "PNC Financial Services",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6021",
   "ticker": "PNC"
  },
  "0000715957": {
@@ -1459,7 +1459,7 @@
   "current": true,
   "name": "Dominion Energy",
   "sector": "Utilities",
-  "sic": null,
+  "sic": "4911",
   "ticker": "D"
  },
  "0000718877": {
@@ -1481,7 +1481,7 @@
   "current": true,
   "name": "Williams-Sonoma, Inc.",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "5700",
   "ticker": "WSM"
  },
  "0000720005": {
@@ -1489,7 +1489,7 @@
   "current": true,
   "name": "Raymond James Financial",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6211",
   "ticker": "RJF"
  },
  "0000721371": {
@@ -1497,7 +1497,7 @@
   "current": true,
   "name": "Cardinal Health",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "5122",
   "ticker": "CAH"
  },
  "0000721683": {
@@ -1512,7 +1512,7 @@
   "current": true,
   "name": "Micron Technology",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3674",
   "ticker": "MU"
  },
  "0000723254": {
@@ -1520,7 +1520,7 @@
   "current": true,
   "name": "Cintas",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "2320",
   "ticker": "CTAS"
  },
  "0000723531": {
@@ -1528,7 +1528,7 @@
   "current": true,
   "name": "Paychex",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "8700",
   "ticker": "PAYX"
  },
  "0000726728": {
@@ -1536,7 +1536,7 @@
   "current": true,
   "name": "Realty Income",
   "sector": "Real Estate",
-  "sic": null,
+  "sic": "6798",
   "ticker": "O"
  },
  "0000726958": {
@@ -1544,7 +1544,7 @@
   "current": true,
   "name": "Casey's",
   "sector": "Consumer Staples",
-  "sic": null,
+  "sic": "5500",
   "ticker": "CASY"
  },
  "0000728535": {
@@ -1552,7 +1552,7 @@
   "current": true,
   "name": "J.B. Hunt",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "4213",
   "ticker": "JBHT"
  },
  "0000731766": {
@@ -1560,7 +1560,7 @@
   "current": true,
   "name": "UnitedHealth Group",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "6324",
   "ticker": "UNH"
  },
  "0000731802": {
@@ -1568,7 +1568,7 @@
   "current": true,
   "name": "Atmos Energy",
   "sector": "Utilities",
-  "sic": null,
+  "sic": "4924",
   "ticker": "ATO"
  },
  "0000732712": {
@@ -1576,7 +1576,7 @@
   "current": true,
   "name": "Verizon",
   "sector": "Communication Services",
-  "sic": null,
+  "sic": "4813",
   "ticker": "VZ"
  },
  "0000732717": {
@@ -1584,7 +1584,7 @@
   "current": true,
   "name": "AT&T",
   "sector": "Communication Services",
-  "sic": null,
+  "sic": "4813",
   "ticker": "T"
  },
  "0000740260": {
@@ -1592,7 +1592,7 @@
   "current": true,
   "name": "Ventas",
   "sector": "Real Estate",
-  "sic": null,
+  "sic": "6798",
   "ticker": "VTR"
  },
  "0000743316": {
@@ -1614,7 +1614,7 @@
   "current": true,
   "name": "Ross Stores",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "5651",
   "ticker": "ROST"
  },
  "0000746515": {
@@ -1622,7 +1622,7 @@
   "current": true,
   "name": "Expeditors International",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "4731",
   "ticker": "EXPD"
  },
  "0000749251": {
@@ -1630,7 +1630,7 @@
   "current": true,
   "name": "Gartner",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "8741",
   "ticker": "IT"
  },
  "0000750556": {
@@ -1645,7 +1645,7 @@
   "current": true,
   "name": "NextEra Energy",
   "sector": "Utilities",
-  "sic": null,
+  "sic": "4911",
   "ticker": "NEE"
  },
  "0000759944": {
@@ -1653,7 +1653,7 @@
   "current": true,
   "name": "Citizens Financial Group",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6022",
   "ticker": "CFG"
  },
  "0000764180": {
@@ -1661,7 +1661,7 @@
   "current": true,
   "name": "Altria",
   "sector": "Consumer Staples",
-  "sic": null,
+  "sic": "2111",
   "ticker": "MO"
  },
  "0000764478": {
@@ -1669,7 +1669,7 @@
   "current": true,
   "name": "Best Buy",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "5731",
   "ticker": "BBY"
  },
  "0000764622": {
@@ -1677,7 +1677,7 @@
   "current": true,
   "name": "Pinnacle West Capital",
   "sector": "Utilities",
-  "sic": null,
+  "sic": "4911",
   "ticker": "PNW"
  },
  "0000765880": {
@@ -1685,7 +1685,7 @@
   "current": true,
   "name": "Healthpeak Properties",
   "sector": "Real Estate",
-  "sic": null,
+  "sic": "6798",
   "ticker": "DOC"
  },
  "0000766421": {
@@ -1700,7 +1700,7 @@
   "current": true,
   "name": "Welltower",
   "sector": "Real Estate",
-  "sic": null,
+  "sic": "6798",
   "ticker": "WELL"
  },
  "0000769397": {
@@ -1708,7 +1708,7 @@
   "current": true,
   "name": "Autodesk",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "7372",
   "ticker": "ADSK"
  },
  "0000773840": {
@@ -1716,7 +1716,7 @@
   "current": true,
   "name": "Honeywell Technologies",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3724",
   "ticker": "HON"
  },
  "0000773910": {
@@ -1731,7 +1731,7 @@
   "current": true,
   "name": "Jack Henry & Associates",
   "sector": "Financials",
-  "sic": null,
+  "sic": "7373",
   "ticker": "JKHY"
  },
  "0000783280": {
@@ -1746,7 +1746,7 @@
   "current": true,
   "name": "WEC Energy Group",
   "sector": "Utilities",
-  "sic": null,
+  "sic": "4931",
   "ticker": "WEC"
  },
  "0000788784": {
@@ -1754,7 +1754,7 @@
   "current": true,
   "name": "Public Service Enterprise Group",
   "sector": "Utilities",
-  "sic": null,
+  "sic": "4931",
   "ticker": "PEG"
  },
  "0000789019": {
@@ -1762,7 +1762,7 @@
   "current": true,
   "name": "Microsoft",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "7372",
   "ticker": "MSFT"
  },
  "0000789570": {
@@ -1770,7 +1770,7 @@
   "current": true,
   "name": "MGM Resorts",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "7011",
   "ticker": "MGM"
  },
  "0000793952": {
@@ -1792,7 +1792,7 @@
   "current": true,
   "name": "Adobe Inc.",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "7372",
   "ticker": "ADBE"
  },
  "0000797468": {
@@ -1800,7 +1800,7 @@
   "current": true,
   "name": "Occidental Petroleum",
   "sector": "Energy",
-  "sic": null,
+  "sic": "1311",
   "ticker": "OXY"
  },
  "0000798354": {
@@ -1808,7 +1808,7 @@
   "current": true,
   "name": "Fiserv",
   "sector": "Financials",
-  "sic": null,
+  "sic": "7389",
   "ticker": "FISV"
  },
  "0000804328": {
@@ -1816,7 +1816,7 @@
   "current": true,
   "name": "Qualcomm",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3663",
   "ticker": "QCOM"
  },
  "0000804753": {
@@ -1831,7 +1831,7 @@
   "current": true,
   "name": "CMS Energy",
   "sector": "Utilities",
-  "sic": null,
+  "sic": "4931",
   "ticker": "CMS"
  },
  "0000813672": {
@@ -1839,7 +1839,7 @@
   "current": true,
   "name": "Cadence Design Systems",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "7372",
   "ticker": "CDNS"
  },
  "0000814453": {
@@ -1854,7 +1854,7 @@
   "current": true,
   "name": "Fair Isaac",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "7389",
   "ticker": "FICO"
  },
  "0000815094": {
@@ -1869,7 +1869,7 @@
   "current": true,
   "name": "Carnival Corporation",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "4400",
   "ticker": "CCL"
  },
  "0000815556": {
@@ -1877,7 +1877,7 @@
   "current": true,
   "name": "Fastenal",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "5200",
   "ticker": "FAST"
  },
  "0000816284": {
@@ -1899,7 +1899,7 @@
   "current": true,
   "name": "Ameriprise Financial",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6282",
   "ticker": "AMP"
  },
  "0000820313": {
@@ -1907,7 +1907,7 @@
   "current": true,
   "name": "Amphenol",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3678",
   "ticker": "APH"
  },
  "0000820318": {
@@ -1915,7 +1915,7 @@
   "current": true,
   "name": "Coherent Corp.",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3827",
   "ticker": "COHR"
  },
  "0000821189": {
@@ -1923,7 +1923,7 @@
   "current": true,
   "name": "EOG Resources",
   "sector": "Energy",
-  "sic": null,
+  "sic": "1311",
   "ticker": "EOG"
  },
  "0000822416": {
@@ -1931,7 +1931,7 @@
   "current": true,
   "name": "PulteGroup",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "1531",
   "ticker": "PHM"
  },
  "0000823768": {
@@ -1939,7 +1939,7 @@
   "current": true,
   "name": "Waste Management",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "4953",
   "ticker": "WM"
  },
  "0000827052": {
@@ -1947,7 +1947,7 @@
   "current": true,
   "name": "Edison International",
   "sector": "Utilities",
-  "sic": null,
+  "sic": "4911",
   "ticker": "EIX"
  },
  "0000827054": {
@@ -1955,7 +1955,7 @@
   "current": true,
   "name": "Microchip Technology",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3674",
   "ticker": "MCHP"
  },
  "0000829224": {
@@ -1963,7 +1963,7 @@
   "current": true,
   "name": "Starbucks",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "5810",
   "ticker": "SBUX"
  },
  "0000831001": {
@@ -1971,7 +1971,7 @@
   "current": true,
   "name": "Citigroup",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6021",
   "ticker": "C"
  },
  "0000831259": {
@@ -1979,7 +1979,7 @@
   "current": true,
   "name": "Freeport-McMoRan",
   "sector": "Materials",
-  "sic": null,
+  "sic": "1000",
   "ticker": "FCX"
  },
  "0000832101": {
@@ -1987,7 +1987,7 @@
   "current": true,
   "name": "IDEX Corporation",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3561",
   "ticker": "IEX"
  },
  "0000833444": {
@@ -1995,7 +1995,7 @@
   "current": true,
   "name": "Johnson Controls",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3585",
   "ticker": "JCI"
  },
  "0000842023": {
@@ -2003,7 +2003,7 @@
   "current": true,
   "name": "Bio-Techne",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "2836",
   "ticker": "TECH"
  },
  "0000849395": {
@@ -2011,7 +2011,7 @@
   "current": true,
   "name": "CRH plc",
   "sector": "Materials",
-  "sic": null,
+  "sic": "3241",
   "ticker": "CRH"
  },
  "0000849399": {
@@ -2019,7 +2019,7 @@
   "current": true,
   "name": "Gen Digital",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "7372",
   "ticker": "GEN"
  },
  "0000850209": {
@@ -2041,7 +2041,7 @@
   "current": true,
   "name": "PTC Inc.",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "7372",
   "ticker": "PTC"
  },
  "0000858470": {
@@ -2056,7 +2056,7 @@
   "current": true,
   "name": "Cisco",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3576",
   "ticker": "CSCO"
  },
  "0000859737": {
@@ -2071,7 +2071,7 @@
   "current": true,
   "name": "HCA Healthcare",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "8062",
   "ticker": "HCA"
  },
  "0000860731": {
@@ -2079,7 +2079,7 @@
   "current": true,
   "name": "Tyler Technologies",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "7372",
   "ticker": "TYL"
  },
  "0000864749": {
@@ -2087,7 +2087,7 @@
   "current": true,
   "name": "Trimble Inc.",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3829",
   "ticker": "TRMB"
  },
  "0000865752": {
@@ -2095,7 +2095,7 @@
   "current": true,
   "name": "Monster Beverage",
   "sector": "Consumer Staples",
-  "sic": null,
+  "sic": "2086",
   "ticker": "MNST"
  },
  "0000866374": {
@@ -2103,7 +2103,7 @@
   "current": true,
   "name": "Flex Ltd.",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3672",
   "ticker": "FLEX"
  },
  "0000866787": {
@@ -2111,7 +2111,7 @@
   "current": true,
   "name": "AutoZone",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "5531",
   "ticker": "AZO"
  },
  "0000872589": {
@@ -2119,7 +2119,7 @@
   "current": true,
   "name": "Regeneron Pharmaceuticals",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "2834",
   "ticker": "REGN"
  },
  "0000874716": {
@@ -2127,7 +2127,7 @@
   "current": true,
   "name": "Idexx Laboratories",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "2835",
   "ticker": "IDXX"
  },
  "0000874761": {
@@ -2135,7 +2135,7 @@
   "current": true,
   "name": "AES Corporation",
   "sector": "Utilities",
-  "sic": null,
+  "sic": "4991",
   "ticker": "AES"
  },
  "0000874766": {
@@ -2143,7 +2143,7 @@
   "current": true,
   "name": "Hartford (The)",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6331",
   "ticker": "HIG"
  },
  "0000875045": {
@@ -2151,7 +2151,7 @@
   "current": true,
   "name": "Biogen",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "2836",
   "ticker": "BIIB"
  },
  "0000875320": {
@@ -2159,7 +2159,7 @@
   "current": true,
   "name": "Vertex Pharmaceuticals",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "2834",
   "ticker": "VRTX"
  },
  "0000877212": {
@@ -2167,7 +2167,7 @@
   "current": true,
   "name": "Zebra Technologies",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3560",
   "ticker": "ZBRA"
  },
  "0000877890": {
@@ -2182,7 +2182,7 @@
   "current": true,
   "name": "Old Dominion",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "4213",
   "ticker": "ODFL"
  },
  "0000879101": {
@@ -2190,7 +2190,7 @@
   "current": true,
   "name": "Kimco Realty",
   "sector": "Real Estate",
-  "sic": null,
+  "sic": "6798",
   "ticker": "KIM"
  },
  "0000879169": {
@@ -2198,7 +2198,7 @@
   "current": true,
   "name": "Incyte",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "8731",
   "ticker": "INCY"
  },
  "0000882095": {
@@ -2206,7 +2206,7 @@
   "current": true,
   "name": "Gilead Sciences",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "2836",
   "ticker": "GILD"
  },
  "0000882184": {
@@ -2214,7 +2214,7 @@
   "current": true,
   "name": "D. R. Horton",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "1531",
   "ticker": "DHI"
  },
  "0000882835": {
@@ -2222,7 +2222,7 @@
   "current": true,
   "name": "Roper Technologies",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3823",
   "ticker": "ROP"
  },
  "0000883241": {
@@ -2230,7 +2230,7 @@
   "current": true,
   "name": "Synopsys",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "7372",
   "ticker": "SNPS"
  },
  "0000884887": {
@@ -2238,7 +2238,7 @@
   "current": true,
   "name": "Royal Caribbean Group",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "4400",
   "ticker": "RCL"
  },
  "0000885639": {
@@ -2253,7 +2253,7 @@
   "current": true,
   "name": "Boston Scientific",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "3841",
   "ticker": "BSX"
  },
  "0000886982": {
@@ -2261,7 +2261,7 @@
   "current": true,
   "name": "Goldman Sachs",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6211",
   "ticker": "GS"
  },
  "0000891103": {
@@ -2276,7 +2276,7 @@
   "current": true,
   "name": "Expand Energy",
   "sector": "Energy",
-  "sic": null,
+  "sic": "1311",
   "ticker": "EXE"
  },
  "0000895421": {
@@ -2284,7 +2284,7 @@
   "current": true,
   "name": "Morgan Stanley",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6211",
   "ticker": "MS"
  },
  "0000896159": {
@@ -2292,7 +2292,7 @@
   "current": true,
   "name": "Chubb Limited",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6331",
   "ticker": "CB"
  },
  "0000896878": {
@@ -2300,7 +2300,7 @@
   "current": true,
   "name": "Intuit",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "7372",
   "ticker": "INTU"
  },
  "0000898173": {
@@ -2308,7 +2308,7 @@
   "current": true,
   "name": "O'Reilly Automotive",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "5531",
   "ticker": "ORLY"
  },
  "0000898293": {
@@ -2316,7 +2316,7 @@
   "current": true,
   "name": "Jabil",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3672",
   "ticker": "JBL"
  },
  "0000899051": {
@@ -2324,7 +2324,7 @@
   "current": true,
   "name": "Allstate",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6331",
   "ticker": "ALL"
  },
  "0000899689": {
@@ -2346,7 +2346,7 @@
   "current": true,
   "name": "Copart",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "5500",
   "ticker": "CPRT"
  },
  "0000906107": {
@@ -2354,7 +2354,7 @@
   "current": true,
   "name": "Vivmark Residential",
   "sector": "Real Estate",
-  "sic": null,
+  "sic": "6798",
   "ticker": "VMRK"
  },
  "0000906163": {
@@ -2362,7 +2362,7 @@
   "current": true,
   "name": "NVR, Inc.",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "1531",
   "ticker": "NVR"
  },
  "0000906345": {
@@ -2370,7 +2370,7 @@
   "current": true,
   "name": "Camden Property Trust",
   "sector": "Real Estate",
-  "sic": null,
+  "sic": "6798",
   "ticker": "CPT"
  },
  "0000906709": {
@@ -2392,7 +2392,7 @@
   "current": true,
   "name": "Costco",
   "sector": "Consumer Staples",
-  "sic": null,
+  "sic": "5331",
   "ticker": "COST"
  },
  "0000910521": {
@@ -2400,7 +2400,7 @@
   "current": true,
   "name": "Deckers Brands",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "3021",
   "ticker": "DECK"
  },
  "0000910606": {
@@ -2408,7 +2408,7 @@
   "current": true,
   "name": "Regency Centers",
   "sector": "Real Estate",
-  "sic": null,
+  "sic": "6798",
   "ticker": "REG"
  },
  "0000912242": {
@@ -2423,7 +2423,7 @@
   "current": true,
   "name": "Mid-America Apartment Communities",
   "sector": "Real Estate",
-  "sic": null,
+  "sic": "6798",
   "ticker": "MAA"
  },
  "0000914208": {
@@ -2431,7 +2431,7 @@
   "current": true,
   "name": "Invesco",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6282",
   "ticker": "IVZ"
  },
  "0000915389": {
@@ -2453,7 +2453,7 @@
   "current": true,
   "name": "Albemarle Corporation",
   "sector": "Materials",
-  "sic": null,
+  "sic": "2821",
   "ticker": "ALB"
  },
  "0000916076": {
@@ -2461,7 +2461,7 @@
   "current": true,
   "name": "Martin Marietta Materials",
   "sector": "Materials",
-  "sic": null,
+  "sic": "1400",
   "ticker": "MLM"
  },
  "0000916365": {
@@ -2469,7 +2469,7 @@
   "current": true,
   "name": "Tractor Supply",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "5200",
   "ticker": "TSCO"
  },
  "0000920148": {
@@ -2477,7 +2477,7 @@
   "current": true,
   "name": "Labcorp",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "8071",
   "ticker": "LH"
  },
  "0000920522": {
@@ -2485,7 +2485,7 @@
   "current": true,
   "name": "Essex Property Trust",
   "sector": "Real Estate",
-  "sic": null,
+  "sic": "6798",
   "ticker": "ESS"
  },
  "0000920760": {
@@ -2493,7 +2493,7 @@
   "current": true,
   "name": "Lennar",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "1520",
   "ticker": "LEN"
  },
  "0000921738": {
@@ -2508,7 +2508,7 @@
   "current": true,
   "name": "PPL Corporation",
   "sector": "Utilities",
-  "sic": null,
+  "sic": "4911",
   "ticker": "PPL"
  },
  "0000922621": {
@@ -2516,7 +2516,7 @@
   "current": true,
   "name": "Erie Indemnity",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6411",
   "ticker": "ERIE"
  },
  "0000922864": {
@@ -2531,7 +2531,7 @@
   "current": true,
   "name": "DaVita",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "8090",
   "ticker": "DVA"
  },
  "0000927628": {
@@ -2539,7 +2539,7 @@
   "current": true,
   "name": "Capital One",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6021",
   "ticker": "COF"
  },
  "0000927653": {
@@ -2547,7 +2547,7 @@
   "current": true,
   "name": "McKesson Corporation",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "5122",
   "ticker": "MCK"
  },
  "0000935703": {
@@ -2555,7 +2555,7 @@
   "current": true,
   "name": "Dollar Tree",
   "sector": "Consumer Staples",
-  "sic": null,
+  "sic": "5331",
   "ticker": "DLTR"
  },
  "0000936340": {
@@ -2563,7 +2563,7 @@
   "current": true,
   "name": "DTE Energy",
   "sector": "Utilities",
-  "sic": null,
+  "sic": "4911",
   "ticker": "DTE"
  },
  "0000936395": {
@@ -2571,7 +2571,7 @@
   "current": true,
   "name": "Ciena",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3661",
   "ticker": "CIEN"
  },
  "0000936468": {
@@ -2579,7 +2579,7 @@
   "current": true,
   "name": "Lockheed Martin",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3760",
   "ticker": "LMT"
  },
  "0000940944": {
@@ -2587,7 +2587,7 @@
   "current": true,
   "name": "Darden Restaurants",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "5812",
   "ticker": "DRI"
  },
  "0000943452": {
@@ -2595,7 +2595,7 @@
   "current": true,
   "name": "Wabtec",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3743",
   "ticker": "WAB"
  },
  "0000943819": {
@@ -2603,7 +2603,7 @@
   "current": true,
   "name": "ResMed|",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "3841",
   "ticker": "RMD"
  },
  "0000945841": {
@@ -2618,7 +2618,7 @@
   "current": true,
   "name": "Take-Two Interactive",
   "sector": "Communication Services",
-  "sic": null,
+  "sic": "7372",
   "ticker": "TTWO"
  },
  "0000947484": {
@@ -2626,7 +2626,7 @@
   "current": true,
   "name": "Arch Capital Group",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6331",
   "ticker": "ACGL"
  },
  "0001000228": {
@@ -2634,7 +2634,7 @@
   "current": true,
   "name": "Henry Schein",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "5047",
   "ticker": "HSIC"
  },
  "0001000697": {
@@ -2642,7 +2642,7 @@
   "current": true,
   "name": "Waters Corporation",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "3826",
   "ticker": "WAT"
  },
  "0001001082": {
@@ -2657,7 +2657,7 @@
   "current": true,
   "name": "Estée Lauder Companies (The)",
   "sector": "Consumer Staples",
-  "sic": null,
+  "sic": "2844",
   "ticker": "EL"
  },
  "0001002047": {
@@ -2665,7 +2665,7 @@
   "current": true,
   "name": "NetApp",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3572",
   "ticker": "NTAP"
  },
  "0001002910": {
@@ -2673,7 +2673,7 @@
   "current": true,
   "name": "Ameren",
   "sector": "Utilities",
-  "sic": null,
+  "sic": "4931",
   "ticker": "AEE"
  },
  "0001004434": {
@@ -2688,7 +2688,7 @@
   "current": true,
   "name": "PG&E Corporation",
   "sector": "Utilities",
-  "sic": null,
+  "sic": "4931",
   "ticker": "PCG"
  },
  "0001012100": {
@@ -2703,7 +2703,7 @@
   "current": true,
   "name": "FactSet",
   "sector": "Financials",
-  "sic": null,
+  "sic": "7370",
   "ticker": "FDS"
  },
  "0001013462": {
@@ -2718,7 +2718,7 @@
   "current": true,
   "name": "NRG Energy",
   "sector": "Utilities",
-  "sic": null,
+  "sic": "4911",
   "ticker": "NRG"
  },
  "0001014473": {
@@ -2726,7 +2726,7 @@
   "current": true,
   "name": "Verisign",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "7371",
   "ticker": "VRSN"
  },
  "0001015780": {
@@ -2741,7 +2741,7 @@
   "current": true,
   "name": "Amazon",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "5961",
   "ticker": "AMZN"
  },
  "0001020569": {
@@ -2749,7 +2749,7 @@
   "current": true,
   "name": "Iron Mountain",
   "sector": "Real Estate",
-  "sic": null,
+  "sic": "6798",
   "ticker": "IRM"
  },
  "0001021860": {
@@ -2764,7 +2764,7 @@
   "current": true,
   "name": "Quest Diagnostics",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "8071",
   "ticker": "DGX"
  },
  "0001022671": {
@@ -2772,7 +2772,7 @@
   "current": true,
   "name": "Steel Dynamics",
   "sector": "Materials",
-  "sic": null,
+  "sic": "3312",
   "ticker": "STLD"
  },
  "0001024305": {
@@ -2787,7 +2787,7 @@
   "current": true,
   "name": "Rockwell Automation",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3829",
   "ticker": "ROK"
  },
  "0001031296": {
@@ -2795,7 +2795,7 @@
   "current": true,
   "name": "FirstEnergy",
   "sector": "Utilities",
-  "sic": null,
+  "sic": "4911",
   "ticker": "FE"
  },
  "0001032208": {
@@ -2803,7 +2803,7 @@
   "current": true,
   "name": "Sempra",
   "sector": "Utilities",
-  "sic": null,
+  "sic": "4932",
   "ticker": "SRE"
  },
  "0001034054": {
@@ -2811,7 +2811,7 @@
   "current": true,
   "name": "SBA Communications",
   "sector": "Real Estate",
-  "sic": null,
+  "sic": "6798",
   "ticker": "SBAC"
  },
  "0001035002": {
@@ -2819,7 +2819,7 @@
   "current": true,
   "name": "Valero Energy",
   "sector": "Energy",
-  "sic": null,
+  "sic": "2911",
   "ticker": "VLO"
  },
  "0001035267": {
@@ -2827,7 +2827,7 @@
   "current": true,
   "name": "Intuitive Surgical",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "3842",
   "ticker": "ISRG"
  },
  "0001035443": {
@@ -2835,7 +2835,7 @@
   "current": true,
   "name": "Alexandria Real Estate Equities",
   "sector": "Real Estate",
-  "sic": null,
+  "sic": "6798",
   "ticker": "ARE"
  },
  "0001035983": {
@@ -2843,7 +2843,7 @@
   "current": true,
   "name": "Comfort Systems USA",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "1731",
   "ticker": "FIX"
  },
  "0001037038": {
@@ -2851,7 +2851,7 @@
   "current": true,
   "name": "Ralph Lauren Corporation",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "2320",
   "ticker": "RL"
  },
  "0001037540": {
@@ -2859,7 +2859,7 @@
   "current": true,
   "name": "BXP, Inc.",
   "sector": "Real Estate",
-  "sic": null,
+  "sic": "6798",
   "ticker": "BXP"
  },
  "0001037646": {
@@ -2867,7 +2867,7 @@
   "current": true,
   "name": "Mettler Toledo",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "3826",
   "ticker": "MTD"
  },
  "0001037868": {
@@ -2875,7 +2875,7 @@
   "current": true,
   "name": "Ametek",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3823",
   "ticker": "AME"
  },
  "0001038357": {
@@ -2897,7 +2897,7 @@
   "current": true,
   "name": "Oneok",
   "sector": "Energy",
-  "sic": null,
+  "sic": "4923",
   "ticker": "OKE"
  },
  "0001040971": {
@@ -2912,7 +2912,7 @@
   "current": true,
   "name": "Yum! Brands",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "5812",
   "ticker": "YUM"
  },
  "0001043277": {
@@ -2920,7 +2920,7 @@
   "current": true,
   "name": "C.H. Robinson",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "4731",
   "ticker": "CHRW"
  },
  "0001043604": {
@@ -2935,7 +2935,7 @@
   "current": true,
   "name": "Prologis",
   "sector": "Real Estate",
-  "sic": null,
+  "sic": "6798",
   "ticker": "PLD"
  },
  "0001045810": {
@@ -2943,7 +2943,7 @@
   "current": true,
   "name": "Nvidia",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3674",
   "ticker": "NVDA"
  },
  "0001047122": {
@@ -2958,7 +2958,7 @@
   "current": true,
   "name": "Consolidated Edison",
   "sector": "Utilities",
-  "sic": null,
+  "sic": "4931",
   "ticker": "ED"
  },
  "0001048286": {
@@ -2966,7 +2966,7 @@
   "current": true,
   "name": "Marriott International",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "7011",
   "ticker": "MAR"
  },
  "0001048695": {
@@ -2974,7 +2974,7 @@
   "current": true,
   "name": "F5, Inc.",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3576",
   "ticker": "FFIV"
  },
  "0001048911": {
@@ -2982,7 +2982,7 @@
   "current": true,
   "name": "FedEx",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "4513",
   "ticker": "FDX"
  },
  "0001050915": {
@@ -2990,7 +2990,7 @@
   "current": true,
   "name": "Quanta Services",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "1731",
   "ticker": "PWR"
  },
  "0001051470": {
@@ -2998,7 +2998,7 @@
   "current": true,
   "name": "Crown Castle",
   "sector": "Real Estate",
-  "sic": null,
+  "sic": "6798",
   "ticker": "CCI"
  },
  "0001053507": {
@@ -3006,7 +3006,7 @@
   "current": true,
   "name": "American Tower",
   "sector": "Real Estate",
-  "sic": null,
+  "sic": "6798",
   "ticker": "AMT"
  },
  "0001057352": {
@@ -3014,7 +3014,7 @@
   "current": true,
   "name": "CoStar Group",
   "sector": "Real Estate",
-  "sic": null,
+  "sic": "7389",
   "ticker": "CSGP"
  },
  "0001058090": {
@@ -3022,7 +3022,7 @@
   "current": true,
   "name": "Chipotle Mexican Grill",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "5812",
   "ticker": "CMG"
  },
  "0001058290": {
@@ -3030,7 +3030,7 @@
   "current": true,
   "name": "Cognizant",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "7371",
   "ticker": "CTSH"
  },
  "0001059556": {
@@ -3038,7 +3038,7 @@
   "current": true,
   "name": "Moody's Corporation",
   "sector": "Financials",
-  "sic": null,
+  "sic": "7320",
   "ticker": "MCO"
  },
  "0001060391": {
@@ -3046,7 +3046,7 @@
   "current": true,
   "name": "Republic Services",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "4953",
   "ticker": "RSG"
  },
  "0001063761": {
@@ -3054,7 +3054,7 @@
   "current": true,
   "name": "Simon Property Group",
   "sector": "Real Estate",
-  "sic": null,
+  "sic": "6798",
   "ticker": "SPG"
  },
  "0001065088": {
@@ -3062,7 +3062,7 @@
   "current": true,
   "name": "eBay Inc.",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "7389",
   "ticker": "EBAY"
  },
  "0001065280": {
@@ -3070,7 +3070,7 @@
   "current": true,
   "name": "Netflix",
   "sector": "Communication Services",
-  "sic": null,
+  "sic": "7841",
   "ticker": "NFLX"
  },
  "0001065696": {
@@ -3085,7 +3085,7 @@
   "current": true,
   "name": "United Rentals",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "7359",
   "ticker": "URI"
  },
  "0001067983": {
@@ -3093,7 +3093,7 @@
   "current": true,
   "name": "Berkshire Hathaway",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6331",
   "ticker": "BRK.B"
  },
  "0001069183": {
@@ -3101,7 +3101,7 @@
   "current": true,
   "name": "Axon Enterprise",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3480",
   "ticker": "AXON"
  },
  "0001069202": {
@@ -3109,7 +3109,7 @@
   "current": true,
   "name": "Lennox International",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3585",
   "ticker": "LII"
  },
  "0001070750": {
@@ -3117,7 +3117,7 @@
   "current": true,
   "name": "Host Hotels & Resorts",
   "sector": "Real Estate",
-  "sic": null,
+  "sic": "6798",
   "ticker": "HST"
  },
  "0001071739": {
@@ -3125,7 +3125,7 @@
   "current": true,
   "name": "Centene Corporation",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "6324",
   "ticker": "CNC"
  },
  "0001075531": {
@@ -3133,7 +3133,7 @@
   "current": true,
   "name": "Booking Holdings",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "4700",
   "ticker": "BKNG"
  },
  "0001086222": {
@@ -3141,7 +3141,7 @@
   "current": true,
   "name": "Akamai Technologies",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "7389",
   "ticker": "AKAM"
  },
  "0001087423": {
@@ -3156,7 +3156,7 @@
   "current": true,
   "name": "Devon Energy",
   "sector": "Energy",
-  "sic": null,
+  "sic": "1311",
   "ticker": "DVN"
  },
  "0001090727": {
@@ -3164,7 +3164,7 @@
   "current": true,
   "name": "United Parcel Service",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "4210",
   "ticker": "UPS"
  },
  "0001090872": {
@@ -3172,7 +3172,7 @@
   "current": true,
   "name": "Agilent Technologies",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "3826",
   "ticker": "A"
  },
  "0001091667": {
@@ -3180,7 +3180,7 @@
   "current": true,
   "name": "Charter Communications",
   "sector": "Communication Services",
-  "sic": null,
+  "sic": "4841",
   "ticker": "CHTR"
  },
  "0001093557": {
@@ -3188,7 +3188,7 @@
   "current": true,
   "name": "Dexcom",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "3841",
   "ticker": "DXCM"
  },
  "0001094285": {
@@ -3196,7 +3196,7 @@
   "current": true,
   "name": "Teledyne Technologies",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3812",
   "ticker": "TDY"
  },
  "0001095073": {
@@ -3204,7 +3204,7 @@
   "current": true,
   "name": "Everest Group",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6331",
   "ticker": "EG"
  },
  "0001097149": {
@@ -3212,7 +3212,7 @@
   "current": true,
   "name": "Align Technology",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "3842",
   "ticker": "ALGN"
  },
  "0001097864": {
@@ -3220,7 +3220,7 @@
   "current": true,
   "name": "ON Semiconductor",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3674",
   "ticker": "ON"
  },
  "0001099219": {
@@ -3228,7 +3228,7 @@
   "current": true,
   "name": "MetLife",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6311",
   "ticker": "MET"
  },
  "0001099800": {
@@ -3236,7 +3236,7 @@
   "current": true,
   "name": "Edwards Lifesciences",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "3842",
   "ticker": "EW"
  },
  "0001100682": {
@@ -3244,7 +3244,7 @@
   "current": true,
   "name": "Charles River Laboratories",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "8731",
   "ticker": "CRL"
  },
  "0001101215": {
@@ -3259,7 +3259,7 @@
   "current": true,
   "name": "Equinix",
   "sector": "Real Estate",
-  "sic": null,
+  "sic": "6798",
   "ticker": "EQIX"
  },
  "0001103982": {
@@ -3267,7 +3267,7 @@
   "current": true,
   "name": "Mondelez International",
   "sector": "Consumer Staples",
-  "sic": null,
+  "sic": "2000",
   "ticker": "MDLZ"
  },
  "0001108524": {
@@ -3275,7 +3275,7 @@
   "current": true,
   "name": "Salesforce",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "7372",
   "ticker": "CRM"
  },
  "0001109357": {
@@ -3283,7 +3283,7 @@
   "current": true,
   "name": "Exelon",
   "sector": "Utilities",
-  "sic": null,
+  "sic": "4931",
   "ticker": "EXC"
  },
  "0001110803": {
@@ -3291,7 +3291,7 @@
   "current": true,
   "name": "Illumina, Inc.",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "3826",
   "ticker": "ILMN"
  },
  "0001111711": {
@@ -3299,7 +3299,7 @@
   "current": true,
   "name": "NiSource",
   "sector": "Utilities",
-  "sic": null,
+  "sic": "4931",
   "ticker": "NI"
  },
  "0001111928": {
@@ -3314,7 +3314,7 @@
   "current": true,
   "name": "T. Rowe Price",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6282",
   "ticker": "TROW"
  },
  "0001116132": {
@@ -3322,7 +3322,7 @@
   "current": true,
   "name": "Tapestry, Inc.",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "3100",
   "ticker": "TPR"
  },
  "0001120193": {
@@ -3330,7 +3330,7 @@
   "current": true,
   "name": "Nasdaq, Inc.",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6200",
   "ticker": "NDAQ"
  },
  "0001121788": {
@@ -3338,7 +3338,7 @@
   "current": true,
   "name": "Garmin",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "3812",
   "ticker": "GRMN"
  },
  "0001123360": {
@@ -3346,7 +3346,7 @@
   "current": true,
   "name": "Global Payments",
   "sector": "Financials",
-  "sic": null,
+  "sic": "7389",
   "ticker": "GPN"
  },
  "0001124198": {
@@ -3361,7 +3361,7 @@
   "current": true,
   "name": "Principal Financial Group",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6321",
   "ticker": "PFG"
  },
  "0001130310": {
@@ -3369,7 +3369,7 @@
   "current": true,
   "name": "CenterPoint Energy",
   "sector": "Utilities",
-  "sic": null,
+  "sic": "4911",
   "ticker": "CNP"
  },
  "0001133421": {
@@ -3377,7 +3377,7 @@
   "current": true,
   "name": "Northrop Grumman",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3812",
   "ticker": "NOC"
  },
  "0001136869": {
@@ -3385,7 +3385,7 @@
   "current": true,
   "name": "Zimmer Biomet",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "3842",
   "ticker": "ZBH"
  },
  "0001136893": {
@@ -3393,7 +3393,7 @@
   "current": true,
   "name": "Fidelity National Information Services",
   "sector": "Financials",
-  "sic": null,
+  "sic": "7389",
   "ticker": "FIS"
  },
  "0001137774": {
@@ -3401,7 +3401,7 @@
   "current": true,
   "name": "Prudential Financial",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6311",
   "ticker": "PRU"
  },
  "0001137789": {
@@ -3409,7 +3409,7 @@
   "current": true,
   "name": "Seagate Technology",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3572",
   "ticker": "STX"
  },
  "0001138118": {
@@ -3417,7 +3417,7 @@
   "current": true,
   "name": "CBRE Group",
   "sector": "Real Estate",
-  "sic": null,
+  "sic": "6500",
   "ticker": "CBRE"
  },
  "0001140536": {
@@ -3428,7 +3428,7 @@
   "current": true,
   "name": "Willis Towers Watson",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6411",
   "ticker": "WTW"
  },
  "0001140859": {
@@ -3436,7 +3436,7 @@
   "current": true,
   "name": "Cencora",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "5122",
   "ticker": "COR"
  },
  "0001141391": {
@@ -3444,7 +3444,7 @@
   "current": true,
   "name": "Mastercard",
   "sector": "Financials",
-  "sic": null,
+  "sic": "7389",
   "ticker": "MA"
  },
  "0001145197": {
@@ -3452,7 +3452,7 @@
   "current": true,
   "name": "Insulet Corporation",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "3841",
   "ticker": "PODD"
  },
  "0001156039": {
@@ -3460,7 +3460,7 @@
   "current": true,
   "name": "Elevance Health",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "6324",
   "ticker": "ELV"
  },
  "0001156375": {
@@ -3468,7 +3468,7 @@
   "current": true,
   "name": "CME Group",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6200",
   "ticker": "CME"
  },
  "0001158449": {
@@ -3483,7 +3483,7 @@
   "current": true,
   "name": "ConocoPhillips",
   "sector": "Energy",
-  "sic": null,
+  "sic": "2911",
   "ticker": "COP"
  },
  "0001164727": {
@@ -3491,7 +3491,7 @@
   "current": true,
   "name": "Newmont",
   "sector": "Materials",
-  "sic": null,
+  "sic": "1040",
   "ticker": "NEM"
  },
  "0001166691": {
@@ -3499,7 +3499,7 @@
   "current": true,
   "name": "Comcast",
   "sector": "Communication Services",
-  "sic": null,
+  "sic": "4841",
   "ticker": "CMCSA"
  },
  "0001168054": {
@@ -3521,7 +3521,7 @@
   "current": true,
   "name": "Wynn Resorts",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "7011",
   "ticker": "WYNN"
  },
  "0001175454": {
@@ -3529,7 +3529,7 @@
   "current": true,
   "name": "Corpay",
   "sector": "Financials",
-  "sic": null,
+  "sic": "7389",
   "ticker": "CPAY"
  },
  "0001176948": {
@@ -3537,7 +3537,7 @@
   "current": true,
   "name": "Ares Management",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6282",
   "ticker": "ARES"
  },
  "0001179929": {
@@ -3552,7 +3552,7 @@
   "current": true,
   "name": "TransDigm Group",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3728",
   "ticker": "TDG"
  },
  "0001262039": {
@@ -3560,7 +3560,7 @@
   "current": true,
   "name": "Fortinet",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3577",
   "ticker": "FTNT"
  },
  "0001267238": {
@@ -3568,7 +3568,7 @@
   "current": true,
   "name": "Assurant",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6399",
   "ticker": "AIZ"
  },
  "0001274494": {
@@ -3576,7 +3576,7 @@
   "current": true,
   "name": "First Solar",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3674",
   "ticker": "FSLR"
  },
  "0001278021": {
@@ -3598,7 +3598,7 @@
   "current": true,
   "name": "Monolithic Power Systems",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3674",
   "ticker": "MPWR"
  },
  "0001281761": {
@@ -3606,7 +3606,7 @@
   "current": true,
   "name": "Regions Financial Corporation",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6021",
   "ticker": "RF"
  },
  "0001283699": {
@@ -3614,7 +3614,7 @@
   "current": true,
   "name": "T-Mobile US",
   "sector": "Communication Services",
-  "sic": null,
+  "sic": "4812",
   "ticker": "TMUS"
  },
  "0001285785": {
@@ -3622,7 +3622,7 @@
   "current": true,
   "name": "Mosaic Company (The)",
   "sector": "Materials",
-  "sic": null,
+  "sic": "2870",
   "ticker": "MOS"
  },
  "0001286681": {
@@ -3630,7 +3630,7 @@
   "current": true,
   "name": "Domino's",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "5140",
   "ticker": "DPZ"
  },
  "0001289490": {
@@ -3638,7 +3638,7 @@
   "current": true,
   "name": "Extra Space Storage",
   "sector": "Real Estate",
-  "sic": null,
+  "sic": "6798",
   "ticker": "EXR"
  },
  "0001297996": {
@@ -3646,7 +3646,7 @@
   "current": true,
   "name": "Digital Realty",
   "sector": "Real Estate",
-  "sic": null,
+  "sic": "6798",
   "ticker": "DLR"
  },
  "0001300514": {
@@ -3654,7 +3654,7 @@
   "current": true,
   "name": "Las Vegas Sands",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "7011",
   "ticker": "LVS"
  },
  "0001306830": {
@@ -3676,7 +3676,7 @@
   "current": true,
   "name": "Tesla, Inc.",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "3711",
   "ticker": "TSLA"
  },
  "0001321655": {
@@ -3684,7 +3684,7 @@
   "current": true,
   "name": "Palantir Technologies",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "7372",
   "ticker": "PLTR"
  },
  "0001324404": {
@@ -3692,7 +3692,7 @@
   "current": true,
   "name": "CF Industries",
   "sector": "Materials",
-  "sic": null,
+  "sic": "2870",
   "ticker": "CF"
  },
  "0001324424": {
@@ -3700,7 +3700,7 @@
   "current": true,
   "name": "Expedia Group",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "4700",
   "ticker": "EXPE"
  },
  "0001326160": {
@@ -3708,7 +3708,7 @@
   "current": true,
   "name": "Duke Energy",
   "sector": "Utilities",
-  "sic": null,
+  "sic": "4931",
   "ticker": "DUK"
  },
  "0001326801": {
@@ -3716,7 +3716,7 @@
   "current": true,
   "name": "Meta Platforms",
   "sector": "Communication Services",
-  "sic": null,
+  "sic": "7370",
   "ticker": "META"
  },
  "0001327567": {
@@ -3724,7 +3724,7 @@
   "current": true,
   "name": "Palo Alto Networks",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3577",
   "ticker": "PANW"
  },
  "0001327811": {
@@ -3732,7 +3732,7 @@
   "current": true,
   "name": "Workday, Inc.",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "7374",
   "ticker": "WDAY"
  },
  "0001335258": {
@@ -3740,7 +3740,7 @@
   "current": true,
   "name": "Live Nation Entertainment",
   "sector": "Communication Services",
-  "sic": null,
+  "sic": "7900",
   "ticker": "LYV"
  },
  "0001336917": {
@@ -3755,7 +3755,7 @@
   "current": true,
   "name": "Leidos",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "7373",
   "ticker": "LDOS"
  },
  "0001339947": {
@@ -3770,7 +3770,7 @@
   "current": true,
   "name": "Oracle Corporation",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "7372",
   "ticker": "ORCL"
  },
  "0001352010": {
@@ -3813,7 +3813,7 @@
   "current": true,
   "name": "ServiceNow",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "7372",
   "ticker": "NOW"
  },
  "0001374310": {
@@ -3821,7 +3821,7 @@
   "current": true,
   "name": "Cboe Global Markets",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6200",
   "ticker": ""
  },
  "0001375365": {
@@ -3829,7 +3829,7 @@
   "current": true,
   "name": "Supermicro",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3571",
   "ticker": "SMCI"
  },
  "0001378946": {
@@ -3844,7 +3844,7 @@
   "current": true,
   "name": "Interactive Brokers",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6211",
   "ticker": "IBKR"
  },
  "0001383312": {
@@ -3852,7 +3852,7 @@
   "current": true,
   "name": "Broadridge Financial Solutions",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "7389",
   "ticker": "BR"
  },
  "0001385157": {
@@ -3860,7 +3860,7 @@
   "current": true,
   "name": "TE Connectivity",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "5065",
   "ticker": "TEL"
  },
  "0001389170": {
@@ -3868,7 +3868,7 @@
   "current": true,
   "name": "Targa Resources",
   "sector": "Energy",
-  "sic": null,
+  "sic": "4922",
   "ticker": "TRGP"
  },
  "0001390777": {
@@ -3876,7 +3876,7 @@
   "current": true,
   "name": "BNY Mellon",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6022",
   "ticker": "BNY"
  },
  "0001393052": {
@@ -3884,7 +3884,7 @@
   "current": true,
   "name": "Veeva Systems",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "7372",
   "ticker": "VEEV"
  },
  "0001393311": {
@@ -3892,7 +3892,7 @@
   "current": true,
   "name": "Public Storage",
   "sector": "Real Estate",
-  "sic": null,
+  "sic": "6798",
   "ticker": "PSA"
  },
  "0001393612": {
@@ -3907,7 +3907,7 @@
   "current": true,
   "name": "Blackstone Inc.",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6282",
   "ticker": "BX"
  },
  "0001396009": {
@@ -3915,7 +3915,7 @@
   "current": true,
   "name": "Vulcan Materials Company",
   "sector": "Materials",
-  "sic": null,
+  "sic": "1400",
   "ticker": "VMC"
  },
  "0001397187": {
@@ -3923,7 +3923,7 @@
   "current": true,
   "name": "Lululemon Athletica",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "2300",
   "ticker": "LULU"
  },
  "0001402057": {
@@ -3931,7 +3931,7 @@
   "current": true,
   "name": "CDW Corporation",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "5961",
   "ticker": "CDW"
  },
  "0001403161": {
@@ -3939,7 +3939,7 @@
   "current": true,
   "name": "Visa Inc.",
   "sector": "Financials",
-  "sic": null,
+  "sic": "7389",
   "ticker": "V"
  },
  "0001403568": {
@@ -3947,7 +3947,7 @@
   "current": true,
   "name": "Ulta Beauty",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "5990",
   "ticker": "ULTA"
  },
  "0001404912": {
@@ -3955,7 +3955,7 @@
   "current": true,
   "name": "KKR & Co.",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6282",
   "ticker": "KKR"
  },
  "0001408198": {
@@ -3963,7 +3963,7 @@
   "current": true,
   "name": "MSCI",
   "sector": "Financials",
-  "sic": null,
+  "sic": "7389",
   "ticker": "MSCI"
  },
  "0001410636": {
@@ -3971,7 +3971,7 @@
   "current": true,
   "name": "American Water Works",
   "sector": "Utilities",
-  "sic": null,
+  "sic": "4941",
   "ticker": "AWK"
  },
  "0001413329": {
@@ -3979,7 +3979,7 @@
   "current": true,
   "name": "Philip Morris International",
   "sector": "Consumer Staples",
-  "sic": null,
+  "sic": "2111",
   "ticker": "PM"
  },
  "0001413447": {
@@ -3987,7 +3987,7 @@
   "current": true,
   "name": "NXP Semiconductors",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3674",
   "ticker": "NXPI"
  },
  "0001415404": {
@@ -3995,7 +3995,7 @@
   "current": true,
   "name": "EchoStar",
   "sector": "Communication Services",
-  "sic": null,
+  "sic": "4899",
   "ticker": "ECHO"
  },
  "0001418091": {
@@ -4010,7 +4010,7 @@
   "current": true,
   "name": "Keurig Dr Pepper",
   "sector": "Consumer Staples",
-  "sic": null,
+  "sic": "2080",
   "ticker": "KDP"
  },
  "0001419612": {
@@ -4029,7 +4029,7 @@
   "current": true,
   "name": "Warner Bros. Discovery",
   "sector": "Communication Services",
-  "sic": null,
+  "sic": "4841",
   "ticker": "WBD"
  },
  "0001442145": {
@@ -4037,7 +4037,7 @@
   "current": true,
   "name": "Verisk Analytics",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "7374",
   "ticker": "VRSK"
  },
  "0001463101": {
@@ -4052,7 +4052,7 @@
   "current": true,
   "name": "Trane Technologies",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3822",
   "ticker": "TT"
  },
  "0001467373": {
@@ -4060,7 +4060,7 @@
   "current": true,
   "name": "Accenture",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "7389",
   "ticker": "ACN"
  },
  "0001467858": {
@@ -4068,7 +4068,7 @@
   "current": true,
   "name": "General Motors",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "3711",
   "ticker": "GM"
  },
  "0001474432": {
@@ -4076,7 +4076,7 @@
   "current": true,
   "name": "Everpure",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3572",
   "ticker": "P"
  },
  "0001474735": {
@@ -4084,7 +4084,7 @@
   "current": true,
   "name": "Generac",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3621",
   "ticker": "GNRC"
  },
  "0001478242": {
@@ -4092,7 +4092,7 @@
   "current": true,
   "name": "IQVIA",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "8731",
   "ticker": "IQV"
  },
  "0001489393": {
@@ -4100,7 +4100,7 @@
   "current": true,
   "name": "LyondellBasell",
   "sector": "Materials",
-  "sic": null,
+  "sic": "2860",
   "ticker": "LYB"
  },
  "0001492633": {
@@ -4115,7 +4115,7 @@
   "current": true,
   "name": "Huntington Ingalls Industries",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3730",
   "ticker": "HII"
  },
  "0001506307": {
@@ -4123,7 +4123,7 @@
   "current": true,
   "name": "Kinder Morgan",
   "sector": "Energy",
-  "sic": null,
+  "sic": "4922",
   "ticker": "KMI"
  },
  "0001510295": {
@@ -4131,7 +4131,7 @@
   "current": true,
   "name": "Marathon Petroleum",
   "sector": "Energy",
-  "sic": null,
+  "sic": "2911",
   "ticker": "MPC"
  },
  "0001512673": {
@@ -4139,7 +4139,7 @@
   "current": true,
   "name": "Block, Inc.",
   "sector": "Financials",
-  "sic": null,
+  "sic": "7372",
   "ticker": "XYZ"
  },
  "0001513761": {
@@ -4147,7 +4147,7 @@
   "current": true,
   "name": "Norwegian Cruise Line Holdings",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "4400",
   "ticker": "NCLH"
  },
  "0001519751": {
@@ -4162,7 +4162,7 @@
   "current": true,
   "name": "Aptiv",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "3714",
   "ticker": "APTV"
  },
  "0001524472": {
@@ -4170,7 +4170,7 @@
   "current": true,
   "name": "Xylem Inc.",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3561",
   "ticker": "XYL"
  },
  "0001526520": {
@@ -4192,7 +4192,7 @@
   "current": true,
   "name": "Phillips 66",
   "sector": "Energy",
-  "sic": null,
+  "sic": "2911",
   "ticker": "PSX"
  },
  "0001535527": {
@@ -4200,7 +4200,7 @@
   "current": true,
   "name": "CrowdStrike",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "7372",
   "ticker": "CRWD"
  },
  "0001539838": {
@@ -4208,7 +4208,7 @@
   "current": true,
   "name": "Diamondback Energy",
   "sector": "Energy",
-  "sic": null,
+  "sic": "1311",
   "ticker": "FANG"
  },
  "0001543151": {
@@ -4216,7 +4216,7 @@
   "current": true,
   "name": "Uber",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "7389",
   "ticker": "UBER"
  },
  "0001551152": {
@@ -4224,7 +4224,7 @@
   "current": true,
   "name": "AbbVie",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "2834",
   "ticker": "ABBV"
  },
  "0001551182": {
@@ -4232,7 +4232,7 @@
   "current": true,
   "name": "Eaton Corporation",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3590",
   "ticker": "ETN"
  },
  "0001555280": {
@@ -4240,7 +4240,7 @@
   "current": true,
   "name": "Zoetis",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "2834",
   "ticker": "ZTS"
  },
  "0001559720": {
@@ -4248,7 +4248,7 @@
   "current": true,
   "name": "Airbnb",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "7340",
   "ticker": "ABNB"
  },
  "0001561550": {
@@ -4256,7 +4256,7 @@
   "current": true,
   "name": "Datadog",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "7372",
   "ticker": "DDOG"
  },
  "0001564708": {
@@ -4264,7 +4264,7 @@
   "current": true,
   "name": "News Corp",
   "sector": "Communication Services",
-  "sic": null,
+  "sic": "2711",
   "ticker": "NWSA/NWS"
  },
  "0001571949": {
@@ -4272,7 +4272,7 @@
   "current": true,
   "name": "Intercontinental Exchange",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6200",
   "ticker": "ICE"
  },
  "0001571996": {
@@ -4280,7 +4280,7 @@
   "current": true,
   "name": "Dell Technologies",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3571",
   "ticker": "DELL"
  },
  "0001578845": {
@@ -4295,7 +4295,7 @@
   "current": true,
   "name": "Allegion",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "7381",
   "ticker": "ALLE"
  },
  "0001585364": {
@@ -4310,7 +4310,7 @@
   "current": true,
   "name": "Hilton Worldwide",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "7011",
   "ticker": "HLT"
  },
  "0001590895": {
@@ -4332,7 +4332,7 @@
   "current": true,
   "name": "Arista Networks",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3576",
   "ticker": "ANET"
  },
  "0001596783": {
@@ -4354,7 +4354,7 @@
   "current": true,
   "name": "Keysight Technologies",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3823",
   "ticker": "KEYS"
  },
  "0001601712": {
@@ -4362,7 +4362,7 @@
   "current": true,
   "name": "Synchrony Financial",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6199",
   "ticker": "SYF"
  },
  "0001604778": {
@@ -4377,7 +4377,7 @@
   "current": true,
   "name": "GoDaddy",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "7373",
   "ticker": "GDDY"
  },
  "0001613103": {
@@ -4385,7 +4385,7 @@
   "current": true,
   "name": "Medtronic",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "3845",
   "ticker": "MDT"
  },
  "0001618921": {
@@ -4400,7 +4400,7 @@
   "current": true,
   "name": "PayPal",
   "sector": "Financials",
-  "sic": null,
+  "sic": "7389",
   "ticker": "PYPL"
  },
  "0001633978": {
@@ -4408,7 +4408,7 @@
   "current": true,
   "name": "Lumentum",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3669",
   "ticker": "LITE"
  },
  "0001637459": {
@@ -4416,7 +4416,7 @@
   "current": true,
   "name": "Kraft Heinz",
   "sector": "Consumer Staples",
-  "sic": null,
+  "sic": "2030",
   "ticker": "KHC"
  },
  "0001645590": {
@@ -4424,7 +4424,7 @@
   "current": true,
   "name": "Hewlett Packard Enterprise",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3570",
   "ticker": "HPE"
  },
  "0001652044": {
@@ -4432,7 +4432,7 @@
   "current": true,
   "name": "Alphabet Inc.",
   "sector": "Communication Services",
-  "sic": null,
+  "sic": "7370",
   "ticker": "GOOGL/GOOG"
  },
  "0001659166": {
@@ -4440,7 +4440,7 @@
   "current": true,
   "name": "Fortive",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3823",
   "ticker": "FTV"
  },
  "0001664703": {
@@ -4448,7 +4448,7 @@
   "current": true,
   "name": "Bloom Energy",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3620",
   "ticker": "BE"
  },
  "0001666700": {
@@ -4459,7 +4459,7 @@
   "current": true,
   "name": "DuPont",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "2821",
   "ticker": "DD"
  },
  "0001671933": {
@@ -4474,7 +4474,7 @@
   "current": true,
   "name": "Vertiv",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3679",
   "ticker": "VRT"
  },
  "0001679273": {
@@ -4489,7 +4489,7 @@
   "current": true,
   "name": "Coinbase",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6199",
   "ticker": "COIN"
  },
  "0001681459": {
@@ -4504,7 +4504,7 @@
   "current": true,
   "name": "Moderna",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "2836",
   "ticker": "MRNA"
  },
  "0001685040": {
@@ -4519,7 +4519,7 @@
   "current": true,
   "name": "Invitation Homes",
   "sector": "Real Estate",
-  "sic": null,
+  "sic": "6510",
   "ticker": "INVH"
  },
  "0001688568": {
@@ -4534,7 +4534,7 @@
   "current": true,
   "name": "Carvana",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "5500",
   "ticker": "CVNA"
  },
  "0001692819": {
@@ -4542,7 +4542,7 @@
   "current": true,
   "name": "Vistra Corp.",
   "sector": "Utilities",
-  "sic": null,
+  "sic": "4911",
   "ticker": "VST"
  },
  "0001699150": {
@@ -4550,7 +4550,7 @@
   "current": true,
   "name": "Ingersoll Rand",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3560",
   "ticker": "IR"
  },
  "0001701605": {
@@ -4558,7 +4558,7 @@
   "current": true,
   "name": "Baker Hughes",
   "sector": "Energy",
-  "sic": null,
+  "sic": "3533",
   "ticker": "BKR"
  },
  "0001705696": {
@@ -4566,7 +4566,7 @@
   "current": true,
   "name": "Vici Properties",
   "sector": "Real Estate",
-  "sic": null,
+  "sic": "6798",
   "ticker": "VICI"
  },
  "0001707925": {
@@ -4574,7 +4574,7 @@
   "current": true,
   "name": "Linde plc",
   "sector": "Materials",
-  "sic": null,
+  "sic": "2810",
   "ticker": "LIN"
  },
  "0001711269": {
@@ -4582,7 +4582,7 @@
   "current": true,
   "name": "Evergy",
   "sector": "Utilities",
-  "sic": null,
+  "sic": "4931",
   "ticker": "EVRG"
  },
  "0001713445": {
@@ -4590,7 +4590,7 @@
   "current": true,
   "name": "Reddit",
   "sector": "Communication Services",
-  "sic": null,
+  "sic": "7374",
   "ticker": "RDDT"
  },
  "0001725057": {
@@ -4608,7 +4608,7 @@
   "current": true,
   "name": "Broadcom",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3674",
   "ticker": "AVGO"
  },
  "0001732845": {
@@ -4623,7 +4623,7 @@
   "current": true,
   "name": "Cigna",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "6324",
   "ticker": "CI"
  },
  "0001744489": {
@@ -4631,7 +4631,7 @@
   "current": true,
   "name": "Walt Disney Company (The)",
   "sector": "Communication Services",
-  "sic": null,
+  "sic": "7990",
   "ticker": "DIS"
  },
  "0001748790": {
@@ -4642,7 +4642,7 @@
   "current": true,
   "name": "Amcor",
   "sector": "Materials",
-  "sic": null,
+  "sic": "3990",
   "ticker": "AMCR"
  },
  "0001751008": {
@@ -4650,7 +4650,7 @@
   "current": true,
   "name": "AppLovin",
   "sector": "Communication Services",
-  "sic": null,
+  "sic": "7370",
   "ticker": "APP"
  },
  "0001751788": {
@@ -4658,7 +4658,7 @@
   "current": true,
   "name": "Dow Inc.",
   "sector": "Materials",
-  "sic": null,
+  "sic": "2821",
   "ticker": "DOW"
  },
  "0001754301": {
@@ -4666,7 +4666,7 @@
   "current": true,
   "name": "Fox Corporation",
   "sector": "Communication Services",
-  "sic": null,
+  "sic": "4833",
   "ticker": "FOXA/FOX"
  },
  "0001755672": {
@@ -4674,7 +4674,7 @@
   "current": true,
   "name": "Corteva",
   "sector": "Materials",
-  "sic": null,
+  "sic": "0100",
   "ticker": "CTVA"
  },
  "0001757898": {
@@ -4682,7 +4682,7 @@
   "current": true,
   "name": "Steris",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "3842",
   "ticker": "STE"
  },
  "0001770450": {
@@ -4697,7 +4697,7 @@
   "current": true,
   "name": "Otis Worldwide",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3600",
   "ticker": "OTIS"
  },
  "0001783180": {
@@ -4705,7 +4705,7 @@
   "current": true,
   "name": "Carrier Global",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3585",
   "ticker": "CARR"
  },
  "0001783879": {
@@ -4713,7 +4713,7 @@
   "current": true,
   "name": "Robinhood Markets",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6211",
   "ticker": "HOOD"
  },
  "0001786842": {
@@ -4728,7 +4728,7 @@
   "current": true,
   "name": "Viatris",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "2834",
   "ticker": "VTRS"
  },
  "0001792789": {
@@ -4736,7 +4736,7 @@
   "current": true,
   "name": "DoorDash",
   "sector": "Consumer Discretionary",
-  "sic": null,
+  "sic": "7389",
   "ticker": "DASH"
  },
  "0001811074": {
@@ -4744,7 +4744,7 @@
   "current": true,
   "name": "Texas Pacific Land Corporation",
   "sector": "Energy",
-  "sic": null,
+  "sic": "6792",
   "ticker": "TPL"
  },
  "0001821825": {
@@ -4759,7 +4759,7 @@
   "current": true,
   "name": "Marvell Technology",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3674",
   "ticker": "MRVL"
  },
  "0001841666": {
@@ -4767,7 +4767,7 @@
   "current": true,
   "name": "APA Corporation",
   "sector": "Energy",
-  "sic": null,
+  "sic": "1311",
   "ticker": "APA"
  },
  "0001858681": {
@@ -4775,7 +4775,7 @@
   "current": true,
   "name": "Apollo Global Management",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6282",
   "ticker": "APO"
  },
  "0001868275": {
@@ -4783,7 +4783,7 @@
   "current": true,
   "name": "Constellation Energy",
   "sector": "Utilities",
-  "sic": null,
+  "sic": "4911",
   "ticker": "CEG"
  },
  "0001932393": {
@@ -4791,7 +4791,7 @@
   "current": true,
   "name": "GE HealthCare",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "3844",
   "ticker": "GEHC"
  },
  "0001944048": {
@@ -4799,7 +4799,7 @@
   "current": true,
   "name": "Kenvue",
   "sector": "Consumer Staples",
-  "sic": null,
+  "sic": "2844",
   "ticker": "KVUE"
  },
  "0001964738": {
@@ -4807,7 +4807,7 @@
   "current": true,
   "name": "Solventum",
   "sector": "Health Care",
-  "sic": null,
+  "sic": "3841",
   "ticker": "SOLV"
  },
  "0001967680": {
@@ -4815,7 +4815,7 @@
   "current": true,
   "name": "Veralto",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3825",
   "ticker": "VLTO"
  },
  "0001973266": {
@@ -4823,7 +4823,7 @@
   "current": true,
   "name": "TKO Group Holdings",
   "sector": "Communication Services",
-  "sic": null,
+  "sic": "7900",
   "ticker": "TKO"
  },
  "0001996810": {
@@ -4831,7 +4831,7 @@
   "current": true,
   "name": "GE Vernova",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3600",
   "ticker": "GEV"
  },
  "0001996862": {
@@ -4839,7 +4839,7 @@
   "current": true,
   "name": "Bunge Global",
   "sector": "Consumer Staples",
-  "sic": null,
+  "sic": "2070",
   "ticker": "BG"
  },
  "0002005951": {
@@ -4847,7 +4847,7 @@
   "current": true,
   "name": "Smurfit Westrock",
   "sector": "Materials",
-  "sic": null,
+  "sic": "2650",
   "ticker": "SW"
  },
  "0002011286": {
@@ -4862,7 +4862,7 @@
   "current": true,
   "name": "Ferguson Enterprises",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "5070",
   "ticker": "FERG"
  },
  "0002012383": {
@@ -4870,7 +4870,7 @@
   "current": true,
   "name": "BlackRock",
   "sector": "Financials",
-  "sic": null,
+  "sic": "6211",
   "ticker": "BLK"
  },
  "0002023554": {
@@ -4878,7 +4878,7 @@
   "current": true,
   "name": "Sandisk",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3572",
   "ticker": "SNDK"
  },
  "0002041610": {
@@ -4886,7 +4886,7 @@
   "current": true,
   "name": "Paramount Skydance Corporation",
   "sector": "Communication Services",
-  "sic": null,
+  "sic": "4833",
   "ticker": "PSKY"
  },
  "0002058873": {
@@ -4894,7 +4894,7 @@
   "current": true,
   "name": "Qnity Electronics",
   "sector": "Information Technology",
-  "sic": null,
+  "sic": "3674",
   "ticker": "Q"
  },
  "0002082247": {
@@ -4902,7 +4902,7 @@
   "current": true,
   "name": "FedEx Freight",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "4513",
   "ticker": "FDXF"
  },
  "0002089271": {
@@ -4910,7 +4910,7 @@
   "current": true,
   "name": "Honeywell Aerospace",
   "sector": "Industrials",
-  "sic": null,
+  "sic": "3724",
   "ticker": "HONA"
  },
  "0002115436": {
@@ -4918,7 +4918,7 @@
   "current": true,
   "name": "ExxonMobil",
   "sector": "Energy",
-  "sic": null,
+  "sic": "2911",
   "ticker": "XOM"
  }
 }
