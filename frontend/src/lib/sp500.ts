@@ -18,6 +18,7 @@ export interface Sp500Company {
   nd_ebitda: Num;
   roe: Num;
   roic: Num;
+  group?: "mag7" | "ai" | "core" | "energy" | "fin";
   member_since: string;
   series: { rev: Num[]; ebit: Num[]; ni: Num[] };
 }
@@ -37,7 +38,11 @@ export interface Sp500Payload {
   generated_at: string;
   as_of_quarter: string;
   quarters: string[];
-  in_progress: { quarter: string; reported: number; members: number }[];
+  in_progress: {
+    quarter: string; reported: number; members: number; ended?: boolean;
+    revenue_yoy?: Num; revenue_yoy_ex_energy?: Num; ebit_yoy?: Num; same_companies_prior_quarter?: Num; tickers?: string[];
+  }[];
+  roic_groups?: { mag7: Num[]; ai: Num[]; core: Num[] };
   coverage: { reported: number[]; members: number[] };
   aggregate: Record<string, Num[]>;
   macro: { quarters: string[]; gdp_nominal_yoy?: Num[]; usd_broad_yoy?: Num[] };
@@ -53,7 +58,7 @@ export interface Sp500Payload {
   contributions: Record<"revenue" | "ebit", { top: [string, string, number][]; bottom: [string, string, number][]; total: number }>;
   companies: Sp500Company[];
   changes: Sp500Change[];
-  stats: { companies_loaded: number; companies_failed: number; patched_from_filings: number };
+  stats: { companies_loaded: number; companies_failed: number; patched_from_filings: number; missing_history?: string[] };
   method: { ai_chain: string[]; mag7: string[]; outlier_growth: number; complete_coverage: number };
 }
 

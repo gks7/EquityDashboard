@@ -295,6 +295,45 @@ class Panel:
             out["movers"].append([[t, g, _r(c_, 5), _r(gr)] for t, g, c_, gr in mv])
         return out
 
+    # -- ROIC by group and growth vs ROIC --------------------------------
+    def static_group(self, c):
+        if c["t"] in C.MAG7:
+            return "mag7"
+        if c["t"] in C.AI_CHAIN:
+            return "ai"
+        if c["s"] in ("Financials", "Energy"):
+            return None
+        return "core"
+
+    def roic_groups(self, QA):
+        """TTM ROIC per group: Magnificent 7, AI supply chain, core (ex-fin., ex-energy)."""
+        out = {g: [] for g in ("mag7", "ai", "core")}
+        for k in QA:
+            acc = {g: [0.0, 0.0] for g in out}
+            if k >= 4:
+                for i in self.members(k):
+                    g = self.static_group(self.cos[i])
+                    rr = self.roic(i, k) if g else None
+                    if rr:
+                        acc[g][0] += rr[0]
+                        acc[g][1] += rr[1]
+            for g in out:
+                out[g].append(_r(acc[g][0] / acc[g][1]) if acc[g][1] else None)
+        return out
+
+    def early_reporters(self, k):
+        """Growth among the companies that already reported an open quarter."""
+        if k < 4:
+            return {}
+        pool = [i for i in self.members(k) if self.m(i, k).get("rev") is not None]
+        ne = [i for i in pool if self.cos[i]["s"] != "Energy"]
+        nf = [i for i in pool if self.cos[i]["s"] != "Financials"]
+        both = [i for i in pool if self.okr(i, k, k - 4)]
+        prev = self.yoy(k - 1, "rev", [i for i in both])  # same companies, prior quarter
+        return {"revenue_yoy": _r(self.yoy(k, "rev", pool)), "revenue_yoy_ex_energy": _r(self.yoy(k, "rev", ne)),
+                "ebit_yoy": _r(self.yoy(k, "ebit", nf)), "same_companies_prior_quarter": _r(prev),
+                "tickers": sorted(self.cos[i]["t"] for i in pool)[:60]}
+
     # -- per-company table ---------------------------------------------
     def contributions(self, kL):
         def one(key, fin=True):
@@ -321,7 +360,9 @@ class Panel:
                 if all(self.m(i, k - d).get("rev") is not None for d in range(4)):
                     L = k
                     break
-            if L is None:
+            # skip companies whose revenue stops more than a year before the
+            # headline quarter (usually a custom revenue tag we cannot read)
+            if L is None or L < QA[-1] - 4:
                 continue
             rv = self.ttm(i, "rev", L)
             rp = self.ttm(i, "rev", L - 4) if L >= 7 else None
@@ -349,6 +390,7 @@ class Panel:
                 "nd_ebitda": None if nd is None or not ebitda or ebitda <= 0 or c["s"] in ("Financials", "Real Estate") else round(nd / ebitda, 2),
                 "roe": None if ni is None or not e1 or not e0 or e1 <= 0 or e0 <= 0 else _r(ni / ((e1 + e0) / 2)),
                 "roic": _r(rr[0] / rr[1]) if rr else None,
+                "group": self.static_group(c) or ("energy" if c["s"] == "Energy" else "fin"),
                 "member_since": "" if self.B[i][0] else next((self.L[k] for k in range(len(self.Q)) if self.B[i][k]), ""),
                 "series": {key: [mm(self.m(i, k).get(key)) for k in QA] for key in ("rev", "ebit", "ni")},
             })

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { createContext, useContext, useMemo } from "react";
 import { useTheme } from "next-themes";
 import {
   Bar,
@@ -14,6 +14,9 @@ import {
   YAxis,
 } from "recharts";
 import { PALETTE, type Num, type Palette, pct, mult, bn, qLong } from "@/lib/sp500";
+
+/** Number of most recent quarters to show (null = whole series). */
+export const RangeContext = createContext<number | null>(null);
 
 export function usePalette(): Palette {
   const { resolvedTheme } = useTheme();
@@ -132,6 +135,8 @@ export function QuarterChart({
   legend?: boolean;
 }) {
   const p = usePalette();
+  const range = useContext(RangeContext);
+  from = range ? Math.max(from, quarters.length - range) : from;
   const data = useMemo(
     () =>
       quarters.slice(from).map((q, j) => {

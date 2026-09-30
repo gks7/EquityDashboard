@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Landmark, RefreshCcw, Search, ChevronDown, ChevronRight, Clock } from "lucide-react";
+import { Landmark, RefreshCcw, Search, ChevronDown, ChevronRight, Clock, Download } from "lucide-react";
+import { CartesianGrid, LabelList, ReferenceLine, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis } from "recharts";
 import {
   type GroupKey,
   type Num,
@@ -15,7 +16,7 @@ import {
   qLong,
   usdM,
 } from "@/lib/sp500";
-import { Card, Kpi, QuarterChart, Segmented, type Series, usePalette } from "@/components/sp500/charts";
+import { Card, Kpi, Legend, QuarterChart, RangeContext, Segmented, type Series, usePalette } from "@/components/sp500/charts";
 
 type Tab = "growth" | "why" | "profit" | "capital" | "sectors" | "companies";
 const TABS: { key: Tab; label: string }[] = [
@@ -45,6 +46,7 @@ export default function Sp500Page() {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [tab, setTab] = useState<Tab>("growth");
+  const [range, setRange] = useState<"all" | "12" | "8">("all");
 
   const load = useCallback(async () => {
     setRefreshing(true);
@@ -105,7 +107,7 @@ export default function Sp500Page() {
                 title="Headline figures switch to this quarter once 90% of members have reported"
               >
                 <Clock className="w-3.5 h-3.5" />
-                {qLong(prog.quarter)}: {prog.reported} of {prog.members} reported
+                {qLong(prog.quarter)} {prog.ended ? "reporting" : "in progress"}: {prog.reported} of {prog.members} reported
               </span>
             )}
           </div>
@@ -147,7 +149,8 @@ export default function Sp500Page() {
         />
       </div>
 
-      <div className="flex flex-wrap gap-1 mb-4 border-b border-slate-200 dark:border-slate-800">
+      <div className="flex flex-wrap items-end justify-between gap-2 mb-4 border-b border-slate-200 dark:border-slate-800">
+      <div className="flex flex-wrap gap-1">
         {TABS.map((t) => (
           <button
             key={t.key}
@@ -162,6 +165,11 @@ export default function Sp500Page() {
           </button>
         ))}
       </div>
+      <div className="pb-1.5">
+        <Segmented value={range} onChange={setRange} options={[{ key: "all", label: "Since 2019" }, { key: "12", label: "3Y" }, { key: "8", label: "2Y" }]} />
+      </div>
+      </div>
+      <RangeContext.Provider value={range === "all" ? null : Number(range)}>
 
       {tab === "growth" && <GrowthTab d={data} />}
       {tab === "why" && <WhyTab d={data} />}
@@ -169,6 +177,7 @@ export default function Sp500Page() {
       {tab === "capital" && <CapitalTab d={data} />}
       {tab === "sectors" && <SectorsTab d={data} />}
       {tab === "companies" && <CompaniesTab d={data} />}
+      </RangeContext.Provider>
 
       <footer className="mt-6 text-[11.5px] text-slate-500 dark:text-slate-400 leading-relaxed max-w-4xl">
         <p>
@@ -209,8 +218,10 @@ function GrowthTab({ d }: { d: Sp500Payload }) {
     ? { key: "e", name: "EBIT, ex-energy & fin.", values: A.ebit_yoy_ex_energy, color: p.s2 }
     : { key: "e", name: "EBIT, ex-fin.", values: A.ebit_yoy, color: p.s2 };
   const seg = <Segmented value={basis} onChange={setBasis} options={[{ key: "ex", label: "Ex-energy" }, { key: "all", label: "All" }]} />;
+  const early = d.in_progress.find((x) => x.reported > 0 && x.revenue_yoy !== null && x.revenue_yoy !== undefined);
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {early && <EarlyCard e={early} />}
       <Card
         className="lg:col-span-2"
         title="Revenue growth vs nominal GDP"
@@ -303,6 +314,24 @@ function WhyTab({ d }: { d: Sp500Payload }) {
   const movers = D.movers[qi] ?? [];
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <Card
+        className="lg:col-span-3"
+        title="The core grows with the economy"
+        subtitle="Year-over-year revenue growth. Core = the ~two thirds of ex-energy revenue outside the Magnificent 7, AI supply chain, financials and M&A."
+        foot="Returns on this growth are on the Margins & returns tab (ROIC by group, growth vs ROIC by company)."
+      >
+        <QuarterChart
+          quarters={d.quarters}
+          from={4}
+          fmt="pct"
+          height={260}
+          series={[
+            { key: "t", name: "Revenue, ex-energy", values: D.total, color: p.s1, width: 2.5 },
+            { key: "c", name: "Core", values: D.growth.core, color: col.core, width: 2.5 },
+            { key: "g", name: "US nominal GDP", values: gdp, color: p.ink, dash: true },
+          ]}
+        />
+      </Card>
       <Card
         className="lg:col-span-3"
         title="Where revenue growth comes from"
@@ -414,6 +443,29 @@ function WhyTab({ d }: { d: Sp500Payload }) {
   );
 }
 
+function EarlyCard({ e }: { e: Sp500Payload["in_progress"][number] }) {
+  const few = e.reported < 50;
+  return (
+    <section className="lg:col-span-2 rounded-xl border border-blue-200 dark:border-blue-900/60 bg-blue-50/60 dark:bg-blue-950/30 px-4 py-3 flex flex-wrap items-center gap-x-8 gap-y-2">
+      <div className="min-w-0">
+        <div className="text-[10.5px] uppercase tracking-wider text-blue-700 dark:text-blue-300 font-semibold">
+          {qLong(e.quarter)} so far · {e.reported} of {e.members} members reported
+        </div>
+        <div className="text-[12.5px] text-slate-600 dark:text-slate-400 mt-0.5 max-w-2xl">
+          {few
+            ? `Early reporters only (${(e.tickers ?? []).slice(0, 12).join(", ")}${(e.tickers?.length ?? 0) > 12 ? "…" : ""}), mostly companies with fiscal quarters ending before the calendar quarter. Read as a first signal, not the index.`
+            : "Same method as the headline, restricted to companies that have reported. The headline switches to this quarter at 90% coverage."}
+        </div>
+      </div>
+      <div className="flex gap-6 tabular-nums">
+        <div><div className="text-[10.5px] uppercase tracking-wider text-slate-500">Revenue YoY</div><div className="text-lg font-bold text-slate-900 dark:text-white">{pct(e.revenue_yoy)}</div></div>
+        <div><div className="text-[10.5px] uppercase tracking-wider text-slate-500">Same cos., prior qtr</div><div className="text-lg font-bold text-slate-900 dark:text-white">{pct(e.same_companies_prior_quarter)}</div></div>
+        <div><div className="text-[10.5px] uppercase tracking-wider text-slate-500">EBIT YoY</div><div className="text-lg font-bold text-slate-900 dark:text-white">{pct(e.ebit_yoy)}</div></div>
+      </div>
+    </section>
+  );
+}
+
 /* ------------------------------------------------------------ Profit */
 function ProfitTab({ d }: { d: Sp500Payload }) {
   const p = usePalette();
@@ -445,7 +497,99 @@ function ProfitTab({ d }: { d: Sp500Payload }) {
           ]}
         />
       </Card>
+      {d.roic_groups && <RoicGroupsCard d={d} />}
+      <GrowthRoicCard d={d} />
     </div>
+  );
+}
+
+function RoicGroupsCard({ d }: { d: Sp500Payload }) {
+  const p = usePalette();
+  const g = d.roic_groups!;
+  const n = d.quarters.length - 1;
+  const j = d.quarters.indexOf("1Q25");
+  const col = GROUP_COLOR(p);
+  return (
+    <Card
+      className="lg:col-span-2"
+      title="ROIC by group"
+      subtitle="Trailing 12 months. Core excludes financials and energy."
+      foot={
+        j >= 0
+          ? `Since ${qLong(d.quarters[j])}: Magnificent 7 ${pct(g.mag7[j])} → ${pct(g.mag7[n])} (capital invested in data centers is growing faster than profit), AI supply chain ${pct(g.ai[j])} → ${pct(g.ai[n])} (selling that equipment), core ${pct(g.core[j])} → ${pct(g.core[n])}.`
+          : undefined
+      }
+    >
+      <QuarterChart
+        quarters={d.quarters}
+        from={4}
+        fmt="pct"
+        series={[
+          { key: "m", name: "Magnificent 7", values: g.mag7, color: col.mag7 },
+          { key: "a", name: "AI supply chain", values: g.ai, color: col.ai },
+          { key: "c", name: "Core", values: g.core, color: col.core, width: 2.5 },
+        ]}
+      />
+    </Card>
+  );
+}
+
+const SC_GROUPS = [
+  { key: "mag7", name: "Magnificent 7" },
+  { key: "ai", name: "AI supply chain" },
+  { key: "core", name: "Everyone else" },
+  { key: "energy", name: "Energy" },
+] as const;
+
+function GrowthRoicCard({ d }: { d: Sp500Payload }) {
+  const p = usePalette();
+  const col: Record<string, string> = { mag7: p.s1, ai: p.s4, core: p.core, energy: p.s2 };
+  const clampX = (v: number) => Math.max(-0.3, Math.min(0.8, v));
+  const clampY = (v: number) => Math.max(-0.1, Math.min(0.8, v));
+  const pts = d.companies
+    .filter((c) => c.group && c.group !== "fin" && c.roic !== null && c.revenue_growth !== null)
+    .map((c) => ({ ...c, x: clampX(c.revenue_growth as number), y: clampY(c.roic as number), z: c.revenue_ttm ?? 0 }));
+  const med = (a: number[]) => { const s = [...a].sort((x, y) => x - y); return s.length ? s[Math.floor(s.length / 2)] : 0; };
+  const mx = med(pts.map((c) => c.revenue_growth as number));
+  const my = med(pts.map((c) => c.roic as number));
+  return (
+    <Card
+      className="lg:col-span-2"
+      title="Growth vs ROIC, by company"
+      subtitle="Revenue growth (trailing 12 months vs a year earlier) against ROIC. Bubble size is revenue. Ex-financials. Dashed lines are medians; values beyond the axes sit on the edge."
+    >
+      <Legend series={SC_GROUPS.map((g) => ({ name: `${g.name} (${pts.filter((c) => c.group === g.key).length})`, color: col[g.key], kind: "bar" as const }))} />
+      <ResponsiveContainer width="100%" height={380}>
+        <ScatterChart margin={{ top: 10, right: 16, bottom: 18, left: 0 }}>
+          <CartesianGrid stroke={p.grid} />
+          <XAxis type="number" dataKey="x" domain={[-0.3, 0.8]} ticks={[-0.2, 0, 0.2, 0.4, 0.6, 0.8]} tickFormatter={(v: number) => `${Math.round(v * 100)}%`} tick={{ fontSize: 11, fill: p.axis }} stroke={p.grid}
+            label={{ value: "Revenue growth, TTM", position: "insideBottomRight", offset: -8, fontSize: 11, fill: p.axis }} />
+          <YAxis type="number" dataKey="y" domain={[-0.1, 0.8]} ticks={[0, 0.2, 0.4, 0.6, 0.8]} tickFormatter={(v: number) => `${Math.round(v * 100)}%`} tick={{ fontSize: 11, fill: p.axis }} stroke={p.grid} width={44} />
+          <ZAxis type="number" dataKey="z" range={[14, 520]} />
+          <ReferenceLine x={mx} stroke={p.axis} strokeDasharray="4 4" />
+          <ReferenceLine y={my} stroke={p.axis} strokeDasharray="4 4" />
+          <Tooltip
+            cursor={false}
+            content={({ active, payload }) => {
+              if (!active || !payload?.length) return null;
+              const c = payload[0].payload as Sp500Company;
+              return (
+                <div className="rounded-lg border border-slate-700 bg-slate-900/95 text-white text-[11.5px] px-3 py-2 shadow-xl">
+                  <div className="font-semibold mb-0.5">{c.ticker} · {c.name}</div>
+                  <div className="tabular-nums">Growth {pct(c.revenue_growth)} · ROIC {pct(c.roic)}</div>
+                  <div className="tabular-nums text-slate-300">Revenue {usdM(c.revenue_ttm)} · {c.sector}</div>
+                </div>
+              );
+            }}
+          />
+          {SC_GROUPS.map((g) => (
+            <Scatter key={g.key} data={pts.filter((c) => c.group === g.key)} fill={col[g.key]} fillOpacity={g.key === "core" ? 0.45 : 0.85} isAnimationActive={false}>
+              {g.key === "mag7" && <LabelList dataKey="ticker" position="right" style={{ fontSize: 10.5, fontWeight: 600, fill: p.ink }} />}
+            </Scatter>
+          ))}
+        </ScatterChart>
+      </ResponsiveContainer>
+    </Card>
   );
 }
 
@@ -574,6 +718,24 @@ const COLS: { key: SortKey; label: string; f: (c: Sp500Company) => string; title
   { key: "roic", label: "ROIC", f: (c) => pct(c.roic, 0) },
 ];
 
+function downloadCsv(rows: Sp500Company[]) {
+  const cols: [string, (c: Sp500Company) => string | number | null][] = [
+    ["ticker", (c) => c.ticker], ["name", (c) => c.name], ["sector", (c) => c.sector], ["last_quarter", (c) => c.last_quarter],
+    ["revenue_ttm_usd_m", (c) => c.revenue_ttm], ["revenue_growth", (c) => c.revenue_growth], ["ebit_margin", (c) => c.op_margin],
+    ["net_margin", (c) => c.net_margin], ["fcf_ttm_usd_m", (c) => c.fcf_ttm], ["buybacks_dividends_ttm_usd_m", (c) => c.shareholder_return_ttm],
+    ["payout_to_fcf", (c) => c.return_to_fcf], ["shares_yoy", (c) => c.share_change], ["net_debt_ebitda", (c) => c.nd_ebitda],
+    ["roe", (c) => c.roe], ["roic", (c) => c.roic], ["member_since", (c) => c.member_since],
+  ];
+  const esc = (v: string | number | null) => (v === null || v === undefined ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
+  const text = [cols.map((c) => c[0]).join(","), ...rows.map((r) => cols.map(([, f]) => esc(f(r))).join(","))].join("\n");
+  const url = URL.createObjectURL(new Blob([text], { type: "text/csv;charset=utf-8" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `sp500_companies_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function CompaniesTab({ d }: { d: Sp500Payload }) {
   const [q, setQ] = useState("");
   const [sector, setSector] = useState("All");
@@ -610,6 +772,14 @@ function CompaniesTab({ d }: { d: Sp500Payload }) {
         subtitle={`${rows.length} of ${d.companies.length} companies · trailing 12 months to each company's latest reported quarter`}
         right={
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => downloadCsv(rows)}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[12.5px] font-medium rounded-md border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800"
+            >
+              <Download className="w-3.5 h-3.5" />
+              CSV
+            </button>
             <label className="relative">
               <Search className="w-3.5 h-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
               <input

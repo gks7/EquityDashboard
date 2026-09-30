@@ -74,13 +74,25 @@ def _write_cache(cache: Path, cik: str, obj):
     _cache_path(cache, cik).write_bytes(gzip.compress(json.dumps(obj, separators=(",", ":")).encode()))
 
 
-def fetch_company(client: sec.SecClient, cik: str) -> dict:
-    """{'facts': raw facts, 'sic': str, 'patched': [accn], 'latest': report date}."""
+def fetch_company(client: sec.SecClient, cik: str, predecessors: list[str] = ()) -> dict:
+    """{'facts': raw facts, 'sic': str, 'patched': [accn], 'latest': report date}.
+
+    ``predecessors`` are older CIKs of the same business (a new holding company
+    registered for a redomicile or reorganisation, e.g. ExxonMobil in 2026).
+    Their facts fill the history; the current CIK wins on any overlap."""
     facts_json = client.companyfacts(cik)
     if not facts_json:
         raise LookupError("companyfacts returned 404")
     subs = client.submissions(cik)
     raw, accns = sec.extract_companyfacts(facts_json)
+    for p in predecessors:
+        pj = client.companyfacts(p)
+        if not pj:
+            log.warning("%s: predecessor %s has no companyfacts", cik, p)
+            continue
+        praw, paccns = sec.extract_companyfacts(pj)
+        sec.merge_patch(raw, praw)
+        accns |= paccns
     patched = []
     filings = sec.recent_periodic_filings(subs, limit=3) if subs else []
     for f in filings:
@@ -106,8 +118,9 @@ def fetch_company(client: sec.SecClient, cik: str) -> dict:
             "fetched": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}
 
 
-def fetch_all(ciks: list[str], cache: Path, offline: bool, workers: int = 6):
+def fetch_all(ciks: list[str], cache: Path, offline: bool, workers: int = 6, predecessors: dict | None = None):
     """Returns (data by CIK, CIKs with no data at all, CIKs served from cache)."""
+    predecessors = predecessors or {}
     client = None if offline else sec.SecClient()
     got, failed, stale = {}, [], []
 
@@ -115,7 +128,7 @@ def fetch_all(ciks: list[str], cache: Path, offline: bool, workers: int = 6):
         if offline:
             return cik, _read_cache(cache, cik), None
         try:
-            obj = fetch_company(client, cik)
+            obj = fetch_company(client, cik, predecessors.get(cik, []))
             _write_cache(cache, cik, obj)
             return cik, obj, None
         except Exception as e:  # network, 403 block, 404, parse error: fall back to yesterday
@@ -174,7 +187,8 @@ def build(today: dt.date, out_path: Path, cache: Path, offline: bool, data_dir: 
     quarters = C.quarter_list(today)
 
     ciks = sorted(mem["members"])
-    got, failed, stale = fetch_all(ciks, cache, offline)
+    got, failed, stale = fetch_all(ciks, cache, offline,
+                                   predecessors={c: r["predecessors"] for c, r in reg.items() if r.get("predecessors")})
     for cik, obj in got.items():
         if obj.get("sic") and not reg.get(cik, {}).get("sic"):
             reg.setdefault(cik, {"ticker": cik, "name": cik, "sector": None, "current": False})["sic"] = obj["sic"]
@@ -193,6 +207,19 @@ def build(today: dt.date, out_path: Path, cache: Path, offline: bool, data_dir: 
                     "m": derive.derive_company(got[cik]["facts"], sector, quarters)})
 
     P = aggregate.Panel(cos, quarters, mem["members"])
+
+    # a member with revenue missing for a year or more of its membership usually
+    # re-registered under a new CIK: add the old one to "predecessors" in the registry
+    short = []
+    for i, c in enumerate(P.cos):
+        member_q = [k for k in range(len(quarters)) if P.B[i][k]]
+        if not c["current"] or len(member_q) < 8:
+            continue
+        missing = [k for k in member_q[:-2] if P.m(i, k).get("rev") is None]
+        if len(missing) >= 4:
+            short.append(f'{c["t"]} ({len(missing)} quarters)')
+    if short:
+        _annotate("revenue missing for part of the membership, check predecessor CIKs: " + ", ".join(short))
     kL = P.last_complete()
     QA = list(range(kL + 1))
     rep, n = P.coverage()
@@ -236,18 +263,20 @@ def build(today: dt.date, out_path: Path, cache: Path, offline: bool, data_dir: 
         "generated_at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "as_of_quarter": P.L[kL],
         "quarters": labels,
-        "in_progress": [{"quarter": P.L[k], "reported": rep[k], "members": n[k]} for k in range(kL + 1, len(quarters))],
+        "in_progress": [{"quarter": P.L[k], "reported": rep[k], "members": n[k], "ended": C.quarter_end(quarters[k]) < today,
+                         **P.early_reporters(k)} for k in range(kL + 1, len(quarters))],
         "coverage": {"reported": [rep[k] for k in QA], "members": [n[k] for k in QA]},
         "aggregate": agg,
         "macro": {"quarters": labels, **mac},
         "sectors": P.sectors(QA),
         "decomposition": P.decomposition(QA),
+        "roic_groups": P.roic_groups(QA),
         "contributions": P.contributions(kL),
         "companies": P.companies(QA),
         "changes": [c for c in changes if c["date"] >= "2019-01-01"][:60],
         "stats": {"companies_loaded": len(got), "companies_failed": len(failed),
                   "companies_from_cache": len(stale), "patched_from_filings": patched,
-                  "index_list_refreshed": wiki_ok},
+                  "index_list_refreshed": wiki_ok, "missing_history": short},
         "method": {
             "ai_chain": sorted(C.AI_CHAIN), "mag7": sorted(C.MAG7),
             "outlier_growth": C.OUTLIER_GROWTH, "complete_coverage": C.COMPLETE_COVERAGE,
