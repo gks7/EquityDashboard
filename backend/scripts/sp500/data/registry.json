@@ -4758,6 +4758,9 @@
   "added": "2026-06-22",
   "current": true,
   "name": "Marvell Technology",
+  "predecessors": [
+   "0001058057"
+  ],
   "sector": "Information Technology",
   "sic": "3674",
   "ticker": "MRVL"
@@ -4774,6 +4777,9 @@
   "added": "2024-12-23",
   "current": true,
   "name": "Apollo Global Management",
+  "predecessors": [
+   "0001411494"
+  ],
   "sector": "Financials",
   "sic": "6282",
   "ticker": "APO"
@@ -4838,6 +4844,9 @@
   "added": "2023-03-15",
   "current": true,
   "name": "Bunge Global",
+  "predecessors": [
+   "0001144519"
+  ],
   "sector": "Consumer Staples",
   "sic": "2070",
   "ticker": "BG"
@@ -4861,6 +4870,9 @@
   "added": "2026-08-05",
   "current": true,
   "name": "Ferguson Enterprises",
+  "predecessors": [
+   "0001832433"
+  ],
   "sector": "Industrials",
   "sic": "5070",
   "ticker": "FERG"
@@ -4869,6 +4881,9 @@
   "added": "2011-04-04",
   "current": true,
   "name": "BlackRock",
+  "predecessors": [
+   "0001364742"
+  ],
   "sector": "Financials",
   "sic": "6211",
   "ticker": "BLK"
@@ -4885,6 +4900,9 @@
   "added": "1994-09-30",
   "current": true,
   "name": "Paramount Skydance Corporation",
+  "predecessors": [
+   "0000813828"
+  ],
   "sector": "Communication Services",
   "sic": "4833",
   "ticker": "PSKY"
@@ -4917,6 +4935,9 @@
   "added": "1957-03-04",
   "current": true,
   "name": "ExxonMobil",
+  "predecessors": [
+   "0000034088"
+  ],
   "sector": "Energy",
   "sic": "2911",
   "ticker": "XOM"
