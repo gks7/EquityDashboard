@@ -5,7 +5,7 @@ import traceback
 from django.db import transaction
 from django.utils import timezone
 
-STALE_AFTER_MIN = 30
+STALE_AFTER_MIN = 2
 
 
 def import_statement(fileobj):

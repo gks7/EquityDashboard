@@ -116,8 +116,11 @@ def load_inputs(today=None):
     idx = pd.DataFrame(list(HistIndexPrice.objects.filter(
         asset__in=['SPX Index', 'CCMP Index', 'BTSISOFR Index', 'SOFRRATE Index'], flt_value__isnull=False).values('date', 'asset', 'flt_value')))
 
+    from finance.models import ManualFundFlow
+    manual_flows = {r.date: (r.subscription or 0.0) - (r.redemption or 0.0) for r in ManualFundFlow.objects.all()}
+
     return dict(cfg=cfg, aliases=aliases, matcher=matcher, cutover=cutover, ps=ps, led=led, items=items, off=off,
-                reps=reps, idx=idx, today=today or dt.date.today())
+                reps=reps, idx=idx, manual_flows=manual_flows, today=today or dt.date.today())
 
 
 # ───────────────────────────────────────────────────────────── prices
@@ -125,13 +128,13 @@ def snapshot_prices(items):
     """Unit value (USD) per asset per business day, from the snapshot that best reflects that day's close.
     >= 20:05 UTC -> that day's close; < 13:30 UTC -> previous business day's close; otherwise intraday."""
     if items.empty:
-        return pd.DataFrame(), pd.Series(dtype=object)
+        return pd.DataFrame(), pd.Series(dtype=object), pd.DataFrame()
     it = items[items.asset_id.notna()].copy()
     it['ts'] = pd.to_datetime(it.ts, utc=True)
     snaps = it.groupby('snapshot_id').agg(ts=('ts', 'first'), n=('ticker', 'size'), mv=('market_value', 'sum')).reset_index()
     snaps = snaps[(snaps.n >= 10) & (snaps.mv > 1e6)]
     if snaps.empty:
-        return pd.DataFrame(), pd.Series(dtype=object)
+        return pd.DataFrame(), pd.Series(dtype=object), pd.DataFrame()
     hm = snaps.ts.dt.hour * 60 + snaps.ts.dt.minute
     day = snaps.ts.dt.tz_convert(None).dt.normalize()
     snaps['kind'] = np.where(hm >= 20 * 60 + 5, 'close', np.where(hm < 13 * 60 + 30, 'preopen', 'intraday'))
@@ -139,6 +142,9 @@ def snapshot_prices(items):
     snaps['rk'] = snaps.kind.map({'close': 0, 'preopen': 1, 'intraday': 2})
     snaps['tsn'] = np.where(snaps.kind == 'preopen', snaps.ts.astype('int64'), -snaps.ts.astype('int64'))
     best = snaps.sort_values(['px_date', 'rk', 'tsn']).groupby('px_date').head(1).set_index('snapshot_id')
+    allq = it[it.snapshot_id.isin(best.index)].copy()
+    allq['px_date'] = allq.snapshot_id.map(best.px_date)
+    units = allq.groupby(['px_date', 'asset_id']).quantity.sum().unstack().fillna(0.0).sort_index()
     x = it[it.snapshot_id.isin(best.index) & (it.quantity.abs() > 0) & it.market_value.notna()].copy()
     x['px_date'] = x.snapshot_id.map(best.px_date)
     x['uv'] = x.market_value / x.quantity
@@ -147,7 +153,7 @@ def snapshot_prices(items):
         s = uv[c]
         med = s.rolling(5, center=True, min_periods=3).median()
         uv.loc[(s / med - 1).abs() > 0.25, c] = np.nan
-    return uv, best.set_index('px_date').kind
+    return uv, best.set_index('px_date').kind, units
 
 
 # ───────────────────────────────────────────────────────────── positions & P&L
@@ -164,7 +170,36 @@ def period_a(ps):
     return g
 
 
-def period_b(I, uv_site):
+COUPON_RX = __import__('re').compile(r'^\S.*?\s(\d+(?:\.\d+)?)\s+(\d{2})/(\d{2})/(\d{2,4})$')
+
+
+def coupon_schedule(asset_id, sub_class, start, end):
+    """Expected semi-annual coupon dates (next business day) between start and end for a fixed-rate bond
+    named like 'PEMEX 5.95 01/28/31'. Returns (rate %, [dates]). Perpetuals, zeros and sovereign
+    step-ups are skipped."""
+    if sub_class not in ('Corporate Bond', 'US Treasury'):
+        return 0.0, []
+    m = COUPON_RX.match(asset_id or '')
+    if not m:
+        return 0.0, []
+    rate, mm, dd = float(m.group(1)), int(m.group(2)), int(m.group(3))
+    if rate <= 0:
+        return 0.0, []
+    out = []
+    for y in range(start.year, end.year + 1):
+        for mth in sorted({mm, (mm + 6 - 1) % 12 + 1}):
+            try:
+                d = dt.date(y, mth, min(dd, 28 if mth == 2 else 30 if mth in (4, 6, 9, 11) else 31))
+            except ValueError:
+                continue
+            while d.weekday() >= 5:
+                d += dt.timedelta(days=1)
+            if start < d <= end:
+                out.append(d)
+    return rate, out
+
+
+def period_b(I, uv_site, units_site=None):
     ps, led, cutover, today = I['ps'], I['led'], I['cutover'], I['today']
     days = list(pd.bdate_range(cutover, today).date)
     h0 = ps[(ps.date == cutover) & (ps.asset_group != 'Cash')].groupby('asset_id').units_close.sum() if not ps.empty else pd.Series(dtype=float)
@@ -174,7 +209,16 @@ def period_b(I, uv_site):
     post = post[post.trade_date <= today]
     trades = post[post.type.isin(TRADE_TYPES + ('REDEMPTION',)) & (post.asset_id != '')]
     income = post[post.type.isin(INCOME_TYPES) & (post.asset_id != '')]
-    assets = sorted(set(h0[h0.abs() > 0].index) | set(trades.asset_id) | set(income.asset_id))
+    # Bank statement coverage: after its last date, positions come from the Portfolio uploads
+    stmt = led[led.source == 'Extrato'] if 'source' in led.columns else led.iloc[0:0]
+    ledger_end = max(pd.to_datetime(stmt.trade_date).dt.date.max(), cutover) if len(stmt) else cutover
+    I['ledger_end'] = ledger_end
+    use_snap = units_site is not None and not units_site.empty and ledger_end < today
+    if use_snap:
+        snap_assets = set(units_site.columns[(units_site[units_site.index > ledger_end].abs() > 0).any()]) if (units_site.index > ledger_end).any() else set()
+    else:
+        snap_assets = set()
+    assets = sorted(set(h0[h0.abs() > 0].index) | set(trades.asset_id) | set(income.asset_id) | snap_assets)
     if not assets:
         return pd.DataFrame(), {}, []
 
@@ -197,6 +241,17 @@ def period_b(I, uv_site):
         q_rows.append(dict(cur))
     q = pd.DataFrame(q_rows, index=days)[assets]
     q[q.abs() < 1e-6] = 0.0
+    snap_days_after = []
+    if use_snap:
+        us = units_site.reindex(columns=assets).fillna(0.0)
+        snap_days_after = [d for d in us.index if ledger_end < d <= today]
+        last = q.loc[ledger_end].copy() if ledger_end in q.index else q.iloc[0].copy()
+        for d in days:
+            if d <= ledger_end:
+                continue
+            if d in us.index:
+                last = us.loc[d].copy()
+            q.loc[d] = last.values
 
     ex = trades[trades.type.isin(TRADE_TYPES) & (trades.units != 0) & (~trades.is_reversal.astype(bool))].copy()
     ex['px'] = (-ex.amount / ex.units).abs()
@@ -209,9 +264,27 @@ def period_b(I, uv_site):
     uv = uv.combine_first(ex_px.reindex(columns=assets)) if not ex_px.empty else uv
     uv = uv.reindex(sorted(set(uv.index) | set(days))).ffill().bfill().reindex(days)
     mv = (q * uv).fillna(0.0)
-    cash = trades[trades.type.isin(TRADE_TYPES)].groupby(['trade_date', 'asset_id']).amount.sum().unstack()
-    net_inv = (-cash).reindex(index=days, columns=assets).fillna(0.0)
+    cash = trades[trades.type.isin(TRADE_TYPES) & (trades.trade_date <= ledger_end)].groupby(['trade_date', 'asset_id']).amount.sum().unstack()
+    net_inv = (-cash).reindex(index=days, columns=assets).fillna(0.0) if cash is not None and len(cash) else pd.DataFrame(0.0, index=days, columns=assets)
     inc = income.groupby(['trade_date', 'asset_id']).amount.sum().unstack().reindex(index=days, columns=assets).fillna(0.0)
+    coupons_est = []
+    if use_snap:
+        # after the statement: trades inferred from the change in Portfolio quantities, at that day's price
+        after = [d for d in days if d > ledger_end]
+        dq = q.diff().loc[after]
+        net_inv.loc[after] = (dq * uv.loc[after]).fillna(0.0).values
+        # coupons are not in any upload: credit the scheduled coupon (the dirty price drops on the ex-date)
+        info = {a['asset_id']: a for a in I['aliases']}
+        for a in assets:
+            rate, dates = coupon_schedule(a, info.get(a, {}).get('sub_class', ''), ledger_end, today)
+            for d in dates:
+                if d in q.index:
+                    face = float(q.shift(1).loc[d, a]) if d != days[0] else float(q.loc[d, a])
+                    if face > 0 and not (inc.loc[d, a] > 0):
+                        amt = face * rate / 100 / 2
+                        inc.loc[d, a] += amt
+                        coupons_est.append((d, a, amt))
+    I['coupons_est'] = coupons_est
     mv_open = mv.shift(1)
     mv_open.iloc[0] = mv.iloc[0]
     pnl = mv - mv_open - net_inv + inc
@@ -299,9 +372,9 @@ def compute(today=None):
     if off.empty:
         raise ValueError('Sem histórico oficial de cota (NAVPosition) — nada a calcular.')
 
-    uv_site, kinds = snapshot_prices(I['items'])
+    uv_site, kinds, units_site = snapshot_prices(I['items'])
     pa = period_a(I['ps'])
-    pb, avg_cost, warnings = period_b(I, uv_site)
+    pb, avg_cost, warnings = period_b(I, uv_site, units_site)
     pab = pd.concat([d for d in (pa, pb) if not d.empty], ignore_index=True)
     pab['date'] = pd.to_datetime(pab.date)
     info = {a['asset_id']: a for a in I['aliases']}
@@ -319,6 +392,8 @@ def compute(today=None):
             pme = (pd.Timestamp(rep['date']) - pd.offsets.BMonthEnd(1)).date()
             admin_subs.setdefault(pme, rep['prev_subscriptions'] or 0.0)
     subs_by_deal = dict(bank_subs)
+    for d, v in I.get('manual_flows', {}).items():          # IGF TR page "Captações e Resgates (manual)"
+        subs_by_deal[d] = subs_by_deal.get(d, 0.0) + v
     subs_by_deal.update({d: v for d, v in admin_subs.items() if v})
 
     # ── anchors: official month-ends (NAVPosition before the admin reports, admin lead series after)
@@ -591,7 +666,7 @@ def reconcile(I, pab, f, anchors, adj, kinds, warnings, hwm):
         # bank cash (statement balance by booking date) vs the administrator's first bank account
         banks = [h for h in rep['holdings'] if h['section'] == 'BANK ACCOUNTS']
         tx = led[led.source == 'Extrato'] if 'source' in led else led
-        if banks and not tx.empty:
+        if banks and not tx.empty and I.get('ledger_end', I['cutover']) >= rep['date']:
             acct_digits = ''.join(ch for ch in str(banks[0]['name']) if ch.isdigit())[:9]
             bal = tx[pd.to_datetime(tx.booking_date).dt.date <= rep['date']].amount.sum()
             adm_bal = banks[0]['value']
@@ -644,6 +719,15 @@ def reconcile(I, pab, f, anchors, adj, kinds, warnings, hwm):
             add('info', 'Aplicações aguardando cotização', '; '.join(f"{d:%d/%m} US$ {v:,.0f} ({c})" for d, v, c in pend))
     for w in warnings:
         add('warn', 'Quantidade inconsistente', w)
+    le = I.get('ledger_end', I['cutover'])
+    if le < I['today']:
+        add('info', 'Fonte das posições', f"extrato até {le:%d/%m/%Y}; depois, quantidades e preços do Portfolio (uploads Bloomberg). "
+            "Compras e vendas são lidas pela mudança de quantidade, ao preço de fechamento do dia.")
+        ce = I.get('coupons_est') or []
+        if ce:
+            add('info', 'Cupons estimados pelo calendário', f"{len(ce)} cupom(ns) creditado(s) sem extrato, total US$ {sum(x[2] for x in ce):,.0f}: "
+                + ', '.join(f"{a} {d:%d/%m}" for d, a, _ in ce[-6:]))
+        add('info', 'Dividendos de ações', 'sem extrato, dividendos de ações/ETFs não entram no P&L por ativo até o próximo extrato (a cota oficial do mês já os inclui).')
     add('info', 'Marca d\'água usada na provisão de performance', f"{hwm:.6f} (maior cota de fechamento de maio/novembro)")
     return checks
 

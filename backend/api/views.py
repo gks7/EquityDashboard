@@ -336,6 +336,15 @@ class PortfolioSnapshotViewSet(viewsets.ModelViewSet):
                         pass
             threading.Thread(target=_update_prices, args=(equity_tickers,), daemon=True).start()
 
+            # Refresh the IGF TR performance base with the new prices/quantities (best-effort, background)
+            def _rebuild_performance():
+                try:
+                    from finance.perf import service as perf_service
+                    perf_service.rebuild()
+                except Exception:
+                    pass
+            threading.Thread(target=_rebuild_performance, daemon=True).start()
+
             return Response({
                 "message": f"Portfolio uploaded successfully. {len(items_to_create)} items created.",
                 "snapshot_id": snapshot.id,

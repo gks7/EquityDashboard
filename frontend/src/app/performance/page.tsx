@@ -550,12 +550,12 @@ function HowTo({ data }: { data: Payload }) {
     <details className={`${card} p-5`}>
       <summary className="text-sm font-semibold text-slate-900 dark:text-white cursor-pointer">Como manter batendo</summary>
       <ol className="list-decimal pl-5 mt-3 space-y-1.5 text-xs text-slate-600 dark:text-slate-300 max-w-3xl">
-        <li><b>Todo dia</b> (automático): os snapshots Bloomberg do Portfolio dão o preço. A página usa o snapshot depois do fechamento americano (≥ 17:05 em Nova York). Se faltar dia, aparece em Verificações.</li>
-        <li><b>Toda semana</b>: exporte o extrato de transações da conta UBS 308-152481 em Excel e envie aqui. Pode sobrepor períodos; linhas repetidas são ignoradas.</li>
-        <li><b>Todo mês</b>, quando chegar o NAV Calculation do administrador: envie o arquivo (sem senha). A cota do mês passa a ser a oficial e a página confere quantidade por ativo e o caixa da conta.</li>
+        <li><b>Todo dia</b> (automático): cada upload do Portfolio (macro Bloomberg) atualiza esta base na hora. O preço do dia é o do snapshot depois do fechamento americano; antes do fechamento, a cota de hoje usa o último upload intraday.</li>
+        <li><b>Quantidades</b>: compras e vendas são lidas pela mudança de quantidade no Portfolio, ao preço de fechamento do dia. Atualize a quantidade na planilha no dia da operação.</li>
+        <li><b>Todo mês</b>, quando chegar o NAV Calculation do administrador: envie o arquivo (sem senha). A cota do mês passa a ser a oficial e a página confere a quantidade de cada ativo.</li>
+        <li><b>Captações</b>: lance em IGF TR → Captações e Resgates (manual) até chegar o relatório do administrador.</li>
+        <li><b>Extrato</b> (opcional): se enviar, ele manda nas datas que cobre e traz dividendos e preços reais de execução. Sem extrato, os cupons dos bonds entram pelo calendário e os dividendos das ações só aparecem na cota oficial.</li>
         <li>Se aparecer &quot;sem ativo cadastrado&quot;: cadastre o ativo em Django admin → Asset aliases (id, ISIN, tickers) e recalcule.</li>
-        <li>Operação fora da conta UBS principal (subconta CAD, CSWML): lance em Ajustes manuais.</li>
-        <li>Diferença mensal acima de 25 bps entre estimado e oficial: normalmente é taxa de performance, preço faltando ou operação não lançada. As verificações mostram onde.</li>
       </ol>
       <p className="text-[11px] text-slate-500 mt-3">Base: histórico de posições até {dBR(data.method.cutover)}; depois extrato + preços. Relatórios do administrador carregados: {data.method.admin_reports.map(dBR).join(", ") || "nenhum"}. Marca d&apos;água atual: {data.hwm.toFixed(6)}.</p>
     </details>

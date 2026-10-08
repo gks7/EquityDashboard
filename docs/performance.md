@@ -18,15 +18,15 @@ Captações entram como cotas novas na data de cotização (último dia útil do
 
 ## Rotina
 
-**Todo dia — automático.** A macro Bloomberg continua subindo os snapshots do Portfolio. A página se recalcula sozinha quando há snapshot novo (ou no botão *Recalcular*).
+**Todo dia — automático.** Cada upload do Portfolio (macro Bloomberg, várias vezes ao dia) recalcula esta base em segundo plano. Para cada dia útil vale o snapshot tirado depois do fechamento americano; no dia corrente, antes do fechamento, vale o último upload intraday.
 
-**Toda semana — extrato.** Exporte o extrato de transações da conta UBS 308-152481 em Excel e envie pelo botão *Enviar extrato / relatório adm*. Pode mandar períodos que se sobrepõem; linhas repetidas são reconhecidas pelo nº da transação.
+**Quantidades.** Depois da última data coberta por extrato, as posições são as quantidades do Portfolio. Compras e vendas são inferidas pela mudança de quantidade e valoradas ao preço de fechamento do dia, então atualize a quantidade na planilha no dia da operação. Cupons de bonds de taxa fixa entram pelo calendário (taxa/2 × valor de face). Dividendos de ações só aparecem na cota oficial do mês.
 
-**Todo mês — relatório do administrador.** Quando chegar o *Excel NAV Calculation – IGFWM Total Class A MM.AAAA*, envie pelo mesmo botão (vários arquivos de uma vez funcionam). Se o arquivo vier com senha, abra no Excel e salve uma cópia sem senha. A partir daí a cota do mês fica oficial e a página confere:
+**Todo mês — relatório do administrador.** Quando chegar o *Excel NAV Calculation – IGFWM Total Class A MM.AAAA*, envie pelo botão *Enviar extrato / relatório adm* (sem senha). A cota do mês fica oficial e a página confere a quantidade de cada ativo contra a custódia.
 
-- quantidade de cada ativo vs custódia do administrador;
-- saldo da conta 308-152481 (soma do extrato) vs saldo do administrador;
-- retorno estimado do mês vs retorno oficial (alerta acima de 25 bps; em maio/novembro a diferença costuma ser a taxa de performance cristalizada).
+**Captações.** Lance em IGF TR → Captações e Resgates (manual) até o relatório do administrador chegar; depois valem os números dele.
+
+**Extrato (opcional).** Se enviar o extrato da UBS, ele tem prioridade nas datas que cobre: preços reais de execução, dividendos, cupons e a conciliação de caixa.
 
 ## Quando uma verificação ficar amarela ou vermelha
 
