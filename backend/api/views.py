@@ -1608,3 +1608,110 @@ class CommitteeMeetingViewSet(viewsets.ModelViewSet):
             .order_by('due_date', '-meeting__date', 'order')
         )
         return Response(OpenDecisionSerializer(qs, many=True).data)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# IGF TR — Performance (cota + per-asset performance). Engine: finance/perf/engine.py
+# ─────────────────────────────────────────────────────────────────────────────
+
+class PerformanceView(APIView):
+    """GET /api/igf-tr/performance/[?rebuild=1] — cached dashboard payload (rebuilt when stale or on demand)."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from finance.perf import service
+        if request.query_params.get('rebuild') == '1':
+            run = service.rebuild()
+            if not run.ok:
+                return Response({'error': run.error.splitlines()[0] if run.error else 'erro', 'detail': run.error},
+                                status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        else:
+            run = service.latest()
+        if run is None or not run.ok:
+            return Response({'error': (run.error.splitlines()[0] if run and run.error else 'Sem cálculo disponível'),
+                             'detail': run.error if run else ''}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        data = dict(run.payload)
+        data['run'] = {'created_at': run.created_at.isoformat(), 'duration_s': round(run.duration_s, 1)}
+        return Response(data)
+
+
+class PerformanceUploadView(APIView):
+    """POST /api/igf-tr/performance/upload/ — multipart `files` (bank statement and/or administrator NAV reports).
+    The file kind is detected from its content. Recomputes after importing."""
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        from finance.perf import service
+        import openpyxl
+        files = request.FILES.getlist('files') or list(request.FILES.values())
+        if not files:
+            return Response({'error': 'Nenhum arquivo enviado.'}, status=status.HTTP_400_BAD_REQUEST)
+        results = []
+        for fobj in files:
+            name = fobj.name
+            try:
+                data = fobj.read()
+                import io as _io
+                try:
+                    sheets = openpyxl.load_workbook(_io.BytesIO(data), read_only=True).sheetnames
+                except Exception:
+                    raise ValueError('não abre como .xlsx (arquivo com senha ou formato antigo). Salve uma cópia .xlsx sem senha.')
+                if 'NAV Report' in sheets:
+                    out = service.import_admin_report(_io.BytesIO(data), name)
+                    results.append({'file': name, 'kind': 'Relatório do administrador', 'ok': True, **out})
+                else:
+                    out = service.import_statement(_io.BytesIO(data))
+                    results.append({'file': name, 'kind': 'Extrato bancário', 'ok': True, **out})
+            except ValueError as e:
+                results.append({'file': name, 'ok': False, 'error': str(e)})
+            except Exception as e:  # pragma: no cover - surfaced to the user
+                results.append({'file': name, 'ok': False, 'error': f'{e.__class__.__name__}: {e}'})
+        run = service.rebuild()
+        return Response({'results': results, 'rebuild_ok': run.ok, 'rebuild_error': (run.error.splitlines()[0] if run.error else '')})
+
+
+class PerformanceExportView(APIView):
+    """GET /api/igf-tr/performance/export/ — Excel workbook with the full base."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from django.http import HttpResponse
+        from finance.perf.engine import compute
+        from finance.perf.excel import build_workbook
+        payload, frames = compute()
+        content = build_workbook(payload, frames)
+        resp = HttpResponse(content, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        resp['Content-Disposition'] = f'attachment; filename="IGF_TR_performance_{payload["asof"]}.xlsx"'
+        return resp
+
+
+class PerformanceManualEntriesView(APIView):
+    """GET/POST/DELETE /api/igf-tr/performance/manual/ — trades and income outside the uploaded statement."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from finance.models import ManualLedgerEntry
+        return Response(list(ManualLedgerEntry.objects.values('id', 'trade_date', 'type', 'asset_id', 'units', 'amount', 'note')))
+
+    def post(self, request):
+        from finance.models import ManualLedgerEntry, AssetAlias
+        d = request.data
+        try:
+            td = datetime.strptime(str(d.get('trade_date')), '%Y-%m-%d').date()
+            typ = str(d.get('type'))
+            if typ not in dict(ManualLedgerEntry.TYPE_CHOICES):
+                raise ValueError('tipo inválido')
+            asset = str(d.get('asset_id') or '').strip()
+            if asset and not AssetAlias.objects.filter(asset_id=asset).exists():
+                raise ValueError(f'ativo "{asset}" não cadastrado (Asset aliases)')
+            e = ManualLedgerEntry.objects.create(trade_date=td, type=typ, asset_id=asset, units=float(d.get('units') or 0),
+                                                 amount=float(d.get('amount')), note=str(d.get('note') or '')[:255])
+        except (TypeError, ValueError) as ex:
+            return Response({'error': f'Ajuste inválido: {ex}'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'id': e.id}, status=status.HTTP_201_CREATED)
+
+    def delete(self, request):
+        from finance.models import ManualLedgerEntry
+        ManualLedgerEntry.objects.filter(id=request.query_params.get('id')).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

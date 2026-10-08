@@ -11,6 +11,7 @@ from api.views import (
     CRMContactViewSet, CRMMeetingViewSet,
     CommitteeMeetingViewSet,
     AlphaUploadView, AlphaStocksView, AlphaAnalysisView,
+    PerformanceView, PerformanceUploadView, PerformanceExportView, PerformanceManualEntriesView,
 )
 
 router = DefaultRouter()
@@ -38,6 +39,10 @@ urlpatterns = [
     path('igf-tr/consolidated/', FundConsolidatedView.as_view(), name='igf-tr-consolidated'),
     path('igf-tr/daily-cash/', DailyCashView.as_view(), name='igf-tr-daily-cash'),
     path('igf-tr/manual-flows/', ManualFlowsView.as_view(), name='igf-tr-manual-flows'),
+    path('igf-tr/performance/', PerformanceView.as_view(), name='igf-tr-performance'),
+    path('igf-tr/performance/upload/', PerformanceUploadView.as_view(), name='igf-tr-performance-upload'),
+    path('igf-tr/performance/export/', PerformanceExportView.as_view(), name='igf-tr-performance-export'),
+    path('igf-tr/performance/manual/', PerformanceManualEntriesView.as_view(), name='igf-tr-performance-manual'),
     path('fund-config/', FundConfigView.as_view(), name='fund-config'),
     path('admin/track/', TrackEventView.as_view(), name='admin-track'),
     path('admin/overview/', AdminOverviewView.as_view(), name='admin-overview'),
