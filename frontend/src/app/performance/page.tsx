@@ -11,7 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ResponsiveContainer, LineChart, Line, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine,
 } from "recharts";
-import { RefreshCcw, Upload, Download, CheckCircle2, AlertTriangle, XCircle, Info, ChevronDown, Trash2, Plus } from "lucide-react";
+import { RefreshCcw, Upload, Download, CheckCircle2, AlertTriangle, XCircle, Info, ChevronDown, Trash2, Plus, TrendingUp, TrendingDown } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
 
 const API = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/igf-tr/performance`;
@@ -41,17 +41,18 @@ const MES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out
 const pct = (v: number | null | undefined, d = 2) => v == null || isNaN(v) ? "–" : `${v > 0 ? "+" : ""}${(v * 100).toFixed(d).replace(".", ",")}%`;
 const pp = (v: number | null | undefined, d = 2) => v == null || isNaN(v) ? "–" : `${v > 0 ? "+" : ""}${(v * 100).toFixed(d).replace(".", ",")}`;
 const num = (v: number | null | undefined, d = 0) => v == null || isNaN(v) ? "–" : v.toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
-const mi = (v: number | null | undefined) => v == null ? "–" : (v / 1e6).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const kmi = (v: number | null | undefined) => v == null ? "–" : Math.abs(v) >= 1e6 ? `${(v / 1e6).toLocaleString("pt-BR", { maximumFractionDigits: 2 })} mi` : `${(v / 1e3).toLocaleString("pt-BR", { maximumFractionDigits: 0 })} mil`;
 const dBR = (s?: string | null) => s ? `${s.slice(8, 10)}/${s.slice(5, 7)}/${s.slice(0, 4)}` : "";
-const tone = (v: number | null | undefined) => v == null ? "" : v > 0 ? "text-blue-600 dark:text-blue-400" : v < 0 ? "text-rose-600 dark:text-rose-400" : "";
+const tone = (v: number | null | undefined) => v == null ? "" : v > 0 ? "text-emerald-600 dark:text-emerald-400" : v < 0 ? "text-rose-600 dark:text-rose-400" : "";
 
-const card = "rounded-xl border border-slate-200 dark:border-slate-800/60 bg-white dark:bg-slate-900/50 shadow-sm";
-const btn = "inline-flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/60 transition-colors disabled:opacity-50";
-const seg = (on: boolean) => `px-2.5 py-1 text-xs rounded-md transition-colors ${on ? "bg-slate-900 text-white dark:bg-blue-500" : "text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"}`;
+const card = "rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm";
+const POS = "#10b981", NEG = "#f43f5e", BLUE = "#3b82f6";
+const btn = "inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#111827] text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-50";
+const seg = (on: boolean) => `px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${on ? "bg-white dark:bg-[#111827] text-slate-900 dark:text-white shadow-sm" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`;
+const segWrap = "flex flex-wrap items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg";
 
 const SERIES = [
-  { key: "fund", label: "IGF TR (cota)", color: "#2a78d6" },
+  { key: "fund", label: "IGF TR (cota)", color: "#3b82f6" },
   { key: "S&P 500", label: "S&P 500", color: "#eb6834" },
   { key: "Nasdaq Composite", label: "Nasdaq Composite", color: "#1baf7a" },
   { key: "SOFR (caixa USD)", label: "SOFR (caixa USD)", color: "#7c6ce0" },
@@ -65,7 +66,7 @@ function Spark({ v }: { v: number[] }) {
   const w = 88, h = 22, lo = Math.min(...v), hi = Math.max(...v);
   const x = (i: number) => 2 + (i * (w - 4)) / (v.length - 1), y = (z: number) => h - 3 - ((h - 6) * (z - lo)) / ((hi - lo) || 1);
   const d = v.map((z, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(z).toFixed(1)}`).join("");
-  const c = v[v.length - 1] >= v[0] ? "#2a78d6" : "#e34948";
+  const c = v[v.length - 1] >= v[0] ? POS : NEG;
   return <svg width={w} height={h} aria-hidden="true"><path d={d} fill="none" stroke={c} strokeWidth={1.5} /><circle cx={x(v.length - 1)} cy={y(v[v.length - 1])} r={2.2} fill={c} /></svg>;
 }
 
@@ -127,68 +128,115 @@ export default function PerformancePage() {
   };
 
   return (
-    <div className="min-h-screen">
-      <div className="border-b border-slate-200 dark:border-slate-800/60 bg-white/80 dark:bg-[#080f23]/80 backdrop-blur-sm px-4 sm:px-8 py-5">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-1">IGF WM Total Return · Class A · série líder</p>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Performance</h1>
-            {data && <p className="text-xs text-slate-500 mt-0.5">Posição em {dBR(data.asof)} · cota oficial até {dBR(data.official_last)} · USD{data.run ? ` · calculado ${new Date(data.run.created_at).toLocaleString("pt-BR")}` : ""}</p>}
-          </div>
+    <div className="w-full max-w-6xl mx-auto space-y-5 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Performance</h1>
+          <p className="text-xs sm:text-sm text-slate-400 mt-0.5">IGF WM Total Return · cota, retorno e ativos</p>
+        </div>
+        <div className="flex flex-col sm:items-end gap-2">
           <div className="flex items-center gap-2 flex-wrap">
             <input ref={fileRef} type="file" accept=".xlsx" multiple className="hidden" id="perf-upload" onChange={e => upload(e.target.files)} />
-            <button className={btn} onClick={() => fileRef.current?.click()} disabled={!!busy}><Upload className="w-3.5 h-3.5" />Enviar extrato / relatório adm</button>
+            <button className={btn} onClick={() => fileRef.current?.click()} disabled={!!busy}><Upload className="w-3.5 h-3.5" />Enviar relatório adm / extrato</button>
             <button className={btn} onClick={() => load(true)} disabled={!!busy}><RefreshCcw className={`w-3.5 h-3.5 ${busy ? "animate-spin" : ""}`} />Recalcular</button>
             <button className={btn} onClick={exportXlsx} disabled={!!busy || !data}><Download className="w-3.5 h-3.5" />Excel</button>
           </div>
+          {data?.run && <p className="text-[11px] sm:text-xs text-slate-400 font-medium tabular-nums">Atualizado: {new Date(data.run.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>}
         </div>
-        {busy && <p className="text-xs text-slate-500 mt-3">{busy}</p>}
-        {err && <p className="text-xs text-rose-600 mt-3">{err}</p>}
-        {uploadMsg && <ul className="mt-3 space-y-1">{uploadMsg.map((m, i) => <li key={i} className={`text-xs ${m.ok ? "text-emerald-700 dark:text-emerald-400" : "text-rose-600"}`}><b>{m.file}</b>: {m.text}</li>)}</ul>}
       </div>
-
+      {(busy || err || uploadMsg) && (
+        <div className={`${card} p-4 space-y-1`}>
+          {busy && <p className="text-xs text-slate-500">{busy}</p>}
+          {err && <p className="text-xs text-rose-600">{err}</p>}
+          {uploadMsg && uploadMsg.map((m, i) => <p key={i} className={`text-xs ${m.ok ? "text-emerald-700 dark:text-emerald-400" : "text-rose-600"}`}><b>{m.file}</b>: {m.text}</p>)}
+        </div>
+      )}
       {data && <Body data={data} reload={() => load()} />}
     </div>
   );
 }
 
+function ReturnBadge({ label: l, value }: { label: string; value: number | null }) {
+  if (value == null) return <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-xs font-semibold text-slate-400 tabular-nums">{l} —</span>;
+  const up = value >= 0; const Icon = up ? TrendingUp : TrendingDown;
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums ${up ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400" : "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400"}`}>
+      <Icon className="w-3.5 h-3.5" /><span className="text-[10px] font-bold uppercase tracking-wider opacity-70">{l}</span>{pct(value)}
+    </span>
+  );
+}
+
+function HeroMetric({ label: l, children, sub }: { label: string; children: React.ReactNode; sub?: React.ReactNode }) {
+  return (
+    <div>
+      <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap mb-1.5">{l}</p>
+      <p className="text-2xl sm:text-3xl font-bold tracking-tight tabular-nums leading-none text-slate-900 dark:text-white">{children}</p>
+      {sub && <p className="text-[11px] text-slate-400 mt-1.5 tabular-nums">{sub}</p>}
+    </div>
+  );
+}
+
+const HeroDivider = () => <div className="hidden lg:block self-stretch w-px bg-slate-200 dark:bg-slate-700" />;
+
 function Body({ data, reload }: { data: Payload; reload: () => void }) {
   const K = data.kpi;
   const nWarn = data.checks.filter(c => c.status === "warn" || c.status === "error").length;
+  const [tab, setTab] = useState<"ativos" | "atribuicao" | "pl" | "conciliacao">("ativos");
+  const eq = data.assets.filter(a => a.status === "Em carteira" && (a.bucket === "Ações individuais" || a.bucket === "ETFs de ações")).reduce((t, a) => t + a.w, 0);
+  const fi = data.assets.filter(a => a.status === "Em carteira").reduce((t, a) => t + a.w, 0) - eq;
+  const tabs: [typeof tab, string][] = [["ativos", "Ativos"], ["atribuicao", "Atribuição"], ["pl", "PL e captações"], ["conciliacao", nWarn ? `Conciliação (${nWarn})` : "Conciliação"]];
   return (
-    <div className="px-4 sm:px-8 py-6 space-y-6 max-w-[1400px]">
-      <div className="flex flex-wrap gap-2">
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">Oficial {dBR(data.official_last)}: {data.official_cota.toFixed(6).replace(".", ",")}</span>
-        {data.asof > data.official_last && <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">Após {dBR(data.official_last)}: estimativa</span>}
-        <a href="#checks" className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${nWarn ? "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" : "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"}`}>{nWarn ? `${nWarn} verificação(ões) para olhar` : "Conciliação ok"}</a>
-      </div>
-
-      <div className={`${card} grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 divide-x divide-y lg:divide-y-0 divide-slate-100 dark:divide-slate-800 overflow-hidden`}>
-        {[
-          ["Cota hoje", K.cota.toFixed(6).replace(".", ","), ""],
-          ["No mês", pct(K.mtd), tone(K.mtd)], ["No ano", pct(K.ytd), tone(K.ytd)], ["12 meses", pct(K.m12), tone(K.m12)],
-          ["Desde o início", pct(K.itd), tone(K.itd)], ["Volatilidade a.a.", pct(K.vol).replace("+", ""), ""],
-          ["Máx. drawdown", pct(K.maxdd), tone(K.maxdd)], ["PL (US$ mi)", mi(K.nav), ""],
-        ].map(([l, v, c]) => (
-          <div key={l} className="p-4 min-w-0"><p className="text-[11px] text-slate-500">{l}</p><p className={`font-mono text-lg tabular-nums ${c}`}>{v}</p></div>
-        ))}
+    <>
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm p-4 sm:p-6">
+        <div className="flex flex-wrap items-start gap-x-7 sm:gap-x-9 gap-y-5">
+          <HeroMetric label="Cota" sub={data.asof > data.official_last ? `estimada · oficial ${dBR(data.official_last)}: ${data.official_cota.toFixed(4).replace(".", ",")}` : `oficial ${dBR(data.official_last)}`}>
+            {K.cota.toLocaleString("pt-BR", { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
+          </HeroMetric>
+          <HeroMetric label="Patrimônio" sub={`${(K.shares / 1e6).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi de cotas`}>${(K.nav / 1e6).toFixed(2)}M</HeroMetric>
+          <HeroDivider />
+          <div className="flex flex-col gap-2.5">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap mb-1.5">Rentabilidade no ano</p>
+              <p className="text-2xl sm:text-3xl font-bold tracking-tight tabular-nums leading-none"><span className={tone(K.ytd)}>{pct(K.ytd)}</span></p>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              <ReturnBadge label="Mês" value={K.mtd} />
+              <ReturnBadge label="12M" value={K.m12} />
+              <ReturnBadge label="Início" value={K.itd} />
+            </div>
+          </div>
+          <HeroDivider />
+          <div className="flex flex-col gap-2 min-w-[210px] flex-1">
+            <div className="flex items-center justify-between gap-4">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Risco</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">vol. <span className="text-slate-900 dark:text-white font-semibold">{pct(K.vol, 1).replace("+", "")}</span> · máx. queda <span className="text-rose-600 dark:text-rose-400 font-semibold">{pct(K.maxdd, 1)}</span></p>
+            </div>
+            <div className="flex h-2 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800">
+              <div className="bg-blue-500" style={{ width: `${eq * 100}%` }} />
+              <div className="bg-teal-500" style={{ width: `${fi * 100}%` }} />
+            </div>
+            <div className="flex items-center justify-between gap-4 text-xs">
+              <span className="inline-flex items-center gap-1.5 text-slate-500 dark:text-slate-400"><span className="w-2 h-2 rounded-full bg-blue-500" />Renda variável<span className="text-slate-900 dark:text-white font-semibold tabular-nums">{(eq * 100).toFixed(1)}%</span></span>
+              <span className="inline-flex items-center gap-1.5 text-slate-500 dark:text-slate-400"><span className="w-2 h-2 rounded-full bg-teal-500" />Renda fixa<span className="text-slate-900 dark:text-white font-semibold tabular-nums">{(fi * 100).toFixed(1)}%</span></span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <CotaChart data={data} />
       <MonthlyHeat data={data} />
-      <AssetsTable data={data} />
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <ContribChart data={data} />
-        <AttribTable data={data} />
+
+      <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-full sm:w-fit overflow-x-auto">
+        {tabs.map(([k, l]) => (
+          <button key={k} onClick={() => setTab(k)} className={`flex-1 sm:flex-none whitespace-nowrap px-5 py-2 text-sm font-semibold rounded-lg transition-all ${tab === k ? "bg-white dark:bg-[#111827] text-slate-900 dark:text-white shadow-sm" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}>{l}</button>
+        ))}
       </div>
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <NavChart data={data} />
-        <SubsChart data={data} />
-      </div>
-      <Checks data={data} />
-      <ManualEntries onChange={reload} />
-      <HowTo data={data} />
-    </div>
+
+      {tab === "ativos" && <AssetsTable data={data} />}
+      {tab === "atribuicao" && <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 sm:gap-6"><ContribChart data={data} /><AttribTable data={data} /></div>}
+      {tab === "pl" && <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 sm:gap-6"><NavChart data={data} /><SubsChart data={data} /></div>}
+      {tab === "conciliacao" && <div className="space-y-5 sm:space-y-6"><Checks data={data} /><ManualEntries onChange={reload} /><HowTo data={data} /></div>}
+    </>
   );
 }
 
@@ -216,10 +264,10 @@ function CotaChart({ data }: { data: Payload }) {
     });
   }, [data, range]);
   return (
-    <div className={`${card} p-5`}>
+    <div className={`${card} p-4 sm:p-5`}>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-        <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Cota vs referências <span className="font-normal text-slate-500">(base 100)</span></h2>
-        <div className="flex gap-1">{["Início", "Ano", "12m", "6m", "3m"].map(r => <button key={r} className={seg(range === r)} onClick={() => setRange(r)}>{r}</button>)}</div>
+        <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">Cota vs referências <span className="font-normal text-slate-500">(base 100)</span></h2>
+        <div className={segWrap}>{["Início", "Ano", "12m", "6m", "3m"].map(r => <button key={r} className={seg(range === r)} onClick={() => setRange(r)}>{r}</button>)}</div>
       </div>
       <div className="flex flex-wrap gap-2 mb-3">
         {SERIES.map(s => (
@@ -238,8 +286,8 @@ function CotaChart({ data }: { data: Payload }) {
             <Tooltip formatter={(v, n) => [v == null ? "–" : pct(Number(v) / 100 - 1), n === "fund" || n === "fundEst" ? "IGF TR" : String(n)]}
               labelFormatter={(d) => dBR(String(d))} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
             <ReferenceLine y={100} stroke="#94a3b8" strokeDasharray="2 4" />
-            {on["fund"] && <Line dataKey="fund" stroke="#2a78d6" strokeWidth={2.2} dot={false} isAnimationActive={false} />}
-            {on["fund"] && <Line dataKey="fundEst" stroke="#2a78d6" strokeWidth={2.2} strokeDasharray="5 4" dot={false} isAnimationActive={false} />}
+            {on["fund"] && <Line dataKey="fund" stroke={BLUE} strokeWidth={2.2} dot={false} isAnimationActive={false} />}
+            {on["fund"] && <Line dataKey="fundEst" stroke={BLUE} strokeWidth={2.2} strokeDasharray="5 4" dot={false} isAnimationActive={false} />}
             {SERIES.filter(s => s.key !== "fund" && on[s.key]).map(s => <Line key={s.key} dataKey={s.key} stroke={s.color} strokeWidth={1.5} dot={false} isAnimationActive={false} />)}
           </LineChart>
         </ResponsiveContainer>
@@ -266,7 +314,7 @@ function MonthlyHeat({ data }: { data: Payload }) {
   const bg = (v: number | null | undefined) => {
     if (v == null) return undefined;
     const t = Math.max(-1, Math.min(1, v / scale)); const a = Math.abs(t) * 0.45;
-    return t >= 0 ? `rgba(42,120,214,${a})` : `rgba(227,73,72,${a})`;
+    return t >= 0 ? `rgba(16,185,129,${a})` : `rgba(244,63,94,${a})`;
   };
   const isDiff = k === "Fundo − S&P 500";
   const tableRows = useMemo(() => {
@@ -282,13 +330,13 @@ function MonthlyHeat({ data }: { data: Payload }) {
     return out;
   }, [byYear, isDiff]);
   return (
-    <div className={`${card} p-5`}>
+    <div className={`${card} p-4 sm:p-5`}>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-        <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Rentabilidade mensal</h2>
+        <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">Rentabilidade mensal</h2>
         <select value={k} onChange={e => setK(e.target.value)} className="text-xs px-2 py-1 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">{keys.map(x => <option key={x}>{x}</option>)}</select>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-xs font-mono tabular-nums">
+        <table className="w-full text-xs tabular-nums">
           <thead><tr className="text-slate-500">{["Ano", ...MES, "Ano", "Acum."].map((h, i) => <th key={i} className="px-1.5 py-1.5 text-right first:text-left font-medium">{h}</th>)}</tr></thead>
           <tbody>
             {tableRows.map(({ y, cells, yv, acc }) => (
@@ -332,21 +380,21 @@ function AssetsTable({ data }: { data: Payload }) {
     </th>
   );
   return (
-    <div className={`${card} p-5`}>
+    <div className={`${card} p-4 sm:p-5`}>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-        <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Quanto cada ativo rende</h2>
+        <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">Quanto cada ativo rende</h2>
         <div className="flex flex-wrap gap-3">
-          <div className="flex gap-1">{["Em carteira", "Encerrada", "Todas"].map(x => <button key={x} className={seg(st === x)} onClick={() => setSt(x)}>{x === "Encerrada" ? "Encerradas" : x}</button>)}</div>
-          <div className="flex flex-wrap gap-1">{BUCKETS.map(x => <button key={x} className={seg(cl === x)} onClick={() => setCl(x)}>{BUCKET_SHORT[x]}</button>)}</div>
+          <div className={segWrap}>{["Em carteira", "Encerrada", "Todas"].map(x => <button key={x} className={seg(st === x)} onClick={() => setSt(x)}>{x === "Encerrada" ? "Encerradas" : x}</button>)}</div>
+          <div className={segWrap}>{BUCKETS.map(x => <button key={x} className={seg(cl === x)} onClick={() => setCl(x)}>{BUCKET_SHORT[x]}</button>)}</div>
         </div>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-xs whitespace-nowrap">
           <thead className="text-slate-500 border-b border-slate-200 dark:border-slate-800"><tr>{cols.map(([k, l]) => th(k, l))}<th className="px-2 py-2 text-right font-medium">Trajetória</th></tr></thead>
-          <tbody className="font-mono tabular-nums">
+          <tbody className="tabular-nums">
             {rows.map(a => (
               <tr key={a.id} className="border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                <td className="px-2 py-1.5 font-sans"><div className="font-mono font-medium text-slate-900 dark:text-white">{a.id}</div><div className="text-[11px] text-slate-500 max-w-[220px] truncate">{a.name !== a.id ? a.name : ""}{a.status === "Encerrada" ? ` encerrada ${dBR(a.last)}` : ""}</div></td>
+                <td className="px-2 py-1.5 font-sans"><div className="font-semibold text-slate-900 dark:text-white">{a.id}</div><div className="text-[11px] text-slate-500 max-w-[220px] truncate">{a.name !== a.id ? a.name : ""}{a.status === "Encerrada" ? ` encerrada ${dBR(a.last)}` : ""}</div></td>
                 <td className="px-2 py-1.5 text-right font-sans"><span className="text-[11px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">{BUCKET_SHORT[a.bucket] || a.bucket}</span></td>
                 <td className="px-2 py-1.5 text-right">{a.w ? pct(a.w, 1).replace("+", "") : "–"}</td>
                 <td className="px-2 py-1.5 text-right">{kmi(a.mv)}</td>
@@ -383,8 +431,8 @@ function ContribChart({ data }: { data: Payload }) {
     return [...top, ...bot].map(a => ({ id: a.id.length > 18 ? a.id.slice(0, 17) + "…" : a.id, v: a.c_ytd * 100, pnl: a.pnl_ytd }));
   }, [data]);
   return (
-    <div className={`${card} p-5`}>
-      <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">Quem mais contribuiu no ano <span className="font-normal text-slate-500">(p.p. da cota)</span></h2>
+    <div className={`${card} p-4 sm:p-5`}>
+      <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white mb-3">Quem mais contribuiu no ano <span className="font-normal text-slate-500">(p.p. da cota)</span></h2>
       <div style={{ height: rows.length * 24 + 30 }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={rows} layout="vertical" margin={{ top: 0, right: 40, left: 10, bottom: 0 }}>
@@ -392,7 +440,7 @@ function ContribChart({ data }: { data: Payload }) {
             <YAxis type="category" dataKey="id" width={130} tick={{ fontSize: 11, fill: "#94a3b8" }} />
             <Tooltip formatter={(v, _n, p) => [`${pp(Number(v) / 100)} p.p. · P&L US$ ${num((p as { payload?: { pnl?: number } })?.payload?.pnl)}`, "Contribuição"]} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
             <ReferenceLine x={0} stroke="#94a3b8" />
-            <Bar dataKey="v" radius={3} isAnimationActive={false}>{rows.map((r, i) => <Cell key={i} fill={r.v >= 0 ? "#2a78d6" : "#e34948"} />)}</Bar>
+            <Bar dataKey="v" radius={3} isAnimationActive={false}>{rows.map((r, i) => <Cell key={i} fill={r.v >= 0 ? POS : NEG} />)}</Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -406,10 +454,10 @@ function AttribTable({ data }: { data: Payload }) {
   const keys = ["Ações individuais", "ETFs de ações", "ETFs de crédito", "Bonds (crédito)", "Treasuries", "Taxas, caixa e outros", "Cota"];
   const sum: Record<string, number> = {};
   return (
-    <div className={`${card} p-5`}>
-      <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">Atribuição por classe, {year} <span className="font-normal text-slate-500">(p.p. da cota)</span></h2>
+    <div className={`${card} p-4 sm:p-5`}>
+      <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white mb-3">Atribuição por classe, {year} <span className="font-normal text-slate-500">(p.p. da cota)</span></h2>
       <div className="overflow-x-auto">
-        <table className="w-full text-xs font-mono tabular-nums">
+        <table className="w-full text-xs tabular-nums">
           <thead className="text-slate-500"><tr><th className="px-1.5 py-1.5 text-left font-medium">Mês</th>{keys.map(k => <th key={k} className="px-1.5 py-1.5 text-right font-medium font-sans">{k.replace("ETFs de crédito", "ETFs créd.").replace("Bonds (crédito)", "Bonds").replace("Taxas, caixa e outros", "Taxas/outros").replace("Ações individuais", "Ações").replace("ETFs de ações", "ETFs ações")}</th>)}</tr></thead>
           <tbody>
             {rows.map(r => (
@@ -431,8 +479,8 @@ function AttribTable({ data }: { data: Payload }) {
 function NavChart({ data }: { data: Payload }) {
   const rows = useMemo(() => data.fund.map(r => ({ d: r[0], v: r[3] / 1e6 })), [data]);
   return (
-    <div className={`${card} p-5`}>
-      <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">Patrimônio líquido <span className="font-normal text-slate-500">(US$ mi)</span></h2>
+    <div className={`${card} p-4 sm:p-5`}>
+      <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white mb-3">Patrimônio líquido <span className="font-normal text-slate-500">(US$ mi)</span></h2>
       <div className="h-56">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={rows} margin={{ top: 5, right: 16, left: 0, bottom: 0 }}>
@@ -440,7 +488,7 @@ function NavChart({ data }: { data: Payload }) {
             <XAxis dataKey="d" tickFormatter={(d: string) => `${MES[+d.slice(5, 7) - 1]}/${d.slice(2, 4)}`} minTickGap={40} tick={{ fontSize: 11, fill: "#94a3b8" }} />
             <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} width={36} />
             <Tooltip formatter={(v) => [`US$ ${Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 2 })} mi`, "PL"]} labelFormatter={(d) => dBR(String(d))} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-            <Line dataKey="v" stroke="#2a78d6" strokeWidth={2} dot={false} isAnimationActive={false} />
+            <Line dataKey="v" stroke={BLUE} strokeWidth={2} dot={false} isAnimationActive={false} />
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -458,8 +506,8 @@ function SubsChart({ data }: { data: Payload }) {
     return out;
   }, [data]);
   return (
-    <div className={`${card} p-5`}>
-      <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">Captações por cotização <span className="font-normal text-slate-500">(US$ mi, exclui o aporte inicial)</span></h2>
+    <div className={`${card} p-4 sm:p-5`}>
+      <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white mb-3">Captações por cotização <span className="font-normal text-slate-500">(US$ mi, exclui o aporte inicial)</span></h2>
       <div className="h-56">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={rows} margin={{ top: 5, right: 8, left: 0, bottom: 0 }}>
@@ -467,7 +515,7 @@ function SubsChart({ data }: { data: Payload }) {
             <XAxis dataKey="m" tickFormatter={(m: string) => `${MES[+m.slice(5, 7) - 1]}/${m.slice(2, 4)}`} minTickGap={24} tick={{ fontSize: 11, fill: "#94a3b8" }} />
             <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} width={30} />
             <Tooltip formatter={(v) => [`US$ ${Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 2 })} mi`, "Aplicações"]} labelFormatter={(m) => `${MES[+String(m).slice(5, 7) - 1]}/${String(m).slice(0, 4)}`} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-            <Bar dataKey="v" fill="#2a78d6" radius={[3, 3, 0, 0]} isAnimationActive={false} />
+            <Bar dataKey="v" fill={BLUE} radius={[3, 3, 0, 0]} isAnimationActive={false} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -481,8 +529,8 @@ function Checks({ data }: { data: Payload }) {
   const order = { error: 0, warn: 1, info: 2, ok: 3 } as const;
   const list = [...data.checks].sort((a, b) => order[a.status] - order[b.status]);
   return (
-    <div id="checks" className={`${card} p-5`}>
-      <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">Conciliação e verificações</h2>
+    <div id="checks" className={`${card} p-4 sm:p-5`}>
+      <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white mb-3">Conciliação e verificações</h2>
       <ul className="divide-y divide-slate-100 dark:divide-slate-800">
         {list.map((c, i) => (
           <li key={i} className="py-2">
@@ -519,14 +567,14 @@ function ManualEntries({ onChange }: { onChange: () => void }) {
   const del = async (id: number) => { await authFetch(`${API}/manual/?id=${id}`, { method: "DELETE" }); await fetchRows(); onChange(); };
   const inp = "px-2 py-1.5 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 min-w-0";
   return (
-    <div className={`${card} p-5`}>
-      <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Ajustes manuais</h2>
+    <div className={`${card} p-4 sm:p-5`}>
+      <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">Ajustes manuais</h2>
       <p className="text-[11px] text-slate-500 mb-3">Operações fora do extrato enviado (subconta CAD, conta CSWML, correções). Valor em US$: + recebido, − pago. Quantidade: + compra, − venda. Depois de salvar, clique em Recalcular.</p>
       <div className="overflow-x-auto">
         <table className="w-full text-xs mb-3">
           <thead className="text-slate-500"><tr>{["Data", "Tipo", "Ativo", "Quantidade", "Valor (US$)", "Nota", ""].map(h => <th key={h} className="px-2 py-1 text-left font-medium">{h}</th>)}</tr></thead>
           <tbody>
-            {rows.map(r => <tr key={r.id} className="border-t border-slate-100 dark:border-slate-800"><td className="px-2 py-1">{dBR(r.trade_date)}</td><td className="px-2 py-1">{r.type}</td><td className="px-2 py-1 font-mono">{r.asset_id}</td><td className="px-2 py-1 font-mono">{num(r.units, 2)}</td><td className="px-2 py-1 font-mono">{num(r.amount, 2)}</td><td className="px-2 py-1">{r.note}</td><td className="px-2 py-1"><button onClick={() => del(r.id)} aria-label="Excluir ajuste"><Trash2 className="w-3.5 h-3.5 text-slate-400 hover:text-rose-500" /></button></td></tr>)}
+            {rows.map(r => <tr key={r.id} className="border-t border-slate-100 dark:border-slate-800"><td className="px-2 py-1">{dBR(r.trade_date)}</td><td className="px-2 py-1">{r.type}</td><td className="px-2 py-1 tabular-nums">{r.asset_id}</td><td className="px-2 py-1 tabular-nums">{num(r.units, 2)}</td><td className="px-2 py-1 tabular-nums">{num(r.amount, 2)}</td><td className="px-2 py-1">{r.note}</td><td className="px-2 py-1"><button onClick={() => del(r.id)} aria-label="Excluir ajuste"><Trash2 className="w-3.5 h-3.5 text-slate-400 hover:text-rose-500" /></button></td></tr>)}
             {!rows.length && <tr><td colSpan={7} className="px-2 py-2 text-slate-400">Nenhum ajuste.</td></tr>}
           </tbody>
         </table>
@@ -547,8 +595,8 @@ function ManualEntries({ onChange }: { onChange: () => void }) {
 
 function HowTo({ data }: { data: Payload }) {
   return (
-    <details className={`${card} p-5`}>
-      <summary className="text-sm font-semibold text-slate-900 dark:text-white cursor-pointer">Como manter batendo</summary>
+    <details className={`${card} p-4 sm:p-5`}>
+      <summary className="text-sm sm:text-base font-bold text-slate-900 dark:text-white cursor-pointer">Como manter batendo</summary>
       <ol className="list-decimal pl-5 mt-3 space-y-1.5 text-xs text-slate-600 dark:text-slate-300 max-w-3xl">
         <li><b>Todo dia</b> (automático): cada upload do Portfolio (macro Bloomberg) atualiza esta base na hora. O preço do dia é o do snapshot depois do fechamento americano; antes do fechamento, a cota de hoje usa o último upload intraday.</li>
         <li><b>Quantidades</b>: compras e vendas são lidas pela mudança de quantidade no Portfolio, ao preço de fechamento do dia. Atualize a quantidade na planilha no dia da operação.</li>
