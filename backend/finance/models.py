@@ -1,3 +1,4 @@
+import datetime
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
@@ -417,6 +418,10 @@ class FundConfig(models.Model):
         max_length=20, choices=FLOW_CONVENTION_CHOICES, default=FLOW_PREV_COTA,
     )
 
+    # Performance engine: last day of the old per-asset position history (bloomberg.PositionSnapshot).
+    # After it, positions are rebuilt from the bank statement + Bloomberg snapshots.
+    perf_cutover_date = models.DateField(blank=True, null=True, default=datetime.date(2026, 3, 24))
+
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -511,3 +516,138 @@ class MoatRanking(models.Model):
         
     def __str__(self):
         return f"#{self.rank} {self.stock.ticker} by {self.analyst.username}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Performance engine (cota + per-asset performance)
+#
+# Inputs uploaded from the IGF TR "Performance" page:
+#   * BankTransaction    – custodian cash statement (UBS export), one row per booking
+#   * AdminNAVReport     – administrator month-end "NAV Calculation" workbook
+#   * ManualLedgerEntry  – trades/income booked outside the statement account
+#                          (CAD sub-account, CSWML account, corrections)
+#   * AssetAlias         – maps statement / Bloomberg / position tickers to one asset id
+# Output:
+#   * PerformanceRun     – the computed dashboard payload, cached (see finance/perf/engine.py)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class AssetAlias(models.Model):
+    """One instrument, and every name it goes by in the different sources."""
+    CLASS_CHOICES = [('Equity', 'Equity'), ('Fixed Income', 'Fixed Income'), ('Other', 'Other')]
+    asset_id = models.CharField(max_length=64, unique=True,
+                                help_text='Internal id, e.g. "QQQ" or "PEMEX 5.95 01/28/31"')
+    name = models.CharField(max_length=255, blank=True, default='')
+    asset_class = models.CharField(max_length=20, choices=CLASS_CHOICES, default='Equity')
+    sub_class = models.CharField(max_length=40, blank=True, default='Stock',
+                                 help_text='Stock, Index ETF, Thematic ETF, HY ETF, Corporate Bond, Sovereign Bond, US Treasury')
+    sector = models.CharField(max_length=60, blank=True, default='')
+    isin = models.CharField(max_length=20, blank=True, default='', db_index=True)
+    statement_pattern = models.CharField(max_length=255, blank=True, default='',
+                                         help_text='Regex matched against the bank statement description (used when the ISIN is absent)')
+    tickers = models.CharField(max_length=255, blank=True, default='',
+                               help_text='Comma-separated aliases used by Bloomberg snapshots / position history, e.g. "SDHA LN EQUITY,SDHA LN"')
+
+    class Meta:
+        ordering = ['asset_class', 'asset_id']
+
+    def __str__(self):
+        return self.asset_id
+
+
+class BankTransaction(models.Model):
+    """A row of the custodian cash statement, classified."""
+    TYPE_CHOICES = [(t, t) for t in (
+        'BUY', 'SELL', 'REDEMPTION', 'AMORTIZATION', 'DIVIDEND', 'COUPON', 'SUBSCRIPTION', 'REDEMPTION_PAID',
+        'MGMT_FEE', 'MGMT_PERF_FEE', 'EXPENSE', 'BANK_FEE', 'BANK_INTEREST', 'TRANSFER', 'OTHER_INCOME', 'OTHER')]
+    account = models.CharField(max_length=64, default='', db_index=True)
+    trade_date = models.DateField(db_index=True)
+    trade_time = models.CharField(max_length=16, blank=True, default='')
+    booking_date = models.DateField(null=True, blank=True)
+    value_date = models.DateField(null=True, blank=True)
+    currency = models.CharField(max_length=8, default='USD')
+    amount = models.FloatField()                       # signed: + cash in, - cash out
+    balance = models.FloatField(null=True, blank=True)
+    txn_no = models.CharField(max_length=64, blank=True, default='')
+    desc1 = models.TextField(blank=True, default='')
+    desc2 = models.TextField(blank=True, default='')
+    desc3 = models.TextField(blank=True, default='')
+    # classification (re-derived on every upload; `type_override` wins when set)
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='OTHER')
+    type_override = models.CharField(max_length=20, choices=TYPE_CHOICES, blank=True, default='')
+    asset_id = models.CharField(max_length=64, blank=True, default='')
+    units = models.FloatField(default=0.0)
+    price = models.FloatField(null=True, blank=True)
+    accrued = models.FloatField(null=True, blank=True)
+    is_reversal = models.BooleanField(default=False)
+    counterparty = models.CharField(max_length=255, blank=True, default='')
+    note = models.CharField(max_length=255, blank=True, default='')
+    uploaded_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['trade_date', 'id']
+        constraints = [models.UniqueConstraint(fields=['account', 'txn_no', 'amount', 'trade_date'], name='uniq_bank_txn')]
+
+    @property
+    def effective_type(self):
+        return self.type_override or self.type
+
+    def __str__(self):
+        return f"{self.trade_date} {self.effective_type} {self.asset_id} {self.amount}"
+
+
+class ManualLedgerEntry(models.Model):
+    """Trade or cash event that never appears in the uploaded statement (other sub-accounts, corrections)."""
+    TYPE_CHOICES = [(t, t) for t in ('BUY', 'SELL', 'DIVIDEND', 'COUPON', 'REDEMPTION', 'EXPENSE', 'OTHER_INCOME')]
+    trade_date = models.DateField()
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    asset_id = models.CharField(max_length=64, blank=True, default='')
+    units = models.FloatField(default=0.0, help_text='+ bought / - sold')
+    amount = models.FloatField(help_text='Cash in USD, signed: + received, - paid')
+    note = models.CharField(max_length=255, blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['trade_date', 'id']
+
+    def __str__(self):
+        return f"{self.trade_date} {self.type} {self.asset_id} {self.amount}"
+
+
+class AdminNAVReport(models.Model):
+    """Administrator month-end NAV Calculation workbook, parsed."""
+    date = models.DateField(unique=True)
+    file_name = models.CharField(max_length=255, blank=True, default='')
+    base_nav = models.FloatField(null=True, blank=True)
+    mgmt_fee = models.FloatField(null=True, blank=True)
+    perf_fee = models.FloatField(null=True, blank=True)
+    nav = models.FloatField(null=True, blank=True)
+    subscriptions = models.FloatField(null=True, blank=True)
+    redemptions = models.FloatField(null=True, blank=True)
+    nav_closing = models.FloatField(null=True, blank=True)
+    prev_nav_closing = models.FloatField(null=True, blank=True)
+    prev_subscriptions = models.FloatField(null=True, blank=True)
+    total_assets = models.FloatField(null=True, blank=True)
+    total_shares = models.FloatField(null=True, blank=True)
+    lead_cota = models.FloatField(null=True, blank=True)
+    lead_table = models.JSONField(default=dict, blank=True)   # {"2026": [jan, feb, ...], "2025": [...]}
+    series = models.JSONField(default=list, blank=True)       # [{series, shares, nav_per_share, nav, sub_amount}]
+    holdings = models.JSONField(default=list, blank=True)     # [{section, name, isin, qty, cost, value, price, accrued}]
+    uploaded_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['date']
+
+    def __str__(self):
+        return f"Admin NAV {self.date}"
+
+
+class PerformanceRun(models.Model):
+    """Cached output of finance.perf.engine.compute() — what the Performance page renders."""
+    created_at = models.DateTimeField(auto_now_add=True)
+    duration_s = models.FloatField(default=0.0)
+    ok = models.BooleanField(default=True)
+    error = models.TextField(blank=True, default='')
+    payload = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
