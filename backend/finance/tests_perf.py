@@ -7,7 +7,7 @@ from django.test import TestCase
 
 from finance.perf.statement import AliasMatcher, classify, dealing_date, parse_workbook as parse_statement
 from finance.perf.admin_report import parse_workbook as parse_admin, lead_month_ends
-from finance.perf.engine import anchored, hwm_from
+from finance.perf.engine import anchored, hwm_from, coupon_schedule
 
 ALIASES = [
     dict(asset_id='QQQ', isin='US46090E1038', statement_pattern=r'Invesco QQQ', tickers='QQQ,QQQ US'),
@@ -133,3 +133,17 @@ class CotaMathTests(TestCase):
     def test_hwm(self):
         anchors = {dt.date(2025, 11, 28): 1.1088, dt.date(2026, 3, 31): 1.20, dt.date(2026, 5, 29): 1.1414}
         self.assertAlmostEqual(hwm_from(anchors, 1.1364), 1.1414)
+
+
+class CouponScheduleTests(TestCase):
+    def test_semiannual_dates(self):
+        rate, dates = coupon_schedule('PEMEX 5.95 01/28/31', 'Corporate Bond', dt.date(2026, 6, 30), dt.date(2026, 12, 31))
+        self.assertEqual(rate, 5.95)
+        self.assertEqual(dates, [dt.date(2026, 7, 28)])
+        _, dates = coupon_schedule('CHTR 6.375 09/01/29', 'Corporate Bond', dt.date(2026, 1, 1), dt.date(2026, 12, 31))
+        self.assertEqual(dates, [dt.date(2026, 3, 2), dt.date(2026, 9, 1)])     # 01/03/2026 is a Sunday
+
+    def test_skips_perpetuals_zeros_and_sovereigns(self):
+        self.assertEqual(coupon_schedule('BNP 4.625 Perp', 'Corporate Bond', dt.date(2026, 1, 1), dt.date(2026, 12, 31))[1], [])
+        self.assertEqual(coupon_schedule('T 0 12/10/26', 'US Treasury', dt.date(2026, 1, 1), dt.date(2026, 12, 31))[1], [])
+        self.assertEqual(coupon_schedule('ARGENT 0.75 07/09/30', 'Sovereign Bond', dt.date(2026, 1, 1), dt.date(2026, 12, 31))[1], [])
