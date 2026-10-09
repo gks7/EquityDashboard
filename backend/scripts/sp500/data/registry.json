@@ -4907,16 +4907,17 @@
  "0002041610": {
   "added": "1994-09-30",
   "aliases": [
+   "",
    "PSKY"
   ],
   "current": true,
-  "name": "Paramount Skydance Corporation",
+  "name": "Skydance Corporation",
   "predecessors": [
    "0000813828"
   ],
   "sector": "Communication Services",
   "sic": "4833",
-  "ticker": ""
+  "ticker": "SKYD"
  },
  "0002058873": {
   "added": "2025-11-03",
