@@ -4451,6 +4451,14 @@
   "sic": "3823",
   "ticker": "FTV"
  },
+ "0001660134": {
+  "added": "2026-11-04",
+  "current": true,
+  "name": "Okta, Inc.",
+  "sector": "Information Technology",
+  "sic": "7372",
+  "ticker": "OKTA"
+ },
  "0001664703": {
   "added": "2026-09-21",
   "current": true,
@@ -4810,7 +4818,7 @@
  },
  "0001944048": {
   "added": "2023-08-25",
-  "current": true,
+  "current": false,
   "name": "Kenvue",
   "sector": "Consumer Staples",
   "sic": "2844",
