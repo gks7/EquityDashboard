@@ -11,7 +11,6 @@ const ADMIN_EMAIL = "gabriel@igfwm.com";
 
 const navItems = [
 { href: "/", label: "Dashboard", icon: LayoutDashboard },
-{ href: "/performance", label: "Performance", icon: Activity },
 { href: "/watchlist", label: "Watchlist", icon: List },
 { href: "/portfolio", label: "Portfolio", icon: LineChart },
 { href: "/igf-tr", label: "IGF TR", icon: TrendingUp },
