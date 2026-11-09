@@ -9,7 +9,7 @@ from finance.perf.statement import AliasMatcher, classify, dealing_date, parse_w
 from finance.perf.admin_report import parse_workbook as parse_admin, lead_month_ends
 import numpy as np
 
-from finance.perf.engine import anchored, hwm_from, coupon_schedule, benchmarks, plausible_cost
+from finance.perf.engine import anchored, hwm_from, coupon_schedule, benchmarks, plausible_cost, history_cost
 
 ALIASES = [
     dict(asset_id='QQQ', isin='US46090E1038', statement_pattern=r'Invesco QQQ', tickers='QQQ,QQQ US'),
@@ -168,6 +168,17 @@ class BenchmarkTests(TestCase):
         self.assertLess(float((b / self.truth - 1).abs().max()), 1e-9)
         self.assertEqual(len(bm.attrs['info']), 1)
 
+    def test_stale_etf_price_is_not_used_as_anchor(self):
+        # ETF snapshot stuck for three days before the index hole over the year end
+        pab = self.pab.copy()
+        stuck = (pab.date >= '2025-12-24') & (pab.date <= '2025-12-26')
+        pab.loc[stuck, 'price'] = float(self.truth['2025-12-23']) / 10
+        raw = self.truth[(self.truth.index <= '2025-12-26') | (self.truth.index >= '2026-01-07')]
+        idx = pd.DataFrame({'date': raw.index, 'asset': 'SPX Index', 'flt_value': raw.values})
+        b = benchmarks(idx, pab, self.days.min(), self.days.max())['S&P 500']
+        ye = pd.Timestamp('2025-12-31')
+        self.assertAlmostEqual(float(b[ye] / self.truth[ye]), 1.0, places=9)
+
     def test_aligned_index_untouched(self):
         idx = pd.DataFrame({'date': self.days[:150], 'asset': 'SPX Index', 'flt_value': self.truth.values[:150]})
         bm = benchmarks(idx, self.pab, self.days.min(), self.days.max())
@@ -183,3 +194,10 @@ class CostSanityTests(TestCase):
         self.assertIsNone(plausible_cost(3.94, pd.Series([0.98, 0.9967])))  # T-bill: yield read as cost
         self.assertEqual(plausible_cost(0.97, pd.Series([0.86, 0.99])), 0.97)
         self.assertIsNone(plausible_cost(float('nan'), px))
+
+    def test_history_cost(self):
+        g = pd.DataFrame({'date': pd.bdate_range('2024-08-01', periods=4), 'units': [100.0, 100.0, 150.0, 75.0],
+                          'price': [500.0, 520.0, 600.0, 610.0], 'net_invested': [50000.0, 0.0, 30000.0, -45750.0]})
+        self.assertAlmostEqual(history_cost(g), 80000.0 / 150.0)        # a sale keeps the average
+        g.loc[0, 'net_invested'] = 0.0                                   # position transferred in: valued at the price
+        self.assertAlmostEqual(history_cost(g), 80000.0 / 150.0)
