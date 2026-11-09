@@ -7,7 +7,9 @@ from django.test import TestCase
 
 from finance.perf.statement import AliasMatcher, classify, dealing_date, parse_workbook as parse_statement
 from finance.perf.admin_report import parse_workbook as parse_admin, lead_month_ends
-from finance.perf.engine import anchored, hwm_from, coupon_schedule
+import numpy as np
+
+from finance.perf.engine import anchored, hwm_from, coupon_schedule, benchmarks, plausible_cost
 
 ALIASES = [
     dict(asset_id='QQQ', isin='US46090E1038', statement_pattern=r'Invesco QQQ', tickers='QQQ,QQQ US'),
@@ -147,3 +149,37 @@ class CouponScheduleTests(TestCase):
         self.assertEqual(coupon_schedule('BNP 4.625 Perp', 'Corporate Bond', dt.date(2026, 1, 1), dt.date(2026, 12, 31))[1], [])
         self.assertEqual(coupon_schedule('T 0 12/10/26', 'US Treasury', dt.date(2026, 1, 1), dt.date(2026, 12, 31))[1], [])
         self.assertEqual(coupon_schedule('ARGENT 0.75 07/09/30', 'Sovereign Bond', dt.date(2026, 1, 1), dt.date(2026, 12, 31))[1], [])
+
+
+class BenchmarkTests(TestCase):
+    def setUp(self):
+        self.days = pd.bdate_range('2025-11-03', '2026-08-31')
+        rng = np.random.default_rng(1)
+        self.truth = pd.Series(6800 * np.exp(np.cumsum(rng.normal(0, 0.01, len(self.days)))), index=self.days)
+        self.pab = pd.DataFrame({'asset_id': 'SPY', 'date': self.days, 'price': self.truth.values / 10})
+
+    def test_lagged_index_with_gaps_is_redated_and_spliced(self):
+        # legacy table: close stored on the next business day, a hole over the year end, uploads stop in June
+        raw = self.truth.shift(1).dropna()
+        raw = raw[(raw.index <= '2026-06-11') & ~((raw.index >= '2025-12-30') & (raw.index <= '2026-01-06'))]
+        idx = pd.DataFrame({'date': raw.index, 'asset': 'SPX Index', 'flt_value': raw.values})
+        bm = benchmarks(idx, self.pab, self.days.min(), self.days.max())
+        b = bm['S&P 500']
+        self.assertLess(float((b / self.truth - 1).abs().max()), 1e-9)
+        self.assertEqual(len(bm.attrs['info']), 1)
+
+    def test_aligned_index_untouched(self):
+        idx = pd.DataFrame({'date': self.days[:150], 'asset': 'SPX Index', 'flt_value': self.truth.values[:150]})
+        bm = benchmarks(idx, self.pab, self.days.min(), self.days.max())
+        self.assertLess(float((bm['S&P 500'] / self.truth - 1).abs().max()), 1e-9)
+        self.assertEqual(bm.attrs['info'], [])
+
+
+class CostSanityTests(TestCase):
+    def test_cost_outside_price_range_is_dropped(self):
+        px = pd.Series([496.0, 600.0, 779.0])
+        self.assertIsNone(plausible_cost(244.6, px))                        # SPY: wrong admin column
+        self.assertEqual(plausible_cost(543.0, px), 543.0)
+        self.assertIsNone(plausible_cost(3.94, pd.Series([0.98, 0.9967])))  # T-bill: yield read as cost
+        self.assertEqual(plausible_cost(0.97, pd.Series([0.86, 0.99])), 0.97)
+        self.assertIsNone(plausible_cost(float('nan'), px))
