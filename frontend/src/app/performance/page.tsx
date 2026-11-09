@@ -11,7 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ResponsiveContainer, LineChart, Line, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine,
 } from "recharts";
-import { RefreshCcw, Upload, Download, CheckCircle2, AlertTriangle, XCircle, Info, ChevronDown, Trash2, Plus, TrendingUp, TrendingDown } from "lucide-react";
+import { RefreshCcw, Upload, Download, CheckCircle2, AlertTriangle, XCircle, Info, ChevronDown, Trash2, Plus } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
 
 const API = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/igf-tr/performance`;
@@ -156,27 +156,41 @@ export default function PerformancePage() {
   );
 }
 
-function ReturnBadge({ label: l, value }: { label: string; value: number | null }) {
-  if (value == null) return <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-xs font-semibold text-slate-400 tabular-nums">{l} —</span>;
-  const up = value >= 0; const Icon = up ? TrendingUp : TrendingDown;
-  return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums ${up ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400" : "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400"}`}>
-      <Icon className="w-3.5 h-3.5" /><span className="text-[10px] font-bold uppercase tracking-wider opacity-70">{l}</span>{pct(value)}
-    </span>
-  );
+/** Rentabilidade por janela (mês, ano, 12 meses, início), cada uma com o SOFR na mesma janela. */
+function periodReturns(data: Payload) {
+  const K = data.kpi;
+  const dates = data.fund.map(r => r[0]);
+  const sofr = data.bench["SOFR (caixa USD)"] || [];
+  // Same bases as the engine (build_payload): last day before the month, last day of the prior year,
+  // last day on/before one year ago, and the first day of the series.
+  const lastBefore = (d: string, strict = false) => { let k = -1; dates.forEach((x, i) => { if (strict ? x < d : x <= d) k = i; }); return k; };
+  const lvl = (i: number) => { for (let j = i; j >= 0; j--) if (sofr[j] != null) return sofr[j] as number; return null; };
+  const end = lvl(dates.length - 1);
+  const sofrRet = (i: number) => { const b = i < 0 ? null : lvl(i); return end == null || !b ? null : end / b - 1; };
+  const d = K.date.slice(0, 10), y = +d.slice(0, 4), m = +d.slice(5, 7);
+  const inc = String(K.inception).slice(0, 10);
+  return [
+    { l: "Mês", cap: `${MES[m - 1]}/${String(y).slice(2)}`, v: K.mtd, b: sofrRet(lastBefore(`${d.slice(0, 7)}-01`, true)) },
+    { l: "Ano", cap: String(y), v: K.ytd, b: sofrRet(lastBefore(`${y - 1}-12-31`)) },
+    { l: "12 meses", cap: "", v: K.m12, b: sofrRet(lastBefore(`${y - 1}${d.slice(4)}`)) },
+    { l: "Início", cap: `${MES[+inc.slice(5, 7) - 1]}/${inc.slice(2, 4)}`, v: K.itd, b: sofrRet(0) },
+  ];
 }
 
-function HeroMetric({ label: l, children, sub }: { label: string; children: React.ReactNode; sub?: React.ReactNode }) {
+function HeroMetric({ label: l, cap, children, sub, valueClass = "text-slate-900 dark:text-white", className = "" }:
+  { label: string; cap?: string; children: React.ReactNode; sub?: React.ReactNode; valueClass?: string; className?: string }) {
   return (
-    <div>
-      <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap mb-1.5">{l}</p>
-      <p className="text-2xl sm:text-3xl font-bold tracking-tight tabular-nums leading-none text-slate-900 dark:text-white">{children}</p>
-      {sub && <p className="text-[11px] text-slate-400 mt-1.5 tabular-nums">{sub}</p>}
+    <div className={`min-w-0 ${className}`}>
+      <p className="flex items-baseline gap-1.5 h-4 mb-1.5 whitespace-nowrap">
+        <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">{l}</span>
+        {cap && <span className="text-[10px] text-slate-400/80 dark:text-slate-500">{cap}</span>}
+      </p>
+      <p className={`text-2xl @6xl:text-[28px] font-bold tracking-tight tabular-nums leading-none whitespace-nowrap ${valueClass}`}>{children}</p>
+      {sub && <p className="text-[11px] text-slate-400 mt-2 tabular-nums @4xl:whitespace-nowrap">{sub}</p>}
     </div>
   );
 }
 
-const HeroDivider = () => <div className="hidden lg:block self-stretch w-px bg-slate-200 dark:bg-slate-700" />;
 
 function Body({ data, reload }: { data: Payload; reload: () => void }) {
   const K = data.kpi;
@@ -188,25 +202,26 @@ function Body({ data, reload }: { data: Payload; reload: () => void }) {
   return (
     <>
       <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm p-4 sm:p-6">
-        <div className="flex flex-wrap items-start gap-x-7 sm:gap-x-9 gap-y-5">
-          <HeroMetric label="Cota" sub={data.asof > data.official_last ? `estimada · oficial ${dBR(data.official_last)}: ${data.official_cota.toFixed(4).replace(".", ",")}` : `oficial ${dBR(data.official_last)}`}>
-            {K.cota.toLocaleString("pt-BR", { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
-          </HeroMetric>
-          <HeroMetric label="Patrimônio" sub={`${(K.shares / 1e6).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi de cotas`}>${(K.nav / 1e6).toFixed(2)}M</HeroMetric>
-          <HeroDivider />
-          <div className="flex flex-col gap-2.5">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap mb-1.5">Rentabilidade no ano</p>
-              <p className="text-2xl sm:text-3xl font-bold tracking-tight tabular-nums leading-none"><span className={tone(K.ytd)}>{pct(K.ytd)}</span></p>
+        <div className="@container">
+          <div className="flex flex-col @4xl:flex-row gap-y-5 gap-x-8">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-5 @4xl:flex @4xl:gap-x-10 shrink-0">
+              <HeroMetric label="Cota" sub={data.asof > data.official_last ? `estimada\u00a0· oficial\u00a0${dBR(data.official_last).slice(0, 5)}:\u00a0${data.official_cota.toFixed(4).replace(".", ",")}` : `oficial ${dBR(data.official_last)}`}>
+                {K.cota.toLocaleString("pt-BR", { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
+              </HeroMetric>
+              <HeroMetric label="Patrimônio" sub={`${(K.shares / 1e6).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi de cotas`}>${(K.nav / 1e6).toFixed(2)}M</HeroMetric>
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              <ReturnBadge label="Mês" value={K.mtd} />
-              <ReturnBadge label="12M" value={K.m12} />
-              <ReturnBadge label="Início" value={K.itd} />
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-5 flex-1 min-w-0 border-t @4xl:border-t-0 @4xl:border-l border-slate-100 @4xl:border-slate-200 dark:border-slate-800 @4xl:dark:border-slate-700 pt-5 @4xl:pt-0 @4xl:pl-8">
+              {periodReturns(data).map(r => (
+                <HeroMetric key={r.l} label={r.l} cap={r.cap} valueClass={r.v == null ? "text-slate-400" : tone(r.v)}
+                  sub={<>SOFR <span className="font-medium text-slate-600 dark:text-slate-300">{pct(r.b)}</span></>}>
+                  {pct(r.v)}
+                </HeroMetric>
+              ))}
             </div>
           </div>
-          <HeroDivider />
-          <div className="flex flex-col gap-2 min-w-[210px] flex-1">
+        </div>
+        <div className="mt-5">
+          <div className="flex flex-col gap-2 border-t border-slate-100 dark:border-slate-800 pt-4">
             <div className="flex items-center justify-between gap-4">
               <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Risco</p>
               <p className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">vol. <span className="text-slate-900 dark:text-white font-semibold">{pct(K.vol, 1).replace("+", "")}</span> · máx. queda <span className="text-rose-600 dark:text-rose-400 font-semibold">{pct(K.maxdd, 1)}</span></p>
