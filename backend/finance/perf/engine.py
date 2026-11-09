@@ -459,13 +459,59 @@ def compute(today=None):
     pab['ret'] = pab.ret.clip(-0.5, 0.5).fillna(0.0)
 
     bm = benchmarks(I['idx'], pab, f.index.min(), f.index.max())
+    I['bench_info'] = bm.attrs.get('info', [])
     payload, frames = build_payload(I, f, pab, bm, anchors, adj, eng, subs, subs_by_deal, avg_cost, kinds, hwm, warnings)
     return payload, frames
 
 
+def _obs_returns(s):
+    """Daily returns only between two consecutive observed values (gaps and repeated values -> NaN)."""
+    r = s / s.shift(1) - 1
+    r[s.isna() | s.shift(1).isna()] = np.nan
+    return r.where(r != 0)
+
+
+def index_lag(a, e, max_lag=2, min_obs=30):
+    """Business days by which the index series is dated late versus the ETF (0 = aligned).
+    The legacy HistIndexPrice table stores some closes on the next business day; the ETF prices
+    (Portfolio snapshots) carry the real trading date. A lag is only adopted when it clearly beats 0."""
+    re_ = _obs_returns(e)
+    errs = {}
+    for k in range(-max_lag, max_lag + 1):
+        x = pd.concat([_obs_returns(a.shift(-k)), re_], axis=1, keys=['i', 'e']).dropna()
+        if len(x) >= min_obs:
+            errs[k] = float((x.i - x.e).abs().median())
+    if not errs or 0 not in errs:
+        return 0
+    best = min(errs, key=errs.get)
+    return best if best != 0 and errs[best] < 0.5 * errs[0] else 0
+
+
+def index_with_etf(a_raw, e_raw, days):
+    """Price index on business days: index closes re-dated to the ETF's trading dates, and every
+    day without an index close (gaps, holidays, after the last upload) carried by the ETF's move
+    since the last index close. Returns (series, lag_in_business_days)."""
+    span = pd.bdate_range(min(days.min(), a_raw.index.min()), days.max())
+    a = a_raw.groupby(level=0).last()
+    a = a[a.ne(a.shift(1))].reindex(span)          # a close repeated from the day before is a stale value, not a close
+    if e_raw is None or e_raw.empty:
+        return a.ffill().reindex(days), 0
+    e = e_raw.groupby(level=0).last().reindex(span.union(e_raw.index)).ffill().reindex(span)
+    lag = index_lag(a, e)
+    if lag:
+        a = a.shift(-lag)
+    obs = a.notna()
+    p_date = pd.Series(span.where(obs.values), index=span).ffill()
+    a_last = a.ffill()
+    e_at_p = pd.Series(e.reindex(pd.DatetimeIndex(p_date.values)).values, index=span)
+    ratio = (e / e_at_p).where(e.notna() & e_at_p.notna(), 1.0)
+    out = a_last * ratio
+    return out.reindex(days), lag
+
+
 def benchmarks(idx, pab, start, end):
     days = pd.bdate_range(start, end)
-    out = {}
+    out, info = {}, []
     if idx.empty:
         return pd.DataFrame(index=days)
     idx = idx.copy(); idx['date'] = pd.to_datetime(idx.date)
@@ -473,15 +519,12 @@ def benchmarks(idx, pab, start, end):
         a = idx[idx.asset == code].drop_duplicates('date').set_index('date').flt_value.sort_index()
         if a.empty:
             continue
-        last = a.index.max()
-        a = a.reindex(days.union(a.index)).ffill().reindex(days)
         e = pab[pab.asset_id == etf].drop_duplicates('date', keep='last').set_index('date').price.sort_index()
-        if not e.empty:
-            e = e.reindex(days.union(e.index)).ffill().reindex(days)
-            after = e[e.index > last]
-            if len(after) and last in e.index and pd.notna(e[last]):
-                a.loc[after.index] = a[last] * after / e[last]
-        out[name] = a
+        e = e[e > 0]
+        out[name], lag = index_with_etf(a, e, days)
+        if lag:
+            info.append(f"{code} veio datado {lag} dia(s) útil(eis) depois do pregão; re-datado pelo {etf}. "
+                        f"Dias sem fechamento do índice seguem a variação do {etf}.")
     s = idx[idx.asset == 'BTSISOFR Index'].drop_duplicates('date').set_index('date').flt_value.sort_index()
     r = idx[idx.asset == 'SOFRRATE Index'].drop_duplicates('date').set_index('date').flt_value.sort_index()
     if not s.empty:
@@ -490,7 +533,21 @@ def benchmarks(idx, pab, start, end):
         for d in s.index[s.index > last]:
             s[d] = s[last] * (1 + rate) ** ((d - last).days / 360)
         out['SOFR (caixa USD)'] = s
-    return pd.DataFrame(out, index=days)
+    df = pd.DataFrame(out, index=days)
+    df.attrs['info'] = info
+    return df
+
+
+def plausible_cost(cost, prices, tol=0.15):
+    """Average cost per unit, or None when it cannot be an average of the prices seen while the asset
+    was held (e.g. a wrong column read from the administrator report)."""
+    if cost is None or not isinstance(cost, (int, float)) or not math.isfinite(cost) or cost <= 0:
+        return None
+    px = pd.to_numeric(prices, errors='coerce').dropna()
+    px = px[px > 0]
+    if px.empty:
+        return float(cost)
+    return float(cost) if (1 - tol) * px.min() <= cost <= (1 + tol) * px.max() else None
 
 
 def _twr(r):
@@ -558,7 +615,8 @@ def build_payload(I, f, pab, bm, anchors, adj, eng, subs, subs_by_deal, avg_cost
         x = spx[(spx.index >= a - pd.Timedelta(days=4)) & (spx.index <= b)].dropna()
         return float(x.iloc[-1] / x.iloc[0] - 1) if len(x) > 1 else None
 
-    assets = []
+    assets, cost_flags = [], []
+    I['cost_flags'] = cost_flags
     for a, g in pab.groupby('asset_id'):
         g = g.sort_values('date')
         held = g[(g.mv_close.abs() > 0) | (g.mv_open.abs() > 0)]
@@ -571,8 +629,12 @@ def build_payload(I, f, pab, bm, anchors, adj, eng, subs, subs_by_deal, avg_cost
         m3 = g[g.date > last_day - pd.DateOffset(months=3)]
         ai = info.get(a, {})
         price = float(lr.price.iloc[-1]) if is_open else None
-        cost = adm_cost.get(a, avg_cost.get(a) if isinstance(avg_cost, dict) else None)
-        cost = None if cost is None or (isinstance(cost, float) and np.isnan(cost)) else cost
+        cost = plausible_cost(adm_cost.get(a), g[g.date >= first].price)
+        if cost is None:
+            cost = plausible_cost(avg_cost.get(a) if isinstance(avg_cost, dict) else None, g[g.date >= first].price)
+            if is_open and a in adm_cost:
+                cost_flags.append(f"{a}: custo do administrador {adm_cost[a]:,.2f} fora da faixa de preços desde a entrada; "
+                                  + (f"usando o custo médio do motor ({cost:,.2f})" if cost is not None else 'custo omitido'))
         idxs = (1 + g[g.date >= first].ret).cumprod()
         wk = idxs.groupby(g[g.date >= first].date.dt.to_period('W')).last()
         assets.append(dict(
@@ -719,6 +781,10 @@ def reconcile(I, pab, f, anchors, adj, kinds, warnings, hwm):
             add('info', 'Aplicações aguardando cotização', '; '.join(f"{d:%d/%m} US$ {v:,.0f} ({c})" for d, v, c in pend))
     for w in warnings:
         add('warn', 'Quantidade inconsistente', w)
+    for w in I.get('cost_flags') or []:
+        add('warn', 'Custo do administrador descartado', w)
+    for w in I.get('bench_info') or []:
+        add('info', 'Benchmark re-datado', w)
     le = I.get('ledger_end', I['cutover'])
     if le < I['today']:
         add('info', 'Fonte das posições', f"extrato até {le:%d/%m/%Y}; depois, quantidades e preços do Portfolio (uploads Bloomberg). "
