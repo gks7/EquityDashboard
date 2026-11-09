@@ -501,11 +501,19 @@ def index_with_etf(a_raw, e_raw, days):
     if lag:
         a = a.shift(-lag)
     obs = a.notna()
-    p_date = pd.Series(span.where(obs.values), index=span).ffill()
-    a_last = a.ffill()
-    e_at_p = pd.Series(e.reindex(pd.DatetimeIndex(p_date.values)).values, index=span)
-    ratio = (e / e_at_p).where(e.notna() & e_at_p.notna(), 1.0)
-    out = a_last * ratio
+    # Gap days are carried from an anchor: a day with an index close AND a fresh ETF price (an ETF
+    # price repeated from the day before is stale and would bend the level). Previous anchor first,
+    # the next one for days before the first anchor.
+    good = obs & e.notna() & e.ne(e.shift(1))
+    if not good.any():
+        good = obs
+    anchors = pd.Series(span.where(good.values), index=span)
+    p_date = anchors.ffill().fillna(anchors.bfill())
+    pd_idx = pd.DatetimeIndex(p_date.values)
+    a_at_p = pd.Series(a.reindex(pd_idx).values, index=span)
+    e_at_p = pd.Series(e.reindex(pd_idx).values, index=span)
+    carried = a_at_p * e / e_at_p
+    out = a.where(obs, carried).fillna(a.ffill())
     return out.reindex(days), lag
 
 
@@ -536,6 +544,24 @@ def benchmarks(idx, pab, start, end):
     df = pd.DataFrame(out, index=days)
     df.attrs['info'] = info
     return df
+
+
+def history_cost(g):
+    """Average cost per unit from the fund's own position history: units added are valued at the cash
+    paid that day (net_invested) or, without it, at that day's price; sales keep the average."""
+    d = g.groupby('date').agg(units=('units', 'sum'), price=('price', 'last'), ni=('net_invested', 'sum')).sort_index()
+    units = cost = 0.0
+    for u, p, ni in zip(d.units.fillna(0.0), d.price, d.ni.fillna(0.0)):
+        du = u - units
+        if du > 1e-9:
+            paid = ni if ni > 0 and p and math.isfinite(p) and 0.8 < ni / (du * p) < 1.25 else (du * p if p and math.isfinite(p) else np.nan)
+            cost += paid
+        elif du < -1e-9 and units > 0:
+            cost *= max(u, 0.0) / units
+        units = u
+        if units <= 1e-9:
+            units = cost = 0.0
+    return float(cost / units) if units > 1e-9 and math.isfinite(cost) else None
 
 
 def plausible_cost(cost, prices, tol=0.15):
@@ -612,8 +638,12 @@ def build_payload(I, f, pab, bm, anchors, adj, eng, subs, subs_by_deal, avg_cost
     def spx_ret(a, b):
         if spx is None:
             return None
-        x = spx[(spx.index >= a - pd.Timedelta(days=4)) & (spx.index <= b)].dropna()
-        return float(x.iloc[-1] / x.iloc[0] - 1) if len(x) > 1 else None
+        # base = close on or before the window start (the 12/31 close for the year), like the asset returns
+        s0 = spx[spx.index <= a].dropna()
+        s1 = spx[spx.index <= b].dropna()
+        if s0.empty:
+            s0 = spx[spx.index >= a].dropna().iloc[:1]
+        return float(s1.iloc[-1] / s0.iloc[-1] - 1) if len(s0) and len(s1) and s1.index[-1] > s0.index[-1] else None
 
     assets, cost_flags = [], []
     I['cost_flags'] = cost_flags
@@ -629,12 +659,15 @@ def build_payload(I, f, pab, bm, anchors, adj, eng, subs, subs_by_deal, avg_cost
         m3 = g[g.date > last_day - pd.DateOffset(months=3)]
         ai = info.get(a, {})
         price = float(lr.price.iloc[-1]) if is_open else None
-        cost = plausible_cost(adm_cost.get(a), g[g.date >= first].price)
+        px_held = g[g.date >= first].price
+        cost = plausible_cost(adm_cost.get(a), px_held)
         if cost is None:
-            cost = plausible_cost(avg_cost.get(a) if isinstance(avg_cost, dict) else None, g[g.date >= first].price)
+            cost, src = plausible_cost(history_cost(g), px_held), 'pelo histórico de posições do fundo'
+            if cost is None:
+                cost, src = plausible_cost(avg_cost.get(a) if isinstance(avg_cost, dict) else None, px_held), 'médio da base antiga'
             if is_open and a in adm_cost:
                 cost_flags.append(f"{a}: custo do administrador {adm_cost[a]:,.2f} fora da faixa de preços desde a entrada; "
-                                  + (f"usando o custo médio do motor ({cost:,.2f})" if cost is not None else 'custo omitido'))
+                                  + (f"usando o custo {src} ({cost:,.2f})" if cost is not None else 'custo omitido'))
         idxs = (1 + g[g.date >= first].ret).cumprod()
         wk = idxs.groupby(g[g.date >= first].date.dt.to_period('W')).last()
         assets.append(dict(
