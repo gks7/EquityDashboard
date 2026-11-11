@@ -270,7 +270,7 @@ function Body({ data, reload }: { data: Payload; reload: () => void }) {
         ))}
       </div>
 
-      {tab === "hoje" && <DayView />}
+      {tab === "hoje" && <DayView nav={data.kpi.nav} />}
       {tab === "ativos" && <AssetsTable data={data} />}
       {tab === "atribuicao" && <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 sm:gap-6"><ContribChart data={data} /><AttribTable data={data} /></div>}
       {tab === "pl" && <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 sm:gap-6"><NavChart data={data} /><SubsChart data={data} /></div>}

@@ -206,7 +206,11 @@ function fiColor(item: PortfolioHolding): string {
 
 // ─── Main Component ─────────────────────────────────────────────────
 /** Dia a dia da carteira: variação de hoje por ativo e por classe, posições, setores e renda fixa. */
-export default function DayView() {
+export default function DayView({ nav }: {
+  /** Fund NAV (Patrimônio from the hero, cota × shares). When given, the breakdown is
+   *  measured against it and the difference to the positions shows as "Caixa e outros". */
+  nav?: number;
+} = {}) {
   const router = useRouter();
   const [holdings, setHoldings] = useState<PortfolioHolding[]>([]);
   const [loading, setLoading] = useState(true);
@@ -234,6 +238,11 @@ export default function DayView() {
 
   // ─── Derived data ──────────────────────────────────────────────────
   const totalValue = holdings.reduce((s, h) => s + h.current_value, 0);
+  // The positions only sum to the invested part; the fund's NAV also holds the bank
+  // cash, net of the fee accruals and anything receivable/payable. Weights are taken
+  // over the NAV so they match the Renda variável / Renda fixa bar above.
+  const hasNav = nav != null && isFinite(nav) && nav > 0;
+  const baseValue = hasNav ? nav! : totalValue;
 
   const equities = useMemo(
     () => holdings.filter((h) => h.asset_type === "Equity" || h.stock_details),
@@ -269,12 +278,17 @@ export default function DayView() {
       return "Other FI";
     };
 
-    const agg = (items: PortfolioHolding[]) => {
-      const mv = items.reduce((s, h) => s + h.current_value, 0);
-      const pnl = items.reduce((s, h) => s + (h.pnl_1d || 0), 0);
+    type Agg = { mv: number; pnl: number | null; ret: number | null; pct: number };
+    const pctOf = (mv: number) => (baseValue > 0 ? (mv / baseValue) * 100 : 0);
+    const withPnl = (mv: number, pnl: number): Agg => {
       const prev = mv - pnl;
-      return { mv, pnl, ret: prev > 0 ? (pnl / prev) * 100 : 0, pct: totalValue > 0 ? (mv / totalValue) * 100 : 0 };
+      return { mv, pnl, ret: prev > 0 ? (pnl / prev) * 100 : 0, pct: pctOf(mv) };
     };
+    const agg = (items: PortfolioHolding[]): Agg =>
+      withPnl(
+        items.reduce((s, h) => s + h.current_value, 0),
+        items.reduce((s, h) => s + (h.pnl_1d || 0), 0),
+      );
 
     const eqStocks = equities.filter((h) => !isEtf(h));
     const eqIndex = equities.filter((h) => isEtf(h));
@@ -285,12 +299,16 @@ export default function DayView() {
       (fiByType[cat] = fiByType[cat] || []).push(h);
     });
 
-    const total = agg(holdings);
+    const positions = agg(holdings);
+    // With the NAV known, the total row is the fund itself: same day P&L (cash earns
+    // nothing intraday here), return measured over the whole NAV.
+    const total = hasNav ? withPnl(baseValue, positions.pnl ?? 0) : positions;
     const eq = agg(equities);
     const fi = agg(fixedIncome);
+    const cash = baseValue - totalValue;
 
-    const rows: { label: string; indent: number; bold: boolean; data: ReturnType<typeof agg> }[] = [
-      { label: "Portfolio Total", indent: 0, bold: true, data: total },
+    const rows: { label: string; indent: number; bold: boolean; total?: boolean; data: Agg }[] = [
+      { label: hasNav ? "Patrimônio (NAV)" : "Portfolio Total", indent: 0, bold: true, total: true, data: total },
       { label: "Equity", indent: 0, bold: true, data: eq },
       ...(eqStocks.length > 0 ? [{ label: "Equity", indent: 1, bold: false, data: agg(eqStocks) }] : []),
       ...(eqIndex.length > 0 ? [{ label: "Equity Index", indent: 1, bold: false, data: agg(eqIndex) }] : []),
@@ -298,9 +316,12 @@ export default function DayView() {
       ...["FI Index", "Corporate Bonds", "Treasury", "EM Sovereign", "Other FI"]
         .filter((cat) => fiByType[cat]?.length)
         .map((cat) => ({ label: cat, indent: 1, bold: false, data: agg(fiByType[cat]) })),
+      ...(hasNav
+        ? [{ label: "Caixa e outros", indent: 0, bold: true, data: { mv: cash, pnl: null, ret: null, pct: pctOf(cash) } }]
+        : []),
     ];
     return rows;
-  }, [holdings, equities, fixedIncome, totalValue]);
+  }, [holdings, equities, fixedIncome, totalValue, hasNav, baseValue]);
 
 
   // Bar chart: all equities sorted by 1D % change (smallest → largest, left to right)
@@ -516,8 +537,10 @@ export default function DayView() {
           </thead>
           <tbody>
             {breakdown.map((row, i) => {
-              const isTotal = row.label === "Portfolio Total";
+              const isTotal = !!row.total;
               const isGroup = row.bold && !isTotal;
+              const { pnl, ret } = row.data;
+              const isCash = row.label === "Caixa e outros";
               const zebra = i % 2 === 0;
               return (
                 <tr
@@ -531,20 +554,28 @@ export default function DayView() {
                     className={`px-3 py-1 ${row.bold ? "font-bold text-slate-900 dark:text-white" : "font-medium text-slate-500 dark:text-slate-400"}`}
                     style={{ paddingLeft: row.indent ? `${(row.indent * 16) + 12}px` : undefined }}
                   >
-                    {row.label}
+                    <span title={isCash ? "Patrimônio menos as posições: caixa no banco, líquido de taxas provisionadas e valores a receber/pagar" : undefined}>
+                      {row.label}
+                    </span>
                   </td>
                   <td className={`px-3 py-1 text-right tabular-nums ${row.bold ? "font-bold text-slate-900 dark:text-white" : "text-slate-600 dark:text-slate-400"}`}>
-                    {row.data.mv >= 1e6
-                      ? `${(row.data.mv / 1e6).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}M`
-                      : row.data.mv.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    {row.data.mv < 0 ? "(" : ""}
+                    {Math.abs(row.data.mv) >= 1e6
+                      ? `${(Math.abs(row.data.mv) / 1e6).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}M`
+                      : Math.abs(row.data.mv).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    {row.data.mv < 0 ? ")" : ""}
                   </td>
-                  <td className={`px-3 py-1 text-right tabular-nums font-medium ${row.data.pnl >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
-                    {row.data.pnl >= 0 ? "" : "("}
-                    {Math.abs(row.data.pnl).toLocaleString(undefined, { maximumFractionDigits: 1 })}
-                    {row.data.pnl < 0 ? ")" : ""}
+                  <td className={`px-3 py-1 text-right tabular-nums font-medium ${pnl == null ? "text-slate-400" : pnl >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                    {pnl == null ? "—" : (
+                      <>
+                        {pnl >= 0 ? "" : "("}
+                        {Math.abs(pnl).toLocaleString(undefined, { maximumFractionDigits: 1 })}
+                        {pnl < 0 ? ")" : ""}
+                      </>
+                    )}
                   </td>
-                  <td className={`px-3 py-1 text-right tabular-nums font-medium hidden sm:table-cell ${row.data.ret >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
-                    {row.data.ret.toFixed(2)}%
+                  <td className={`px-3 py-1 text-right tabular-nums font-medium hidden sm:table-cell ${ret == null ? "text-slate-400" : ret >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                    {ret == null ? "—" : `${ret.toFixed(2)}%`}
                   </td>
                   <td className={`px-3 py-1 text-right tabular-nums ${row.bold ? "font-bold text-slate-900 dark:text-white" : "text-slate-500 dark:text-slate-400"}`}>
                     {row.data.pct.toFixed(1)}%
@@ -1225,6 +1256,8 @@ export default function DayView() {
                     <tr className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                       {[
                         ["ticker", "Identifier"],
+                        ["qty", "Qty / Face"],
+                        ["price", "Price"],
                         ["current_value", "Mkt Value"],
                         ["chg_1d", "1D %"],
                         ["pnl_1d", "1D PnL"],
@@ -1254,6 +1287,13 @@ export default function DayView() {
                         <td className="px-4 py-3 font-semibold text-slate-900 dark:text-white max-w-[220px] truncate">
                           {item.ticker ? item.ticker.replace("Corp", "").replace("@", " ") : item.isin}
                           <div className="text-xs text-slate-500 font-normal">{item.specific_type}</div>
+                        </td>
+                        {/* Bonds come as face value and price in % of par, so no currency sign. */}
+                        <td className="px-4 py-3 text-right text-slate-600 dark:text-slate-400 font-medium tabular-nums">
+                          {item.quantity.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </td>
+                        <td className="px-4 py-3 text-right font-medium text-slate-900 dark:text-white tabular-nums">
+                          {item.price ? item.price.toFixed(2) : "—"}
                         </td>
                         <td className="px-4 py-3 text-right font-bold text-slate-900 dark:text-white">
                           ${item.current_value.toLocaleString(undefined, { maximumFractionDigits: 0 })}
@@ -1323,9 +1363,14 @@ export default function DayView() {
                       </p>
                       <p className="text-xs text-slate-400">{item.specific_type}</p>
                     </div>
-                    <p className="text-sm font-bold text-slate-900 dark:text-white tabular-nums shrink-0">
-                      ${item.current_value.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                    </p>
+                    <div className="text-right shrink-0">
+                      <p className="text-sm font-bold text-slate-900 dark:text-white tabular-nums">
+                        ${item.current_value.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      </p>
+                      <p className="text-xs text-slate-400 tabular-nums">
+                        {item.quantity.toLocaleString(undefined, { maximumFractionDigits: 0 })} @ {item.price ? item.price.toFixed(2) : "—"}
+                      </p>
+                    </div>
                   </div>
 
                   {/* Row 2: PnL metrics */}
