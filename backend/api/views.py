@@ -8,6 +8,7 @@ from finance.models import Stock, InvestmentThesis, Estimate5Y, PortfolioItem, V
 from .serializers import StockSerializer, InvestmentThesisSerializer, Estimate5YSerializer, PortfolioItemSerializer, PortfolioSnapshotSerializer
 from finance.services import update_stock_price, bloomberg_to_yfinance
 from django.db import transaction
+from django.db.models import Q
 import pandas as pd
 from datetime import datetime
 
@@ -331,6 +332,24 @@ class PortfolioSnapshotViewSet(viewsets.ModelViewSet):
                     "columns_detected": df.columns.tolist(),
                 }, status=status.HTTP_400_BAD_REQUEST)
 
+            # A sheet whose Bloomberg columns all came back "#N/A" parses fine — the
+            # quantities are typed in — but carries no prices at all. Saving it stores a
+            # book worth zero: the performance engine then refuses to price the day and
+            # the dashboard freezes on the previous upload, with nothing on screen
+            # saying why. Refuse it, so the macro reports it while Excel is still open.
+            held = sum(1 for i in items_to_create if i.quantity)
+            priced = sum(1 for i in items_to_create if i.market_value or i.price)
+            if held and not priced:
+                return Response({
+                    "error": (
+                        f"Bloomberg devolveu #N/A em todos os preços ({held} posições sem "
+                        "preço) — nada foi salvo. Confere o terminal, recalcula a planilha "
+                        "(Ctrl+Alt+F9) e sobe de novo."
+                    ),
+                    "columns_detected": df.columns.tolist(),
+                    "holdings_without_price": held,
+                }, status=status.HTTP_400_BAD_REQUEST)
+
             # Postgres rejects the whole INSERT when one value overflows its column, so a
             # single oversized cell used to kill the upload (DataError on bulk_create).
             for item in items_to_create:
@@ -409,14 +428,25 @@ class PortfolioItemViewSet(viewsets.ModelViewSet):
         if snapshot_id:
             return PortfolioItem.objects.filter(snapshot_id=snapshot_id).order_by('-market_value')
         
-        # Skip snapshots that carry no positions. One can still turn up (an upload
-        # interrupted before this fix, or a row created by hand), and reading it as
-        # "the latest portfolio" blanks the dashboard behind "No holdings yet" while
-        # the previous good upload sits one row below.
+        # The newest snapshot is not always the one to show. Two ways it can be junk:
+        # an upload that died part-way leaves it with no rows at all, and a sheet whose
+        # Bloomberg columns came back "#N/A" leaves it with every row priced at zero.
+        # Either one, read as "the latest portfolio", wipes the dashboard — blank in the
+        # first case, a book worth 0 in the second — while the last good upload sits one
+        # row below. So take the most recent snapshot that actually has a price on it.
+        priced = (PortfolioItem.objects
+                  .filter(Q(market_value__gt=0) | Q(price__gt=0))
+                  .order_by('-snapshot__date', '-snapshot__created_at')
+                  .values_list('snapshot_id', flat=True)
+                  .first())
+        if priced:
+            return PortfolioItem.objects.filter(snapshot_id=priced).order_by('-market_value')
+
+        # Nothing priced anywhere (a fresh database): fall back to whatever has rows.
         latest_snapshot = PortfolioSnapshot.objects.filter(items__isnull=False).distinct().first()
         if latest_snapshot:
             return PortfolioItem.objects.filter(snapshot=latest_snapshot).order_by('-market_value')
-            
+
         return PortfolioItem.objects.none()
 
     def create(self, request, *args, **kwargs):

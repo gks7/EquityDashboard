@@ -130,6 +130,30 @@ class PortfolioEndpointTests(TestCase):
         # An explicit snapshot_id is still honoured, empty or not.
         self.assertEqual(client.get(f"/api/portfolio/?snapshot_id={empty.id}").json(), [])
 
+    def test_an_unpriced_snapshot_does_not_zero_the_dashboard(self):
+        """Bloomberg answering #N/A lands quantities with every price at zero. That
+        snapshot has rows, so it is "the latest" — and it used to put a book worth 0
+        on screen. The last priced upload is the one to show."""
+        good = PortfolioSnapshot.objects.create(date="2026-11-10")
+        PortfolioItem.objects.create(snapshot=good, ticker="AMZN", asset_type="Equity",
+                                     quantity=2145.0, average_cost=5.0, price=268.71,
+                                     market_value=576383.0)
+        unpriced = PortfolioSnapshot.objects.create(date="2026-11-11")
+        PortfolioItem.objects.create(snapshot=unpriced, ticker="AMZN", asset_type="Equity",
+                                     quantity=2145.0, average_cost=0.0, price=0.0,
+                                     market_value=0.0)
+
+        client = APIClient()
+        client.force_authenticate(user=User.objects.create_user("tester", password="pw"))
+
+        body = client.get("/api/portfolio/").json()
+        self.assertEqual(len(body), 1)
+        self.assertEqual(body[0]["market_value"], 576383.0)
+
+        # Asking for it by id still returns it as stored.
+        self.assertEqual(
+            client.get(f"/api/portfolio/?snapshot_id={unpriced.id}").json()[0]["market_value"], 0.0)
+
     def test_no_snapshot_at_all_returns_empty(self):
         client = APIClient()
         client.force_authenticate(user=User.objects.create_user("tester", password="pw"))
@@ -245,6 +269,38 @@ class UploadExcelEmptyTests(TestCase):
         self.assertEqual(res.status_code, 201)
         self.assertEqual(PortfolioItem.objects.count(), 2)
         self.assertEqual(Stock.objects.count(), 1)
+
+    def test_a_sheet_with_no_prices_at_all_is_rejected(self):
+        """Bloomberg down: quantities come through, every price cell is #N/A. Saving
+        that stores a book worth zero and freezes the dashboard silently."""
+        res = APIClient().post(
+            "/api/snapshots/upload_excel/",
+            {"file": _workbook([
+                ["Ticker", "Quantity", "PX_LAST", "Market Value", "Currency"],
+                ["AMZN US", 2145, "#N/A N/A", "#N/A N/A", "#N/A Field Not Applicable"],
+                ["META US", 980, "#N/A N/A", "#N/A N/A", "#N/A Field Not Applicable"],
+            ])},
+            format="multipart",
+        )
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("#N/A", res.json()["error"])
+        self.assertEqual(res.json()["holdings_without_price"], 2)
+        self.assertEqual(PortfolioSnapshot.objects.count(), 0)
+        self.assertEqual(PortfolioItem.objects.count(), 0)
+
+    def test_a_partly_priced_sheet_still_lands(self):
+        """One name Bloomberg cannot price is not a reason to drop the whole day."""
+        res = APIClient().post(
+            "/api/snapshots/upload_excel/",
+            {"file": _workbook([
+                ["Ticker", "Quantity", "PX_LAST"],
+                ["AMZN US", 2145, "#N/A N/A"],
+                ["META US", 980, 641.44],
+            ])},
+            format="multipart",
+        )
+        self.assertEqual(res.status_code, 201)
+        self.assertEqual(res.json()["items_created"], 2)
 
     def test_a_failure_while_saving_leaves_no_snapshot(self):
         """The snapshot and its items commit together: a database error part-way
