@@ -149,6 +149,9 @@ class PortfolioEndpointTests(TestCase):
         body = client.get("/api/portfolio/").json()
         self.assertEqual(len(body), 1)
         self.assertEqual(body[0]["market_value"], 576383.0)
+        # and it says which upload it is, so the page can flag that it is not today's
+        self.assertEqual(body[0]["snapshot_date"], "2026-11-10")
+        self.assertIsNotNone(body[0]["snapshot_at"])
 
         # Asking for it by id still returns it as stored.
         self.assertEqual(

@@ -704,8 +704,16 @@ def build_payload(I, f, pab, bm, anchors, adj, eng, subs, subs_by_deal, avg_cost
                  .reset_index().rename(columns={'dealing': 'd'}).to_dict('records'))
     flows = sorted(((d, v) for d, v in zip(f.index, f.subscription) if v), key=lambda x: x[0])
 
+    # Last business day with real Bloomberg prices, and how that day was priced. The
+    # series always runs to `asof`: a day whose upload brought no prices is carried at
+    # the previous close, so the page must be able to say whose prices it is showing
+    # instead of letting the rebuild time pass for a data date.
+    px_dates = sorted(kinds.index) if len(kinds) else []
+    px_asof = px_dates[-1] if px_dates else None
+
     payload = dict(
         asof=today, official_last=official_last, official_cota=float(anchors[official_last]),
+        px_asof=px_asof, px_kind=(kinds.get(px_asof) if px_asof is not None else None),
         kpi=kpi,
         fund=[[d, c, 1 if e else 0, n] for d, c, e, n in zip(f.index, f.cota, f.estimated, f.nav)],
         bench={k: [v for v in bm[k].reindex(f.index).ffill().values] for k in bm.columns},

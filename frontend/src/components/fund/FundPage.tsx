@@ -28,6 +28,9 @@ interface Asset {
 interface Check { status: "ok" | "warn" | "error" | "info"; title: string; detail: string; rows: Record<string, unknown>[]; }
 interface Payload {
   asof: string; official_last: string; official_cota: number; kpi: Kpi;
+  /** Last business day with real Bloomberg prices, and how it was priced. Behind
+   *  `asof` whenever the day's upload brought nothing — the series is carried then. */
+  px_asof: string | null; px_kind: "close" | "preopen" | "intraday" | null;
   fund: [string, number, number, number][];
   bench: Record<string, (number | null)[]>; sleeves: Record<string, number[]>;
   months: Record<string, number | string | null>[]; attrib: Record<string, number | string | null>[];
@@ -143,7 +146,19 @@ export default function FundPage() {
             <button className={btn} onClick={() => load(true)} disabled={!!busy}><RefreshCcw className={`w-3.5 h-3.5 ${busy ? "animate-spin" : ""}`} />Recalcular</button>
             <button className={btn} onClick={exportXlsx} disabled={!!busy || !data}><Download className="w-3.5 h-3.5" />Excel</button>
           </div>
-          {data?.run && <p className="text-[11px] sm:text-xs text-slate-400 font-medium tabular-nums">Atualizado: {new Date(data.run.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>}
+          <div className="flex flex-col sm:items-end gap-0.5">
+            {data?.run && <p className="text-[11px] sm:text-xs text-slate-400 font-medium tabular-nums">Atualizado: {new Date(data.run.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>}
+            {/* "Atualizado" is when the engine last ran, not the date of the prices it ran
+                on. When the day's sheet brought no prices the cota is carried from the last
+                close, so say whose prices these are instead of implying they are today's. */}
+            {data?.px_asof && data.px_asof !== data.asof ? (
+              <p className="text-[11px] sm:text-xs font-semibold text-amber-600 dark:text-amber-400 tabular-nums">
+                Preços de {dBR(data.px_asof)} — a planilha de hoje não trouxe preços
+              </p>
+            ) : data?.px_asof && data.px_kind === "intraday" ? (
+              <p className="text-[11px] sm:text-xs text-slate-400 font-medium tabular-nums">Preços intradiários de {dBR(data.px_asof)}</p>
+            ) : null}
+          </div>
         </div>
       </div>
       {(busy || err || uploadMsg) && (
