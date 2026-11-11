@@ -35,6 +35,10 @@ export interface PortfolioHolding {
   asset_type: string | null;
   specific_type: string | null;
   chg_pct_1d: number | null;
+  /** Which upload these holdings came from. The API falls back to the last one that
+   *  carried prices, so it is not always today's. */
+  snapshot_date?: string | null;
+  snapshot_at?: string | null;
   pnl_1d: number | null;
   chg_pct_ytd: number | null;
   pe_next_12_months: number | null;
@@ -450,6 +454,18 @@ export default function DayView() {
   const maxYtw = Math.max(...fiWithData.map((h) => (h.yield_to_worst || 0) * 100), 1);
   const maxVal = Math.max(...fiWithData.map((h) => h.current_value), 1);
 
+  // ─── Which upload is on screen ────────────────────────────────────
+  // /api/portfolio/ serves the most recent snapshot that carries prices, so on a day
+  // whose sheet came back empty these are the previous day's positions. Say it.
+  const snapAt = holdings[0]?.snapshot_at ?? null;
+  const snapDate = holdings[0]?.snapshot_date ?? null;
+  const asOf = snapAt
+    ? new Date(snapAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
+    : snapDate
+      ? `${snapDate.slice(8, 10)}/${snapDate.slice(5, 7)}`
+      : null;
+  const asOfIsToday = snapDate === new Date().toLocaleDateString("en-CA");
+
   // ─── Loading / empty ──────────────────────────────────────────────
   if (loading) {
     return (
@@ -479,6 +495,13 @@ export default function DayView() {
   // ─── Render ────────────────────────────────────────────────────────
   return (
     <div className="space-y-5 sm:space-y-6">
+      {asOf && (
+        <p className={`text-[11px] sm:text-xs font-medium tabular-nums ${asOfIsToday ? "text-slate-400" : "text-amber-600 dark:text-amber-400 font-semibold"}`}>
+          {asOfIsToday
+            ? `Posições de ${asOf}`
+            : `Posições de ${asOf} — a planilha de hoje não trouxe preços`}
+        </p>
+      )}
       {/* ─── Portfolio Breakdown ─────────────────────────────────── */}
       <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm overflow-hidden">
         <table className="w-full text-[11px] sm:text-xs">

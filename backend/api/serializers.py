@@ -86,6 +86,10 @@ class PortfolioItemSerializer(JsonSafeSerializerMixin, serializers.ModelSerializ
     current_value = serializers.ReadOnlyField()
     unrealized_pl = serializers.ReadOnlyField()
     unrealized_pl_pct = serializers.ReadOnlyField()
+    # The list falls back to the last upload that carried prices, which is not always
+    # today's (see PortfolioItemViewSet). The page says so, and needs the date to do it.
+    snapshot_date = serializers.DateField(source='snapshot.date', read_only=True)
+    snapshot_at = serializers.DateTimeField(source='snapshot.created_at', read_only=True)
 
     class Meta:
         model = PortfolioItem
