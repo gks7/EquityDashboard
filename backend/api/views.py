@@ -230,7 +230,7 @@ class PortfolioSnapshotViewSet(viewsets.ModelViewSet):
                 isin = get_val('ISIN')
                 asset_type = get_val('Type')
                 specific_type = get_val('Specific type')
-                currency = get_val('Currency')
+                currency = _currency_code(get_val('Currency'))
                 
                 quantity = get_float('Quantity')
                 if quantity == 0 and not raw_ticker and not isin:
@@ -284,7 +284,11 @@ class PortfolioSnapshotViewSet(viewsets.ModelViewSet):
                 if asset_type == 'Equity' and raw_ticker:
                     yf_ticker = bloomberg_to_yfinance(raw_ticker)
                     ticker = yf_ticker
-                    stock, _ = Stock.objects.get_or_create(ticker=yf_ticker, defaults={'company_name': yf_ticker})
+                    # Stock.ticker is varchar(10) too. A symbol that does not fit is kept
+                    # on the holding but gets no Stock row, instead of 500-ing the upload.
+                    if yf_ticker and len(yf_ticker) <= 10:
+                        stock, _ = Stock.objects.get_or_create(
+                            ticker=yf_ticker, defaults={'company_name': yf_ticker})
 
                 # Carried over average cost
                 key = ticker or isin
@@ -327,6 +331,11 @@ class PortfolioSnapshotViewSet(viewsets.ModelViewSet):
                     "columns_detected": df.columns.tolist(),
                 }, status=status.HTTP_400_BAD_REQUEST)
 
+            # Postgres rejects the whole INSERT when one value overflows its column, so a
+            # single oversized cell used to kill the upload (DataError on bulk_create).
+            for item in items_to_create:
+                _fit_text_fields(item)
+
             # Snapshot and its items land together or not at all.
             with transaction.atomic():
                 snapshot = PortfolioSnapshot.objects.create(date=datetime.now().date())
@@ -365,6 +374,32 @@ class PortfolioSnapshotViewSet(viewsets.ModelViewSet):
             error_details = traceback.format_exc()
             print("EXCEL UPLOAD ERROR:", error_details)
             return Response({"error": str(e), "traceback": error_details}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+_TEXT_LIMITS = {f.name: f.max_length for f in PortfolioItem._meta.fields
+                if getattr(f, 'max_length', None)}
+
+
+def _fit_text_fields(item):
+    """Trim every text field to what its column holds.
+
+    Bloomberg puts error strings and decorated values in text cells
+    ("#N/A Field Not Applicable" in Currency, a full security name in Ticker).
+    Postgres then rejects the whole batch and the day's upload is lost — a trimmed
+    label is worth more than no portfolio at all.
+    """
+    for name, limit in _TEXT_LIMITS.items():
+        value = getattr(item, name, None)
+        if isinstance(value, str) and len(value) > limit:
+            setattr(item, name, value[:limit])
+
+
+def _currency_code(raw):
+    """"USD Curncy" -> "USD"; "#N/A Field Not Applicable" and other junk -> None."""
+    if not raw:
+        return None
+    head = raw.strip().split()[0] if raw.strip() else ''
+    return head if head.isalpha() and len(head) <= 10 else None
+
 
 class PortfolioItemViewSet(viewsets.ModelViewSet):
     serializer_class = PortfolioItemSerializer
