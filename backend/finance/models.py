@@ -651,3 +651,48 @@ class PerformanceRun(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+
+
+# ─── UTM (internal 13F-driven portfolio) ──────────────────────────────────────
+class UtmRebalance(models.Model):
+    """
+    One rebalance of the UTM portfolio: the full basket held from the close of
+    `date` until the next rebalance. Holdings are share counts (UtmHolding).
+
+    Money put in or taken out is never entered separately: it is implied by the
+    change in shares x that day's close, and the return engine removes it
+    (finance/utm.py), so an aporte/resgate never shows up as performance.
+    """
+    date = models.DateField(unique=True, db_index=True)   # trade date (a trading day)
+    note = models.CharField(max_length=255, blank=True, default='')
+    source = models.CharField(max_length=20, default='excel')  # excel | manual
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['date']
+
+    def __str__(self):
+        return f"UTM rebalance {self.date}"
+
+
+class UtmHolding(models.Model):
+    rebalance = models.ForeignKey(UtmRebalance, on_delete=models.CASCADE, related_name='holdings')
+    ticker = models.CharField(max_length=20)
+    shares = models.FloatField()
+
+    class Meta:
+        unique_together = [('rebalance', 'ticker')]
+        ordering = ['ticker']
+
+
+class UtmPrice(models.Model):
+    """Daily close (and cash dividend per share on its ex-date) for UTM names and SPY/QQQ."""
+    date = models.DateField(db_index=True)
+    ticker = models.CharField(max_length=20, db_index=True)
+    close = models.FloatField()
+    dividend = models.FloatField(default=0.0)
+    source = models.CharField(max_length=20, default='excel')  # excel | yahoo
+
+    class Meta:
+        unique_together = [('date', 'ticker')]
+        ordering = ['date', 'ticker']

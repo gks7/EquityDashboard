@@ -13,6 +13,7 @@ from api.views import (
     AlphaUploadView, AlphaStocksView, AlphaAnalysisView,
     PerformanceView, PerformanceUploadView, PerformanceExportView, PerformanceManualEntriesView,
 )
+from api.utm_views import UtmView, UtmUploadView, UtmRebalanceView
 
 router = DefaultRouter()
 router.register(r'stocks', StockViewSet)
@@ -49,4 +50,7 @@ urlpatterns = [
     path('alpha/upload_excel/', AlphaUploadView.as_view(), name='alpha-upload'),
     path('alpha/stocks/', AlphaStocksView.as_view(), name='alpha-stocks'),
     path('alpha/analysis/', AlphaAnalysisView.as_view(), name='alpha-analysis'),
+    path('utm/', UtmView.as_view(), name='utm'),
+    path('utm/upload/', UtmUploadView.as_view(), name='utm-upload'),
+    path('utm/rebalances/', UtmRebalanceView.as_view(), name='utm-rebalances'),
 ]
