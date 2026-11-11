@@ -7,6 +7,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from finance.models import Stock, InvestmentThesis, Estimate5Y, PortfolioItem, ValuationModel, PortfolioSnapshot, HistCashTransaction, HistIndexPrice, AssetPositionHistOfficial, NAVPosition, ThesisEditHistory, AlphaDataPoint
 from .serializers import StockSerializer, InvestmentThesisSerializer, Estimate5YSerializer, PortfolioItemSerializer, PortfolioSnapshotSerializer
 from finance.services import update_stock_price, bloomberg_to_yfinance
+from django.db import transaction
 import pandas as pd
 from datetime import datetime
 
@@ -189,10 +190,14 @@ class PortfolioSnapshotViewSet(viewsets.ModelViewSet):
             # Remove any empty rows
             df = df.dropna(how='all')
 
-            snapshot = PortfolioSnapshot.objects.create(date=datetime.now().date())
-            
+            # The snapshot row is created only after the whole sheet has parsed (see
+            # below). Creating it up front means any error half-way through the loop
+            # leaves an empty snapshot behind, and the dashboard — which always reads
+            # the most recent snapshot — then shows "No holdings yet" on top of a
+            # perfectly good book from the previous upload.
+
             # Carry over average costs
-            prev_snapshot = PortfolioSnapshot.objects.exclude(id=snapshot.id).first()
+            prev_snapshot = PortfolioSnapshot.objects.first()
             prev_items = {}
             if prev_snapshot:
                 for item in prev_snapshot.items.all():
@@ -286,7 +291,7 @@ class PortfolioSnapshotViewSet(viewsets.ModelViewSet):
                 avg_cost = prev_items.get(key, price)
 
                 item = PortfolioItem(
-                    snapshot=snapshot,
+                    snapshot=None,  # set below, once the whole sheet parsed
                     stock=stock,
                     ticker=ticker,
                     isin=isin,
@@ -314,7 +319,6 @@ class PortfolioSnapshotViewSet(viewsets.ModelViewSet):
             # the most recent one, so a blank snapshot silently hides the real data and
             # the VBA macro still reports "Upload Successful". Fail loudly instead.
             if not items_to_create:
-                snapshot.delete()
                 return Response({
                     "error": (
                         "No holdings recognised in the sheet — nothing was saved. "
@@ -323,7 +327,12 @@ class PortfolioSnapshotViewSet(viewsets.ModelViewSet):
                     "columns_detected": df.columns.tolist(),
                 }, status=status.HTTP_400_BAD_REQUEST)
 
-            PortfolioItem.objects.bulk_create(items_to_create)
+            # Snapshot and its items land together or not at all.
+            with transaction.atomic():
+                snapshot = PortfolioSnapshot.objects.create(date=datetime.now().date())
+                for item in items_to_create:
+                    item.snapshot = snapshot
+                PortfolioItem.objects.bulk_create(items_to_create)
 
             # Update stock prices in background (best-effort, don't block the response)
             equity_tickers = list({item.ticker for item in items_to_create if item.asset_type == 'Equity' and item.ticker})
@@ -365,7 +374,11 @@ class PortfolioItemViewSet(viewsets.ModelViewSet):
         if snapshot_id:
             return PortfolioItem.objects.filter(snapshot_id=snapshot_id).order_by('-market_value')
         
-        latest_snapshot = PortfolioSnapshot.objects.first()
+        # Skip snapshots that carry no positions. One can still turn up (an upload
+        # interrupted before this fix, or a row created by hand), and reading it as
+        # "the latest portfolio" blanks the dashboard behind "No holdings yet" while
+        # the previous good upload sits one row below.
+        latest_snapshot = PortfolioSnapshot.objects.filter(items__isnull=False).distinct().first()
         if latest_snapshot:
             return PortfolioItem.objects.filter(snapshot=latest_snapshot).order_by('-market_value')
             

@@ -8,6 +8,7 @@ instances rather than relying on a database round trip.
 """
 
 import io
+from unittest import mock
 
 from django.contrib.auth.models import User
 from django.core.management import call_command
@@ -111,6 +112,29 @@ class PortfolioEndpointTests(TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.json()[0]["ticker"], "GOOD")
 
+    def test_empty_newest_snapshot_does_not_blank_the_dashboard(self):
+        """An upload that died half-way leaves a snapshot with no items. The list
+        must fall back to the last snapshot that actually holds positions instead
+        of returning [] and sending the dashboard to "No holdings yet"."""
+        good = PortfolioSnapshot.objects.create(date="2026-11-10")
+        PortfolioItem.objects.create(snapshot=good, ticker="GOOD", asset_type="Equity",
+                                     quantity=10.0, average_cost=5.0, market_value=50.0)
+        empty = PortfolioSnapshot.objects.create(date="2026-11-11")
+
+        client = APIClient()
+        client.force_authenticate(user=User.objects.create_user("tester", password="pw"))
+
+        body = client.get("/api/portfolio/").json()
+        self.assertEqual([h["ticker"] for h in body], ["GOOD"])
+
+        # An explicit snapshot_id is still honoured, empty or not.
+        self.assertEqual(client.get(f"/api/portfolio/?snapshot_id={empty.id}").json(), [])
+
+    def test_no_snapshot_at_all_returns_empty(self):
+        client = APIClient()
+        client.force_authenticate(user=User.objects.create_user("tester", password="pw"))
+        self.assertEqual(client.get("/api/portfolio/").json(), [])
+
 
 class CleanNonFiniteCommandTests(TestCase):
     def test_bad_detects_only_non_finite_floats(self):
@@ -172,6 +196,20 @@ class UploadExcelEmptyTests(TestCase):
         self.assertEqual(res.status_code, 201)
         self.assertEqual(res.json()["items_created"], 1)
         self.assertEqual(PortfolioSnapshot.objects.count(), 1)
+
+    def test_a_failure_while_saving_leaves_no_snapshot(self):
+        """The snapshot and its items commit together: a database error part-way
+        through must not leave an empty snapshot shadowing the last good upload."""
+        with mock.patch.object(PortfolioItem.objects, "bulk_create",
+                               side_effect=RuntimeError("boom")):
+            res = APIClient().post(
+                "/api/snapshots/upload_excel/",
+                {"file": _workbook([["Ticker", "Quantity", "PX_LAST"], ["PETR4 BZ", 100, 38.5]])},
+                format="multipart",
+            )
+        self.assertEqual(res.status_code, 500)
+        self.assertEqual(PortfolioSnapshot.objects.count(), 0)
+        self.assertEqual(PortfolioItem.objects.count(), 0)
 
     def test_header_below_a_title_row_is_found(self):
         res = APIClient().post(
