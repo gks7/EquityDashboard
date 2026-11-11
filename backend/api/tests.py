@@ -197,6 +197,55 @@ class UploadExcelEmptyTests(TestCase):
         self.assertEqual(res.json()["items_created"], 1)
         self.assertEqual(PortfolioSnapshot.objects.count(), 1)
 
+    def test_bloomberg_junk_in_currency_does_not_kill_the_upload(self):
+        """A cell longer than its column used to abort the whole INSERT
+        (DataError: value too long for character varying(10)), so the day's
+        portfolio never landed and the dashboard froze on the previous upload."""
+        res = APIClient().post(
+            "/api/snapshots/upload_excel/",
+            {"file": _workbook([
+                ["Ticker", "Quantity", "PX_LAST", "Currency"],
+                ["PETR4 BZ", 100, 38.5, "#N/A Field Not Applicable"],
+                ["SPY US", 10, 670.0, "USD Curncy"],
+                ["IVVB11 BZ", 5, 300.0, "BRL"],
+            ])},
+            format="multipart",
+        )
+        self.assertEqual(res.status_code, 201)
+        self.assertEqual(res.json()["items_created"], 3)
+        self.assertEqual(
+            [i.currency for i in PortfolioItem.objects.order_by("id")],
+            [None, "USD", "BRL"],
+        )
+
+    def test_an_oversized_cell_is_trimmed_to_the_column(self):
+        res = APIClient().post(
+            "/api/snapshots/upload_excel/",
+            {"file": _workbook([
+                ["Ticker", "Quantity", "PX_LAST"],
+                ["X" * 250, 100, 38.5],
+            ])},
+            format="multipart",
+        )
+        self.assertEqual(res.status_code, 201)
+        self.assertEqual(len(PortfolioItem.objects.get().ticker), 100)
+
+    def test_an_equity_symbol_that_does_not_fit_still_uploads(self):
+        """Stock.ticker is varchar(10) as well; an odd symbol costs the Stock link,
+        not the whole upload."""
+        res = APIClient().post(
+            "/api/snapshots/upload_excel/",
+            {"file": _workbook([
+                ["Ticker", "Quantity", "PX_LAST", "Type"],
+                ["VERYLONGSYMBOL123 US", 10, 500.0, "Equity"],
+                ["SPY US", 10, 670.0, "Equity"],
+            ])},
+            format="multipart",
+        )
+        self.assertEqual(res.status_code, 201)
+        self.assertEqual(PortfolioItem.objects.count(), 2)
+        self.assertEqual(Stock.objects.count(), 1)
+
     def test_a_failure_while_saving_leaves_no_snapshot(self):
         """The snapshot and its items commit together: a database error part-way
         through must not leave an empty snapshot shadowing the last good upload."""
