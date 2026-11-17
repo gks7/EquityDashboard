@@ -65,7 +65,13 @@ class UtmCalendarTests(TestCase):
         self.assertEqual(n['deadline'], '2026-11-16')          # 14-Nov-2026 is a Saturday
         self.assertEqual(n['expected_rebalance'], '2026-11-17')
         self.assertEqual(n['quarter'], '3T26')
-        self.assertEqual(utm.next_13f(D(2026, 11, 17))['quarter'], '4T26')
+        nxt = utm.next_13f(D(2026, 11, 17))
+        self.assertEqual(nxt['quarter'], '4T26')
+        # 14-Feb-2027 is a Sunday and 15-Feb is Presidents' Day: due Tuesday 16-Feb.
+        self.assertEqual(nxt['deadline'], '2027-02-16')
+        self.assertEqual(nxt['expected_rebalance'], '2027-02-17')
+        self.assertIn(D(2026, 11, 26), utm.us_holidays(2026))   # Thanksgiving
+        self.assertIn(D(2027, 5, 31), utm.us_holidays(2027))    # Memorial Day
 
     def test_norm_ticker(self):
         self.assertEqual(utm.norm_ticker('AMZN US'), 'AMZN')
@@ -73,6 +79,20 @@ class UtmCalendarTests(TestCase):
 
 
 class UtmRefreshTests(TestCase):
+    def test_names_that_left_are_followed_to_the_period_end(self):
+        days = [D(2026, 1, 5), D(2026, 1, 6), D(2026, 1, 7)]
+        _px([(d, t, 100, 0) for d in days for t in ('SPY', 'QQQ', 'AAA', 'BBB')])
+        utm.add_rebalance(days[0], {'AAA': 1})
+        utm.add_rebalance(days[1], {'BBB': 1})          # AAA leaves; fully priced so far
+        seen = {}
+
+        def fake(tickers, start, end):
+            seen['t'] = set(tickers)
+            return {}
+        with mock.patch.object(utm, '_yahoo', side_effect=fake):
+            utm.refresh_prices(today=D(2026, 1, 8))
+        self.assertIn('AAA', seen['t'])
+
     def test_split_is_scaled_to_stored_basis(self):
         _px([(D(2026, 1, 5), 'SPY', 100, 0), (D(2026, 1, 5), 'QQQ', 100, 0), (D(2026, 1, 5), 'XYZ', 250, 0)])
         utm.add_rebalance(D(2026, 1, 5), {'XYZ': 10})

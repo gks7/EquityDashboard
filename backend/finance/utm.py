@@ -282,10 +282,15 @@ def refresh_prices(today=None):
         d = baskets[k][0]
         end = baskets[majors[j + 1]][0] if j + 1 < len(majors) else today
         window = [x for x in spy_days if d < x <= end]
+        current = j == len(majors) - 1
         for t in baskets[majors[j - 1]][1] - baskets[k][1]:
-            got = sum(1 for x in window if x in stored[t])
-            if not window or got < 0.9 * len(window):
+            have_w = [x for x in window if x in stored[t]]
+            full = window and len(have_w) >= 0.9 * len(window)
+            if not full:
                 want(t, d - dt.timedelta(days=3))
+            elif current or window[-1] not in stored[t]:
+                # Keep following it to the period's end (today, for the current period).
+                want(t, max(have_w) - dt.timedelta(days=3))
     need = set(starts)
     start = min(starts.values())
     have = defaultdict(dict)
@@ -329,11 +334,28 @@ def refresh_prices(today=None):
 
 
 # ─── Engine ──────────────────────────────────────────────────────────────────
+def us_holidays(year):
+    """US federal holidays that close both the SEC (filing deadlines) and the NYSE."""
+    def nth(month, weekday, n):          # n-th weekday of the month; n=-1 for the last
+        if n > 0:
+            d = dt.date(year, month, 1)
+            d += dt.timedelta(days=(weekday - d.weekday()) % 7 + 7 * (n - 1))
+            return d
+        d = dt.date(year + (month == 12), month % 12 + 1, 1) - dt.timedelta(days=1)
+        return d - dt.timedelta(days=(d.weekday() - weekday) % 7)
+
+    def observed(d):
+        return d - dt.timedelta(days=1) if d.weekday() == 5 else d + dt.timedelta(days=1) if d.weekday() == 6 else d
+    return {observed(dt.date(year, 1, 1)), nth(1, 0, 3), nth(2, 0, 3), nth(5, 0, -1),
+            observed(dt.date(year, 6, 19)), observed(dt.date(year, 7, 4)), nth(9, 0, 1), nth(11, 3, 4),
+            observed(dt.date(year, 12, 25))}
+
+
 def next_13f(today):
-    """Next 13F deadline (45 days after quarter end, rolled to a weekday) and the
-    expected rebalance (the next weekday after it — how every past rebalance landed)."""
+    """Next 13F deadline (45 days after quarter end, rolled past weekends and holidays) and
+    the expected rebalance (the next business day after it — how every past rebalance landed)."""
     def roll(d):
-        while d.weekday() >= 5:
+        while d.weekday() >= 5 or d in us_holidays(d.year):
             d += dt.timedelta(days=1)
         return d
     cands = []
