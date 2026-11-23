@@ -96,7 +96,8 @@ def load_inputs(today=None):
     led['amount'] = led['amount'].astype(float)
 
     items = pd.DataFrame(list(PortfolioItem.objects.filter(snapshot__isnull=False).values(
-        'snapshot_id', 'snapshot__created_at', 'ticker', 'quantity', 'market_value', 'isin')))
+        'snapshot_id', 'snapshot__created_at', 'ticker', 'quantity', 'market_value', 'isin',
+        'specific_type', 'cross_usd', 'chg_pct_1d')))
     if not items.empty:
         items = items.rename(columns={'snapshot__created_at': 'ts'})
         tmap = {(t, i): matcher.from_ticker(t) or matcher.from_isin(i) for t, i in set(zip(items.ticker, items['isin']))}
@@ -149,11 +150,49 @@ def snapshot_prices(items):
     x['px_date'] = x.snapshot_id.map(best.px_date)
     x['uv'] = x.market_value / x.quantity
     uv = x.groupby(['px_date', 'asset_id']).uv.last().unstack().sort_index()
+    kind = best.set_index('px_date').kind
+    uv, kind = derive_missed_closes(x, best, uv, kind)
     for c in uv.columns:                                     # feed glitches (e.g. LSE ETF quoted in pence)
         s = uv[c]
         med = s.rolling(5, center=True, min_periods=3).median()
         uv.loc[(s / med - 1).abs() > 0.25, c] = np.nan
-    return uv, best.set_index('px_date').kind, units
+    return uv, kind, units
+
+
+# Bloomberg's CHG_PCT_1D is a like-for-like price change only for listed equities/ETFs in USD;
+# a bond's 1D change is on its clean price while its unit value here is dirty.
+CLOSE_FROM_CHG_TYPES = {'Equity', 'Equity Index', 'Fixed Income Index'}
+
+
+def derive_missed_closes(x, best, uv, kind):
+    """A day whose upload stopped before the US close (only an intraday snapshot) or that has no snapshot at all
+    would be marked at a stale price, misplacing P&L between it and the next day. Its close is backed out of the
+    next priced day's snapshot: price / (1 + CHG_PCT_1D), the change Bloomberg measures from that close.
+    Assets this doesn't apply to keep the intraday price (or are carried forward). Derived days get kind 'derived'."""
+    if not {'chg_pct_1d', 'specific_type'} <= set(x.columns) or uv.empty:
+        return uv, kind
+    cross = x['cross_usd'].fillna(1.0).astype(float) if 'cross_usd' in x.columns else pd.Series(1.0, index=x.index)
+    chg = pd.to_numeric(x.chg_pct_1d, errors='coerce')
+    ok = x.specific_type.isin(CLOSE_FROM_CHG_TYPES) & ((cross - 1).abs() < 1e-9) & chg.notna() & (chg != 0) & (chg.abs() < 50)
+    rows = x[ok].assign(prev=lambda d: d.uv / (1 + pd.to_numeric(d.chg_pct_1d) / 100))
+    by_day = best.reset_index().set_index('px_date')
+    for d in sorted(by_day.index):
+        if by_day.loc[d, 'kind'] == 'preopen':               # taken next morning: its 1D change may be d's own move
+            continue
+        p = (pd.Timestamp(d) - pd.offsets.BDay(1)).date()
+        if kind.get(p) not in (None, 'intraday'):
+            continue
+        prev = rows[rows.snapshot_id == by_day.loc[d, 'snapshot_id']].groupby('asset_id').prev.last()
+        if p in uv.index:                                    # sanity: an intraday mark is within 15% of the close
+            cur = uv.loc[p].reindex(prev.index)
+            prev = prev[cur.isna() | ((prev / cur - 1).abs() < 0.15)]
+        if prev.empty:
+            continue
+        if p not in uv.index:
+            uv.loc[p] = np.nan
+        uv.loc[p, prev.index] = prev.values
+        kind.loc[p] = 'derived'
+    return uv.sort_index(), kind.sort_index()
 
 
 # ───────────────────────────────────────────────────────────── positions & P&L
@@ -798,10 +837,12 @@ def reconcile(I, pab, f, anchors, adj, kinds, warnings, hwm):
     last30 = pd.bdate_range(end=I['today'], periods=30).date
     missing = [d for d in last30 if d not in set(kinds.index)]
     intraday = [d for d in last30 if d in kinds.index and kinds.get(d) == 'intraday']
+    derived = [d for d in last30 if d in kinds.index and kinds.get(d) == 'derived']
     st = 'ok' if len(missing) <= 2 else 'warn'
     add(st, 'Preços Bloomberg (últimos 30 dias úteis)',
-        f"{30-len(missing)}/30 dias com snapshot" + (f" · sem preço: {', '.join(d.strftime('%d/%m') for d in missing[-8:])}" if missing else '') +
-        (f" · só intraday: {', '.join(d.strftime('%d/%m') for d in intraday[-5:])}" if intraday else ''))
+        f"{30-len(missing)}/30 dias com preço" + (f" · sem preço: {', '.join(d.strftime('%d/%m') for d in missing[-8:])}" if missing else '') +
+        (f" · só intraday: {', '.join(d.strftime('%d/%m') for d in intraday[-5:])}" if intraday else '') +
+        (f" · fechamento reconstruído pela variação 1D do dia seguinte: {', '.join(d.strftime('%d/%m') for d in derived[-8:])}" if derived else ''))
     # 5. administrator report freshness
     if I['reps']:
         last_rep = I['reps'][-1]['date']

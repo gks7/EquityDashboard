@@ -9,7 +9,7 @@ from finance.perf.statement import AliasMatcher, classify, dealing_date, parse_w
 from finance.perf.admin_report import parse_workbook as parse_admin, lead_month_ends
 import numpy as np
 
-from finance.perf.engine import anchored, hwm_from, coupon_schedule, benchmarks, plausible_cost, history_cost
+from finance.perf.engine import anchored, hwm_from, coupon_schedule, benchmarks, plausible_cost, history_cost, snapshot_prices
 
 ALIASES = [
     dict(asset_id='QQQ', isin='US46090E1038', statement_pattern=r'Invesco QQQ', tickers='QQQ,QQQ US'),
@@ -201,3 +201,38 @@ class CostSanityTests(TestCase):
         self.assertAlmostEqual(history_cost(g), 80000.0 / 150.0)        # a sale keeps the average
         g.loc[0, 'net_invested'] = 0.0                                   # position transferred in: valued at the price
         self.assertAlmostEqual(history_cost(g), 80000.0 / 150.0)
+
+
+class MissedCloseTests(TestCase):
+    """Friday 20/11/2026: uploads stopped at 14:00 ET; Monday's snapshot carries Bloomberg's 1D change from the close."""
+
+    def items(self, monday_spy_chg=5.004277):
+        def snap(sid, ts, rows):
+            return [dict(snapshot_id=sid, ts=ts, ticker=t, asset_id=t, isin='', quantity=q, market_value=q * px,
+                         specific_type=st, cross_usd=1.0, chg_pct_1d=c) for t, q, px, st, c in rows]
+        filler = [(f'ETF{i}', 1000, 100.0, 'Fixed Income Index', 0.0) for i in range(10)]
+        thu = snap(1, '2026-11-19T22:00:00Z', [('SPY', 1000, 715.87, 'Equity Index', 0.0),
+                                                ('BOND', 1000, 0.9945, 'Corporate Bonds', 0.0)] + filler)
+        fri = snap(2, '2026-11-20T19:00:00Z', [('SPY', 1000, 702.718, 'Equity Index', -1.84),
+                                                ('BOND', 1000, 0.9945, 'Corporate Bonds', -0.27)] + filler)
+        mon = snap(3, '2026-11-23T16:00:00Z', [('SPY', 1000, 724.33, 'Equity Index', monday_spy_chg),
+                                                ('BOND', 1000, 0.9969, 'Corporate Bonds', 0.20)] + filler)
+        return pd.DataFrame(thu + fri + mon)
+
+    def test_intraday_friday_is_replaced_by_close_from_monday_change(self):
+        uv, kinds, _ = snapshot_prices(self.items())
+        fri, mon = dt.date(2026, 11, 20), dt.date(2026, 11, 23)
+        self.assertAlmostEqual(uv.loc[fri, 'SPY'], 724.33 / 1.05004277, places=6)
+        self.assertAlmostEqual(uv.loc[mon, 'SPY'] / uv.loc[fri, 'SPY'] - 1, 0.05004277, places=8)
+        self.assertAlmostEqual(uv.loc[fri, 'BOND'], 0.9945)              # bonds keep the intraday mark
+        self.assertEqual(kinds[fri], 'derived')
+        self.assertEqual(kinds[mon], 'intraday')
+        self.assertEqual(kinds[dt.date(2026, 11, 19)], 'close')
+
+    def test_missing_day_gets_a_close_and_glitches_are_ignored(self):
+        it = self.items()
+        uv, kinds, _ = snapshot_prices(it[it.snapshot_id != 2])            # nothing uploaded on Friday
+        self.assertEqual(kinds[dt.date(2026, 11, 20)], 'derived')
+        self.assertAlmostEqual(uv.loc[dt.date(2026, 11, 20), 'SPY'], 724.33 / 1.05004277, places=6)
+        uv, kinds, _ = snapshot_prices(self.items(monday_spy_chg=40.0))   # implausible vs the intraday mark
+        self.assertAlmostEqual(uv.loc[dt.date(2026, 11, 20), 'SPY'], 702.718)
