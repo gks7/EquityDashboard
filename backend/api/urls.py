@@ -14,6 +14,7 @@ from api.views import (
     PerformanceView, PerformanceUploadView, PerformanceExportView, PerformanceManualEntriesView,
 )
 from api.utm_views import UtmView, UtmUploadView, UtmRebalanceView
+from api.druck_views import DruckLiveView
 
 router = DefaultRouter()
 router.register(r'stocks', StockViewSet)
@@ -53,4 +54,5 @@ urlpatterns = [
     path('utm/', UtmView.as_view(), name='utm'),
     path('utm/upload/', UtmUploadView.as_view(), name='utm-upload'),
     path('utm/rebalances/', UtmRebalanceView.as_view(), name='utm-rebalances'),
+    path('druck/live/', DruckLiveView.as_view(), name='druck-live'),
 ]
