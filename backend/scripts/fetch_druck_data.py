@@ -155,15 +155,38 @@ IND = [
     I(id="T5YIFR", block="inf", name="Inflação implícita 5a daqui a 5a", unit="rate", pol=-1,
       why="Se as expectativas de longo prazo se desancoram, o Fed perde margem."),
     # Fiscal
-    I(id="FYFSGDA188S", block="fiscal", name="Resultado fiscal federal (% PIB)", unit="pct_gdp", dec=1,
-      why="Déficit grande fora de recessão é o tema que ele mais repete: injeta no curto prazo, cobra no longo."),
-    I(id="A091RC1Q027SBEA", block="fiscal", name="Juros pagos pelo governo federal", unit="usd_tn", scale=1e-3,
-      why="Custo da dívida (anualizado). Crescendo mais rápido que a receita = dinâmica de dívida piorando."),
+    # Monthly Treasury Statement (FRED) + Treasury Fiscal Data API; 12m sums smooth
+    # the tax-calendar seasonality of single months.
+    I(id="def12", block="fiscal", name="Resultado federal 12m (% PIB)", src="calc", unit="pct_gdp", dec=1,
+      why="Déficit acumulado em 12 meses sobre o PIB nominal. Déficit grande fora de recessão é o tema que ele mais repete: injeta no curto prazo, cobra no longo."),
+    I(id="rcpt12", block="fiscal", name="Receitas federais 12m (a/a)", src="calc", unit="yoy", dec=1,
+      why="Arrecadação acumulada em 12 meses contra o ano anterior. Receita fraca costuma antecipar desaceleração da economia."),
+    I(id="outl12", block="fiscal", name="Despesas federais 12m (a/a)", src="calc", unit="yoy", dec=1,
+      why="Gasto acumulado em 12 meses contra o ano anterior. Gasto acelerando com economia cheia é o estímulo fiscal fora de hora."),
+    I(id="int12", block="fiscal", name="Juros líquidos da dívida 12m", src="calc", unit="usd_tn", dec=2,
+      why="Juros pagos ao mercado nos últimos 12 meses: juros da dívida pública menos o que o Tesouro credita aos próprios fundos (Social Security etc.). Fonte: MTS, tabela 5."),
+    I(id="intrev", block="fiscal", name="Juros / receita federal (12m)", src="calc", unit="pct_net", dec=1, pol=-1,
+      why="Quanto da arrecadação vai para juros. Subindo = dinâmica da dívida piorando e mais oferta de Treasuries à frente."),
+    I(id="avgrate", block="fiscal", name="Custo médio da dívida negociável", src="calc", unit="rate",
+      why="Taxa média que o Tesouro paga no estoque de títulos negociáveis. Sobe devagar conforme a dívida antiga é rolada a juros mais altos."),
     I(id="THREEFYTP10", block="fiscal", name="Term premium 10 anos", unit="rate", pol=-1,
       why="Prêmio que o mercado exige para carregar Treasury longo. Sobe com excesso de oferta e risco fiscal."),
 ]
 
-EXTRA_FRED = ["ECBASSETSW", "JPNASSETS", "DEXUSEU", "DEXJPUS"]
+EXTRA_FRED = ["ECBASSETSW", "JPNASSETS", "DEXUSEU", "DEXJPUS",
+              "MTSDS133FMS", "MTSR133FMS", "MTSO133FMS", "GDP"]
+
+TREASURY = "https://api.fiscaldata.treasury.gov/services/api/fiscal_service"
+# name -> (endpoint, extra filter, value field)
+TREASURY_SERIES = {
+    "interest": ("v1/accounting/mts/mts_table_5",
+                 "classification_desc:eq:Total--Interest on the Public Debt", "current_month_gross_outly_amt"),
+    # negative: interest the Treasury pays its own trust funds (Social Security etc.)
+    "trustint": ("v1/accounting/mts/mts_table_5",
+                 "classification_desc:eq:Total--Interest Received by Trust Funds", "current_month_gross_outly_amt"),
+    "avgrate": ("v2/accounting/od/avg_interest_rates",
+                "security_desc:eq:Total Marketable", "avg_interest_rate_amt"),
+}
 EXTRA_YF = ["KRE", "XLY", "XLP", "SMH", "XHB", "IYT", "XRT", "IWM", "RSP", "SPY", "GC=F", "HG=F"]
 
 
@@ -204,6 +227,43 @@ def fetch_fred(sid: str) -> pd.Series | None:
             time.sleep(2 * (attempt + 1))
     print(f"  FRED {sid}: FAILED ({err})", file=sys.stderr)
     return None
+
+
+def fetch_treasury(name: str) -> pd.Series | None:
+    """One series from the Treasury Fiscal Data API (no key needed), all pages."""
+    path, filt, field = TREASURY_SERIES[name]
+    flt = f"record_date:gte:{START}" + (f",{filt}" if filt else "")
+    for attempt in range(2):
+        try:
+            rows, page = [], 1
+            while True:
+                r = requests.get(f"{TREASURY}/{path}", timeout=20, headers=UA, params={  # stalls on python-requests UA
+                    "filter": flt, "fields": f"record_date,{field}", "sort": "record_date",
+                    "page[size]": 1000, "page[number]": page})
+                r.raise_for_status()
+                j = r.json()
+                rows += j["data"]
+                if page >= int(j.get("meta", {}).get("total-pages", 1) or 1):
+                    break
+                page += 1
+            s = pd.Series(pd.to_numeric([x[field] for x in rows], errors="coerce"),
+                          index=pd.to_datetime([x["record_date"] for x in rows]))
+            s = s.dropna().sort_index()
+            s = s[~s.index.duplicated(keep="last")]
+            if s.empty:
+                raise ValueError("no rows")
+            s.name = name
+            return s
+        except Exception as e:  # noqa: BLE001
+            err = e
+            time.sleep(2 * (attempt + 1))
+    print(f"  Treasury {name}: FAILED ({err})", file=sys.stderr)
+    return None
+
+
+def monthly(s: pd.Series) -> pd.Series:
+    """Index a monthly series by month start (MTS on FRED is month-start, Treasury is month-end)."""
+    return s.groupby(s.index.to_period("M")).last().to_timestamp()
 
 
 def _yf_close(tickers: list[str]) -> pd.DataFrame:
@@ -323,6 +383,9 @@ def main(out_path: Path = DEFAULT_OUT) -> None:
         fred = dict(zip(fred_ids, ex.map(fetch_fred, fred_ids)))
     fred = {k: v for k, v in fred.items() if v is not None}
     yfd = fetch_yf(yf_ids)
+    with ThreadPoolExecutor(max_workers=3) as ex:
+        tsy = dict(zip(TREASURY_SERIES, ex.map(fetch_treasury, TREASURY_SERIES)))
+    tsy = {k: v for k, v in tsy.items() if v is not None}
 
     raw: dict[str, pd.Series] = {}
     # séries diretas
@@ -348,13 +411,48 @@ def main(out_path: Path = DEFAULT_OUT) -> None:
     if {"HG=F", "GC=F"} <= yfd.keys():
         j = pd.concat([yfd["HG=F"], yfd["GC=F"]], axis=1, join="inner").dropna()
         raw["cuau"] = j.iloc[:, 0] / j.iloc[:, 1] * 1000
+    # fiscal (MTS values are US$ millions per month; GDP is US$ billions SAAR)
+    sum12 = lambda s: monthly(s).rolling(12).sum().dropna()  # noqa: E731
+    def yoy(s: pd.Series) -> pd.Series:  # vs last value on or before the same date a year ago
+        pos = s.index.searchsorted(s.index - pd.DateOffset(years=1), side="right") - 1
+        prev = np.where(pos >= 0, s.values[np.clip(pos, 0, None)], np.nan)
+        return (s / prev - 1) * 100
+    if {"MTSDS133FMS", "GDP"} <= fred.keys():
+        d12 = sum12(fred["MTSDS133FMS"])
+        raw["def12"] = (d12 / (ffill_to(fred["GDP"], d12.index) * 1e3) * 100).dropna()
+    if "MTSR133FMS" in fred:
+        raw["rcpt12"] = yoy(sum12(fred["MTSR133FMS"])).dropna()
+    if "MTSO133FMS" in fred:
+        raw["outl12"] = yoy(sum12(fred["MTSO133FMS"])).dropna()
+    if {"interest", "trustint"} <= tsy.keys():
+        # net of what the Treasury pays its own trust funds = interest paid to the market
+        g12, t12 = sum12(tsy["interest"]), sum12(tsy["trustint"])
+        i12 = (g12 + t12.reindex(g12.index)).dropna()  # US$
+        raw["int12"] = i12 / 1e12
+        if "MTSR133FMS" in fred:
+            r12 = sum12(fred["MTSR133FMS"]) * 1e6
+            j = pd.concat([i12, r12], axis=1, join="inner").dropna()
+            raw["intrev"] = j.iloc[:, 0] / j.iloc[:, 1] * 100
+    if "avgrate" in tsy:
+        raw["avgrate"] = monthly(tsy["avgrate"])
 
     today = pd.Timestamp(dt.date.today())
+    # Last good rows: if a source is down today, keep yesterday's row instead of dropping it.
+    try:
+        prev_rows = {r["id"]: r for r in json.loads(out_path.read_text(encoding="utf-8"))["rows"]}
+    except Exception:  # noqa: BLE001
+        prev_rows = {}
     rows, missing = [], []
     for ind in IND:
         s = raw.get(ind["id"])
         if s is None or s.dropna().empty:
-            missing.append(ind["name"])
+            if ind["id"] in prev_rows:
+                r = prev_rows[ind["id"]]
+                r["stale"] = (today - pd.Timestamp(r["date"])).days > STALE_DAYS[r["freq"]]
+                rows.append(r)
+                print(f"  {ind['id']}: source down, kept previous row ({r['date']})", file=sys.stderr)
+            else:
+                missing.append(ind["name"])
             continue
         s = s.dropna().sort_index()
         fc = freq_class(s)
