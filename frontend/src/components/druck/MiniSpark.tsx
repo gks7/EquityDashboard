@@ -10,10 +10,14 @@ interface Props {
   /** Horizontal reference line (e.g. previous close). */
   refValue?: number | null;
   endDot?: boolean;
+  /** Line color; defaults to the series blue. */
+  color?: string;
+  /** Soft wash under the line (10% of the line color). */
+  area?: boolean;
 }
 
 /** Tiny single-series line, no axes. Line in the series blue; text never uses it. */
-export const MiniSpark: React.FC<Props> = ({ points, width, height = 28, refValue, endDot = true }) => {
+export const MiniSpark: React.FC<Props> = ({ points, width, height = 28, refValue, endDot = true, color = "#2c7bb6", area = false }) => {
   if (!points || points.length < 2) return null;
   const W = width ?? 100;
   const H = height;
@@ -40,10 +44,13 @@ export const MiniSpark: React.FC<Props> = ({ points, width, height = 28, refValu
         <line x1={0} x2={W} y1={Y(refValue)} y2={Y(refValue)}
           className="stroke-slate-300 dark:stroke-slate-700" strokeWidth={1} vectorEffect="non-scaling-stroke" />
       )}
-      <path d={d} fill="none" stroke="#2c7bb6" strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round"
+      {area && (
+        <path d={`${d}L${X(last[0]).toFixed(2)},${H}L${X(points[0][0]).toFixed(2)},${H}Z`} fill={color} fillOpacity={0.1} stroke="none" />
+      )}
+      <path d={d} fill="none" stroke={color} strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round"
         vectorEffect="non-scaling-stroke" />
       {endDot && !stretch && (
-        <circle cx={X(last[0])} cy={Y(last[1])} r={3} fill="#2c7bb6"
+        <circle cx={X(last[0])} cy={Y(last[1])} r={3} fill={color}
           className="stroke-white dark:stroke-slate-900" strokeWidth={2} />
       )}
     </svg>
