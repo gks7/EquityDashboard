@@ -177,15 +177,19 @@ EXTRA_FRED = ["ECBASSETSW", "JPNASSETS", "DEXUSEU", "DEXJPUS",
               "MTSDS133FMS", "MTSR133FMS", "MTSO133FMS", "GDP"]
 
 TREASURY = "https://api.fiscaldata.treasury.gov/services/api/fiscal_service"
-# name -> (endpoint, extra filter, value field)
-TREASURY_SERIES = {
-    "interest": ("v1/accounting/mts/mts_table_5",
-                 "classification_desc:eq:Total--Interest on the Public Debt", "current_month_gross_outly_amt"),
-    # negative: interest the Treasury pays its own trust funds (Social Security etc.)
-    "trustint": ("v1/accounting/mts/mts_table_5",
-                 "classification_desc:eq:Total--Interest Received by Trust Funds", "current_month_gross_outly_amt"),
+# query -> (endpoint, extra filter, value field, {classification_desc: series name} or series name).
+# Both MTS interest lines come in one query: the API is slow and flaky, fewer calls fare better.
+TREASURY_QUERIES = {
+    "mts_interest": (
+        "v1/accounting/mts/mts_table_5",
+        "classification_desc:in:(Total--Interest on the Public Debt,Total--Interest Received by Trust Funds)",
+        "current_month_gross_outly_amt",
+        {"Total--Interest on the Public Debt": "interest",
+         # negative: interest the Treasury pays its own trust funds (Social Security etc.)
+         "Total--Interest Received by Trust Funds": "trustint"},
+    ),
     "avgrate": ("v2/accounting/od/avg_interest_rates",
-                "security_desc:eq:Total Marketable", "avg_interest_rate_amt"),
+                "security_desc:eq:Total Marketable", "avg_interest_rate_amt", "avgrate"),
 }
 EXTRA_YF = ["KRE", "XLY", "XLP", "SMH", "XHB", "IYT", "XRT", "IWM", "RSP", "SPY", "GC=F", "HG=F"]
 
@@ -229,16 +233,19 @@ def fetch_fred(sid: str) -> pd.Series | None:
     return None
 
 
-def fetch_treasury(name: str) -> pd.Series | None:
-    """One series from the Treasury Fiscal Data API (no key needed), all pages."""
-    path, filt, field = TREASURY_SERIES[name]
+def fetch_treasury(query: str) -> dict[str, pd.Series]:
+    """Series from one Treasury Fiscal Data API query (no key needed), all pages."""
+    path, filt, field, names = TREASURY_QUERIES[query]
+    split = isinstance(names, dict)
     flt = f"record_date:gte:{START}" + (f",{filt}" if filt else "")
-    for attempt in range(2):
+    fields = f"record_date,{field}" + (",classification_desc" if split else "")
+    err: Exception | None = None
+    for attempt in range(3):
         try:
             rows, page = [], 1
             while True:
-                r = requests.get(f"{TREASURY}/{path}", timeout=20, headers=UA, params={  # stalls on python-requests UA
-                    "filter": flt, "fields": f"record_date,{field}", "sort": "record_date",
+                r = requests.get(f"{TREASURY}/{path}", timeout=45, headers=UA, params={  # stalls on python-requests UA
+                    "filter": flt, "fields": fields, "sort": "record_date",
                     "page[size]": 1000, "page[number]": page})
                 r.raise_for_status()
                 j = r.json()
@@ -246,19 +253,26 @@ def fetch_treasury(name: str) -> pd.Series | None:
                 if page >= int(j.get("meta", {}).get("total-pages", 1) or 1):
                     break
                 page += 1
-            s = pd.Series(pd.to_numeric([x[field] for x in rows], errors="coerce"),
-                          index=pd.to_datetime([x["record_date"] for x in rows]))
-            s = s.dropna().sort_index()
-            s = s[~s.index.duplicated(keep="last")]
-            if s.empty:
+            df = pd.DataFrame(rows)
+            df["v"] = pd.to_numeric(df[field], errors="coerce")
+            df["d"] = pd.to_datetime(df["record_date"])
+            groups = ({names[k]: g for k, g in df.groupby("classification_desc") if k in names}
+                      if split else {names: df})
+            out = {}
+            for name, g in groups.items():
+                ser = g.set_index("d")["v"].dropna().sort_index()
+                ser = ser[~ser.index.duplicated(keep="last")]
+                if not ser.empty:
+                    ser.name = name
+                    out[name] = ser
+            if not out:
                 raise ValueError("no rows")
-            s.name = name
-            return s
+            return out
         except Exception as e:  # noqa: BLE001
             err = e
-            time.sleep(2 * (attempt + 1))
-    print(f"  Treasury {name}: FAILED ({err})", file=sys.stderr)
-    return None
+            time.sleep(3 * (attempt + 1))
+    print(f"  Treasury {query}: FAILED ({err})", file=sys.stderr)
+    return {}
 
 
 def monthly(s: pd.Series) -> pd.Series:
@@ -383,9 +397,9 @@ def main(out_path: Path = DEFAULT_OUT) -> None:
         fred = dict(zip(fred_ids, ex.map(fetch_fred, fred_ids)))
     fred = {k: v for k, v in fred.items() if v is not None}
     yfd = fetch_yf(yf_ids)
-    with ThreadPoolExecutor(max_workers=3) as ex:
-        tsy = dict(zip(TREASURY_SERIES, ex.map(fetch_treasury, TREASURY_SERIES)))
-    tsy = {k: v for k, v in tsy.items() if v is not None}
+    tsy: dict[str, pd.Series] = {}
+    for q in TREASURY_QUERIES:  # one at a time: the API chokes on parallel calls
+        tsy.update(fetch_treasury(q))
 
     raw: dict[str, pd.Series] = {}
     # séries diretas
