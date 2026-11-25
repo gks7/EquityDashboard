@@ -9,15 +9,16 @@ import { useAuth } from "@/context/AuthContext";
 
 const ADMIN_EMAIL = "gabriel@igfwm.com";
 
-const navItems = [
+// hidden: kept out of the menu; the page still works by its URL.
+const navItems: Array<{ href: string; label: string; icon: typeof LayoutDashboard; hidden?: boolean }> = [
 { href: "/", label: "Dashboard", icon: LayoutDashboard },
 { href: "/watchlist", label: "Watchlist", icon: List },
 { href: "/portfolio", label: "Portfolio", icon: LineChart },
-{ href: "/igf-tr", label: "IGF TR", icon: TrendingUp },
+{ href: "/igf-tr", label: "IGF TR", icon: TrendingUp, hidden: true },
 { href: "/utm", label: "UTM", icon: Layers },
 { href: "/committee", label: "Committee", icon: ClipboardList },
-{ href: "/alpha", label: "Alpha", icon: BarChart3 },
-{ href: "/moats", label: "Moats", icon: Shield },
+{ href: "/alpha", label: "Alpha", icon: BarChart3, hidden: true },
+{ href: "/moats", label: "Moats", icon: Shield, hidden: true },
 { href: "/macro", label: "Macro", icon: Gauge },
 { href: "/druck", label: "Druck", icon: Droplets },
 { href: "/sp500", label: "S&P 500", icon: Landmark },
@@ -85,7 +86,7 @@ const sidebarContent = (
 </div>
 <div className="mx-4 border-t border-slate-200 dark:border-slate-800/80" />
 <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-{navItems.map(({ href, label, icon: Icon }) => {
+{navItems.filter((i) => !i.hidden).map(({ href, label, icon: Icon }) => {
 const isActive = pathname === href;
 return (
 <Link key={href} href={href}
