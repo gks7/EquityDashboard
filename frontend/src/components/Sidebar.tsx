@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
-import { LayoutDashboard, List, LineChart, Settings, Sun, Moon, Shield, LogOut, TrendingUp, Activity, Menu, X, BarChart3, Gauge, ClipboardList, Landmark, Layers } from "lucide-react";
+import { LayoutDashboard, List, LineChart, Settings, Sun, Moon, Shield, LogOut, TrendingUp, Activity, Menu, X, BarChart3, Gauge, ClipboardList, Landmark, Layers, Droplets } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 const ADMIN_EMAIL = "gabriel@igfwm.com";
@@ -19,6 +19,7 @@ const navItems = [
 { href: "/alpha", label: "Alpha", icon: BarChart3 },
 { href: "/moats", label: "Moats", icon: Shield },
 { href: "/macro", label: "Macro", icon: Gauge },
+{ href: "/druck", label: "Druck", icon: Droplets },
 { href: "/sp500", label: "S&P 500", icon: Landmark },
 ];
 
