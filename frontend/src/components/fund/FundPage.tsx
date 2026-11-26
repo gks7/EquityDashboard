@@ -15,6 +15,7 @@ import {
 import { RefreshCcw, Upload, Download, CheckCircle2, AlertTriangle, XCircle, Info, ChevronDown, Trash2, Plus } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
 import DayView from "./DayView";
+import RiskView from "./RiskView";
 
 const API = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/igf-tr/performance`;
 
@@ -218,10 +219,12 @@ function HeroMetric({ label: l, cap, children, sub, valueClass = "text-slate-900
 function Body({ data, reload }: { data: Payload; reload: () => void }) {
   const K = data.kpi;
   const nWarn = data.checks.filter(c => c.status === "warn" || c.status === "error").length;
-  const [tab, setTab] = useState<"hoje" | "ativos" | "atribuicao" | "pl" | "conciliacao">("hoje");
+  const [tab, setTab] = useState<"hoje" | "ativos" | "atribuicao" | "risco" | "pl" | "conciliacao">("hoje");
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const openRisk = () => { setTab("risco"); tabsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); };
   const eq = data.assets.filter(a => a.status === "Em carteira" && (a.bucket === "Ações individuais" || a.bucket === "ETFs de ações")).reduce((t, a) => t + a.w, 0);
   const fi = data.assets.filter(a => a.status === "Em carteira").reduce((t, a) => t + a.w, 0) - eq;
-  const tabs: [typeof tab, string][] = [["hoje", "Hoje"], ["ativos", "Ativos"], ["atribuicao", "Atribuição"], ["pl", "PL e captações"], ["conciliacao", nWarn ? `Conciliação (${nWarn})` : "Conciliação"]];
+  const tabs: [typeof tab, string][] = [["hoje", "Hoje"], ["ativos", "Ativos"], ["atribuicao", "Atribuição"], ["risco", "Risco"], ["pl", "PL e captações"], ["conciliacao", nWarn ? `Conciliação (${nWarn})` : "Conciliação"]];
   return (
     <>
       <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] shadow-sm p-4 sm:p-6">
@@ -247,7 +250,7 @@ function Body({ data, reload }: { data: Payload; reload: () => void }) {
           <div className="flex flex-col gap-2 border-t border-slate-100 dark:border-slate-800 pt-4">
             <div className="flex items-center justify-between gap-4">
               <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Risco</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">vol. <span className="text-slate-900 dark:text-white font-semibold">{pct(K.vol, 1).replace("+", "")}</span> · máx. queda <span className="text-rose-600 dark:text-rose-400 font-semibold">{pct(K.maxdd, 1)}</span></p>
+              <button onClick={openRisk} title="Abrir a aba Risco" className="text-xs text-slate-500 dark:text-slate-400 tabular-nums hover:underline decoration-dotted underline-offset-4">vol. <span className="text-slate-900 dark:text-white font-semibold">{pct(K.vol, 1).replace("+", "")}</span> · máx. queda <span className="text-rose-600 dark:text-rose-400 font-semibold">{pct(K.maxdd, 1)}</span> <span className="text-blue-600 dark:text-blue-400">→</span></button>
             </div>
             <div className="flex h-2 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800">
               <div className="bg-blue-500" style={{ width: `${eq * 100}%` }} />
@@ -264,7 +267,7 @@ function Body({ data, reload }: { data: Payload; reload: () => void }) {
       <CotaChart data={data} />
       <MonthlyHeat data={data} />
 
-      <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-full sm:w-fit overflow-x-auto">
+      <div ref={tabsRef} className="flex gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-full sm:w-fit overflow-x-auto scroll-mt-4">
         {tabs.map(([k, l]) => (
           <button key={k} onClick={() => setTab(k)} className={`flex-1 sm:flex-none whitespace-nowrap px-5 py-2 text-sm font-semibold rounded-lg transition-all ${tab === k ? "bg-white dark:bg-[#111827] text-slate-900 dark:text-white shadow-sm" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}>{l}</button>
         ))}
@@ -273,7 +276,8 @@ function Body({ data, reload }: { data: Payload; reload: () => void }) {
       {tab === "hoje" && <DayView nav={data.kpi.nav} />}
       {tab === "ativos" && <AssetsTable data={data} />}
       {tab === "atribuicao" && <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 sm:gap-6"><ContribChart data={data} /><AttribTable data={data} /></div>}
-      {tab === "pl" && <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 sm:gap-6"><NavChart data={data} /><SubsChart data={data} /></div>}
+      {tab === "risco" && <RiskView data={data} />}
+      {tab === "pl" &&<div className="grid grid-cols-1 xl:grid-cols-2 gap-5 sm:gap-6"><NavChart data={data} /><SubsChart data={data} /></div>}
       {tab === "conciliacao" && <div className="space-y-5 sm:space-y-6"><Checks data={data} /><ManualEntries onChange={reload} /><HowTo data={data} /></div>}
     </>
   );
