@@ -117,7 +117,7 @@ function startIdx(dates: string[], p: Period) {
 }
 
 interface Stats {
-  n: number; ret: Num; vol: number; down: Num; sharpe: Num; sortino: Num; var95: number; cvar: number;
+  n: number; ret: Num; vol: number; down: Num; sortino: Num; var95: number; cvar: number;
   mdd: number; worst: number; best: number; pos: number; beta: Num; corr: Num;
 }
 function stats(B: Built, k: string, j0: number): Stats | null {
@@ -140,7 +140,7 @@ function stats(B: Built, k: string, j0: number): Stats | null {
   const { beta, corr } = k === SPX ? { beta: 1, corr: 1 } : co(...pairs(r, B.ret[SPX], j0, J));
   return {
     n: a.length, ret: base && end ? end / base - 1 : null, vol, down: down || null,
-    sharpe: vol ? exAnn / vol : null, sortino: down ? exAnn / down : null,
+    sortino: down ? exAnn / down : null,
     var95: q, cvar: mean(tail), mdd, worst: Math.min(...a), best: Math.max(...a), pos: a.filter(x => x > 0).length / a.length, beta, corr,
   };
 }
@@ -168,11 +168,10 @@ export default function RiskView({ data }: { data: RiskData }) {
           </div>
           <div className={segWrap}>{PERIODS.map(x => <button key={x} className={seg(p === x)} onClick={() => setP(x)}>{x}</button>)}</div>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-x-6 gap-y-5 mb-5">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-5 mb-5">
           <Tile label="Vol. anualizada" value={pctU(F.vol)} sub={<>S&amp;P 500 <b className="text-slate-600 dark:text-slate-300">{pctU(spx?.vol)}</b></>} />
           <Tile label="VaR 95% · 1 dia" value={pct(F.var95)} valueClass="text-rose-600 dark:text-rose-400" sub={`${usd(F.var95 * data.kpi.nav)} sobre o PL`} />
           <Tile label="Beta vs S&P" value={dec(F.beta)} sub={`correlação ${dec(F.corr)}`} />
-          <Tile label="Sharpe" value={dec(F.sharpe)} sub={`Sortino ${dec(F.sortino)} · vs SOFR`} />
           <Tile label="Drawdown atual" value={pct(ddNow, 1)} valueClass={ddNow && ddNow < -0.0005 ? "text-rose-600 dark:text-rose-400" : "text-slate-900 dark:text-white"} sub={`máx. no período ${pct(F.mdd, 1)}`} />
         </div>
         <StatsTable S={S} />
@@ -194,7 +193,7 @@ export default function RiskView({ data }: { data: RiskData }) {
       <p className="text-[11px] text-slate-500">
         Retornos entre os dias em que a cota mudou: dia sem preço novo fica fora e o retorno seguinte cobre o intervalo inteiro (para todas as séries).
         {data.asof > data.official_last && <> Depois de {dBR(data.official_last)} a cota é estimada pelos preços das posições, não a do administrador.</>}
-        {" "}Sharpe e Sortino sobre o SOFR. S&amp;P 500 e Nasdaq sem dividendos. Livro de ações e Crédito são só a parte do fundo em cada classe.
+        {" "}Sortino sobre o SOFR. S&amp;P 500 e Nasdaq sem dividendos. Livro de ações e Crédito são só a parte do fundo em cada classe.
       </p>
     </div>
   );
@@ -215,7 +214,6 @@ function StatsTable({ S }: { S: Record<string, Stats | null> }) {
     ["Retorno no período", s => pct(s.ret)],
     ["Vol. anualizada", s => pctU(s.vol)],
     ["Vol. de baixa", s => pctU(s.down), "Desvio só dos dias abaixo do SOFR, anualizado"],
-    ["Sharpe", s => dec(s.sharpe), "Retorno acima do SOFR / vol., anualizados"],
     ["Sortino", s => dec(s.sortino), "Retorno acima do SOFR / vol. de baixa"],
     ["Beta vs S&P 500", s => dec(s.beta)],
     ["Correlação vs S&P 500", s => dec(s.corr)],
