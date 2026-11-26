@@ -2,8 +2,9 @@
 // Daily payload: frontend/public/data/druck.json (backend/scripts/fetch_druck_data.py).
 // Live payload: GET /api/druck/live/ (backend/api/druck_views.py).
 
-export type DruckUnit = "rate" | "spread" | "yoy" | "pct_net" | "pct_gdp" | "usd_bn" | "usd_tn" | "px" | "ratio";
-export type DruckMode = "pct" | "bp" | "pp" | "abs";
+export type DruckUnit = "rate" | "spread" | "yoy" | "pct_net" | "pct_gdp" | "usd_bn" | "usd_tn" | "px" | "ratio"
+  | "gap" /* difference of two % rates, in pp */ | "idx" /* plain number, e.g. A/D line */;
+export type DruckMode = "pct" | "bp" | "pp" | "abs" | "num";
 export type DruckFreq = "D" | "W" | "M" | "Q" | "A";
 
 /** [days since 1970-01-01, value] */
@@ -109,6 +110,7 @@ export function fmtVal(r: Pick<DruckRow, "unit" | "dec" | "pre">, v: number | nu
   if (v == null || Number.isNaN(v)) return "—";
   if (PCT_UNITS.includes(r.unit)) return nf(v, r.dec) + "%";
   if (r.unit === "spread") return nf(v * 100, 0) + " bp";
+  if (r.unit === "gap") return (v > 0 ? "+" : v < 0 ? "−" : "") + nf(Math.abs(v), r.dec) + " pp";
   if (r.unit === "usd_tn") return "US$ " + nf(v, r.dec) + " tri";
   if (r.unit === "usd_bn") return "US$ " + nf(v, r.dec) + " bi";
   return r.pre + nf(v, r.dec);
@@ -129,6 +131,7 @@ export function fmtChg(r: Pick<DruckRow, "mode">, c: number | null | undefined):
   if (r.mode === "bp") return sign(c) + nf(a, 0) + " bp";
   if (r.mode === "pp") return sign(c) + nf(a, 1) + " pp";
   if (r.mode === "abs") return sign(c) + "US$ " + nf(a, 0) + " bi";
+  if (r.mode === "num") return sign(c) + nf(a, 0);
   return sign(c) + nf(a, 1) + "%";
 }
 
