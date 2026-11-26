@@ -174,7 +174,7 @@ export default function RiskView({ data }: { data: RiskData }) {
           <Tile label="Beta vs S&P" value={dec(F.beta)} sub={`correlação ${dec(F.corr)}`} />
           <Tile label="Drawdown atual" value={pct(ddNow, 1)} valueClass={ddNow && ddNow < -0.0005 ? "text-rose-600 dark:text-rose-400" : "text-slate-900 dark:text-white"} sub={`máx. no período ${pct(F.mdd, 1)}`} />
         </div>
-        <StatsTable S={S} />
+        <FundStats s={F} />
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 sm:gap-6">
@@ -209,46 +209,26 @@ function Tile({ label, value, sub, valueClass = "text-slate-900 dark:text-white"
   );
 }
 
-function StatsTable({ S }: { S: Record<string, Stats | null> }) {
-  const rows: [string, (s: Stats) => string, string?][] = [
-    ["Retorno no período", s => pct(s.ret)],
-    ["Vol. anualizada", s => pctU(s.vol)],
-    ["Vol. de baixa", s => pctU(s.down), "Desvio só dos dias abaixo do SOFR, anualizado"],
-    ["Sortino", s => dec(s.sortino), "Retorno acima do SOFR / vol. de baixa"],
-    ["Beta vs S&P 500", s => dec(s.beta)],
-    ["Correlação vs S&P 500", s => dec(s.corr)],
-    ["VaR 95% · 1 dia", s => pct(s.var95), "5% dos dias perderam mais que isso (histórico)"],
-    ["CVaR 95% · 1 dia", s => pct(s.cvar), "Perda média nesses 5% piores dias"],
-    ["Máxima queda", s => pct(s.mdd, 1)],
-    ["Pior dia", s => pct(s.worst)],
-    ["Melhor dia", s => pct(s.best)],
-    ["Dias positivos", s => pctU(s.pos, 0)],
+/** Medidas do fundo que não estão nos destaques de cima. */
+function FundStats({ s }: { s: Stats }) {
+  const items: [string, string, string, string?][] = [
+    ["Retorno no período", pct(s.ret), tone(s.ret)],
+    ["Vol. de baixa", pctU(s.down), "", "Desvio só dos dias abaixo do SOFR, anualizado"],
+    ["Sortino", dec(s.sortino), "", "Retorno acima do SOFR / vol. de baixa"],
+    ["Correlação vs S&P 500", dec(s.corr), ""],
+    ["CVaR 95% · 1 dia", pct(s.cvar), "text-rose-600 dark:text-rose-400", "Perda média nos 5% piores dias"],
+    ["Pior dia", pct(s.worst), "text-rose-600 dark:text-rose-400"],
+    ["Melhor dia", pct(s.best), "text-emerald-600 dark:text-emerald-400"],
+    ["Dias positivos", pctU(s.pos, 0), ""],
   ];
   return (
-    <div className="overflow-x-auto -mx-1">
-      <table className="w-full text-xs tabular-nums">
-        <thead>
-          <tr className="text-slate-500 border-b border-slate-100 dark:border-slate-800">
-            <th className="px-2 py-2 text-left font-medium" />
-            {SERIES.map(s => (
-              <th key={s.k} className="px-2 py-2 text-right font-medium whitespace-nowrap">
-                <span className="inline-flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: s.color }} />{s.label}</span>
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map(([l, f, hint]) => (
-            <tr key={l} className="border-b border-slate-50 dark:border-slate-800/60 last:border-0">
-              <td className="px-2 py-1.5 text-slate-600 dark:text-slate-300 whitespace-nowrap" title={hint}>{l}{hint && <span className="text-slate-300 dark:text-slate-600"> ⓘ</span>}</td>
-              {SERIES.map(s => {
-                const st = S[s.k];
-                return <td key={s.k} className={`px-2 py-1.5 text-right ${s.k === FUND ? "font-semibold text-slate-900 dark:text-white bg-blue-50/50 dark:bg-blue-500/5" : "text-slate-600 dark:text-slate-300"}`}>{st ? f(st) : "–"}</td>;
-              })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 border-t border-slate-100 dark:border-slate-800">
+      {items.map(([l, v, c, hint]) => (
+        <div key={l} className="flex items-baseline justify-between gap-3 py-2 border-b border-slate-50 dark:border-slate-800/60 text-xs tabular-nums">
+          <span className="text-slate-500 dark:text-slate-400" title={hint}>{l}{hint && <span className="text-slate-300 dark:text-slate-600"> ⓘ</span>}</span>
+          <span className={`font-semibold ${c || "text-slate-900 dark:text-white"}`}>{v}</span>
+        </div>
+      ))}
     </div>
   );
 }
