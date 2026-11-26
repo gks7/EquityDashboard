@@ -59,7 +59,7 @@ BLOCKS = [
 # unit -> modo de variação: pct (%), bp, pp, abs (US$ bi)
 CHG_MODE = {"rate": "bp", "spread": "bp", "yoy": "pp", "pct_net": "pp",
             "pct_gdp": "pp", "usd_bn": "abs", "usd_tn": "pct", "px": "pct",
-            "ratio": "pct"}
+            "ratio": "pct", "gap": "pp", "idx": "num"}
 
 
 def I(**k):
@@ -84,6 +84,8 @@ IND = [
       why="Crescimento da base monetária ampla. Ele comparou M2 negativo em 2022–23 a um sinal raro de aperto."),
     I(id="g3bs", block="liq", name="Balanço Fed + BCE + BoJ", src="calc", unit="usd_tn", dec=1, pol=1,
       why="Liquidez global em dólares. Inclui o efeito câmbio: dólar forte encolhe o balanço de BCE e BoJ medido em US$."),
+    I(id="m2ip", block="liq", name="M2 − produção industrial (a/a)", src="calc", unit="gap", dec=1, pol=1,
+      why="Dinheiro criado além do que a economia real absorve. Quando o M2 cresce bem acima da produção, o excesso tende a ir para ativos financeiros."),
     # Juros
     I(id="DFF", block="juros", name="Fed funds efetivo", unit="rate", pol=-1,
       why="O juro de política. Ciclo de alta drena liquidez; de corte, devolve."),
@@ -97,15 +99,23 @@ IND = [
       why="Inversão sinaliza aperto; a reinclinação vinda de inversão costuma coincidir com a recessão, não com o fim do risco."),
     I(id="T10Y3M", block="juros", name="Curva 10a − 3m", unit="spread",
       why="A versão da curva com melhor histórico como preditor de recessão."),
+    I(id="ngdpff", block="juros", name="PIB nominal (a/a) − Fed funds", src="calc", unit="gap", dec=1, pol=1,
+      why="O teste dele de 2003: Fed a 1% com o PIB nominal crescendo muito mais = dinheiro barato demais. Gap positivo e subindo = política frouxa; perto de zero ou negativo = Fed apertado de verdade."),
     # Crédito
     I(id="BAMLH0A0HYM2", block="credito", name="Spread high yield", unit="spread", pol=-1,
       why="O alarme mais rápido. Spreads abrindo com bolsa subindo é divergência que ele não ignora."),
     I(id="BAMLC0A0CM", block="credito", name="Spread grau de investimento", unit="spread", pol=-1,
       why="Custo de financiamento das empresas grandes."),
+    I(id="cccbb", block="credito", name="Spread CCC − BB", src="calc", unit="spread", pol=-1,
+      why="Prêmio do pior crédito sobre o melhor do high yield. Muito comprimido = investidor aceitando qualquer papel, como na emissão de 2015 que ele criticou; abrindo = a ponta fraca já sente."),
     I(id="DRTSCILM", block="credito", name="Bancos apertando crédito (SLOOS)", unit="pct_net", dec=1, pol=-1,
       why="% líquido de bancos endurecendo crédito a empresas. Pesquisa trimestral; antecede investimento e emprego."),
     I(id="BUSLOANS", block="credito", name="Empréstimos C&I (a/a)", unit="yoy", tf="yoy", dec=1, pol=1,
       why="Se o crédito bancário está de fato chegando às empresas."),
+    I(id="debtprof", block="credito", name="Dívida corporativa / lucro (anos)", src="calc", unit="ratio", dec=1, pol=-1,
+      why="Dívida das empresas não financeiras sobre o lucro anual depois de impostos. Dívida crescendo mais que o lucro foi o alerta dele em 2015–18. Fonte: Fed (Z.1) e BEA, trimestral."),
+    I(id="spnetdebt", block="credito", name="Emissão líquida de dívida, S&P 500 (12m)", src="calc", unit="usd_bn", dec=0,
+      why="Dívida emitida menos amortizada pelas empresas do S&P nos últimos 4 trimestres (SEC, mesma base da página S&P 500). Contexto: emissão forte é crédito disponível; em excesso, sinal de fim de ciclo."),
     I(id="KRE/SPY", block="credito", name="Bancos regionais vs S&P", src="ratio", a="KRE", b="SPY", unit="ratio", dec=3, pol=1,
       why="Termômetro de estresse bancário (2023). Bancos fracos = crédito mais curto à frente."),
     # Câmbio
@@ -143,6 +153,14 @@ IND = [
       why="Small caps dependem de crédito e juro curto; são as mais sensíveis à liquidez."),
     I(id="RSP/SPY", block="mkt", name="Equal weight vs S&P (amplitude)", src="ratio", a="RSP", b="SPY", unit="ratio", dec=3, pol=1,
       why="Alta concentrada em poucos nomes é alta frágil."),
+    I(id="adline", block="mkt", name="Linha avanço/declínio (S&P 500)", src="calc", unit="idx", dec=0, pol=1, ma=True,
+      why="Soma acumulada de ações em alta menos em queda a cada dia. Índice na máxima com a linha caindo foi o alerta dele em 2000, 2018 e nov/2026. Usa os membros atuais do S&P (viés de sobrevivência no passado)."),
+    I(id="above200", block="mkt", name="% do S&P acima da média de 200 dias", src="calc", unit="pct_net", dec=0, pol=1,
+      why="Quantas ações estão em tendência de alta. Índice subindo com esse número caindo = alta sustentada por poucos."),
+    I(id="nhnl", block="mkt", name="Novas máximas − mínimas 52 sem. (% do S&P)", src="calc", unit="pct_net", dec=1, pol=1,
+      why="Saldo de ações em máxima de 52 semanas menos em mínima, média de 10 dias. Em jan/2000 ele viu 13 máximas contra 242 mínimas com o índice no topo."),
+    I(id="eygap", block="mkt", name="Lucro/preço do S&P − Treasury 10a", src="calc", unit="gap", dec=1, pol=1,
+      why="Quanto a bolsa rende em lucro acima do título do governo. Em jan/2025 ele notou que era o pior em 20 anos. Lucro 12m das empresas do S&P (SEC), nível ancorado no P/L do SPY."),
     # Inflação
     I(id="CPILFESL", block="inf", name="Core CPI (a/a)", unit="yoy", tf="yoy", pol=-1,
       why="O dado que o mercado mais negocia."),
@@ -174,7 +192,8 @@ IND = [
 ]
 
 EXTRA_FRED = ["ECBASSETSW", "JPNASSETS", "DEXUSEU", "DEXJPUS",
-              "MTSDS133FMS", "MTSR133FMS", "MTSO133FMS", "GDP"]
+              "MTSDS133FMS", "MTSR133FMS", "MTSO133FMS", "GDP",
+              "INDPRO", "BCNSDODNS", "NFCPATAX", "BAMLH0A3HYC", "BAMLH0A1HYBB"]
 
 TREASURY = "https://api.fiscaldata.treasury.gov/services/api/fiscal_service"
 # query -> (endpoint, extra filter, value field, {classification_desc: series name} or series name).
@@ -191,7 +210,9 @@ TREASURY_QUERIES = {
     "avgrate": ("v2/accounting/od/avg_interest_rates",
                 "security_desc:eq:Total Marketable", "avg_interest_rate_amt", "avgrate"),
 }
-EXTRA_YF = ["KRE", "XLY", "XLP", "SMH", "XHB", "IYT", "XRT", "IWM", "RSP", "SPY", "GC=F", "HG=F"]
+EXTRA_YF = ["KRE", "XLY", "XLP", "SMH", "XHB", "IYT", "XRT", "IWM", "RSP", "SPY", "GC=F", "HG=F", "^GSPC"]
+# Member list and SEC quarterly financials, from the S&P 500 page's own daily file.
+SP500_JSON = ROOT / "frontend" / "public" / "data" / "sp500.json"
 
 
 # ---------------------------------------------------------------- fetch
@@ -318,6 +339,82 @@ def fetch_yf(tickers: list[str]) -> dict[str, pd.Series]:
     return out
 
 
+def load_sp500() -> dict | None:
+    try:
+        return json.loads(SP500_JSON.read_text(encoding="utf-8"))
+    except Exception as e:  # noqa: BLE001
+        print(f"  sp500.json: {e}", file=sys.stderr)
+        return None
+
+
+def fetch_breadth(members: list[str]) -> dict[str, pd.Series]:
+    """A/D line, % above the 200-day average and net 52-week highs, over current S&P members."""
+    tickers = sorted({t.replace(".", "-") for t in members})  # BRK.B -> BRK-B
+    try:
+        px = _yf_close(tickers)
+    except Exception as e:  # noqa: BLE001
+        print(f"  breadth download failed ({e})", file=sys.stderr)
+        return {}
+    px = px.dropna(axis=1, how="all")
+    if px.shape[1] < 0.8 * len(tickers):
+        print(f"  breadth: only {px.shape[1]}/{len(tickers)} members downloaded, skipping", file=sys.stderr)
+        return {}
+    n = px.notna().sum(axis=1)
+    px = px[n >= 0.8 * n.max()]  # drop days most members did not trade (partial rows)
+    ret = px.pct_change(fill_method=None)
+    ad = ((ret > 0).sum(axis=1) - (ret < 0).sum(axis=1)).iloc[1:].cumsum()
+    ma = px.rolling(200, min_periods=200).mean()
+    v200 = ma.notna() & px.notna()
+    above = ((px > ma) & v200).sum(axis=1) / v200.sum(axis=1).replace(0, np.nan) * 100
+    hi = px.rolling(252, min_periods=252).max()
+    lo = px.rolling(252, min_periods=252).min()
+    v52 = hi.notna() & px.notna()
+    net = ((px >= hi) & v52).sum(axis=1) - ((px <= lo) & v52).sum(axis=1)
+    nhnl = (net / v52.sum(axis=1).replace(0, np.nan) * 100).rolling(10).mean()
+    print(f"  breadth: {px.shape[1]} members, {len(px)} days")
+    return {"adline": ad.astype(float), "above200": above.dropna(), "nhnl": nhnl.dropna()}
+
+
+def _q_end(label: str) -> pd.Timestamp:  # "3Q26" -> 2026-09-30
+    return pd.Timestamp(year=2000 + int(label[2:]), month=3 * int(label[0]), day=1) + pd.offsets.MonthEnd(0)
+
+
+def sp500_earnings(d: dict) -> pd.Series | None:
+    """12-month net income summed over members with complete history, dated 45 days after
+    quarter end (about when the quarter is reported). US$ millions."""
+    q = d["quarters"]
+    last = q.index(d["as_of_quarter"]) if d.get("as_of_quarter") in q else len(q) - 1
+    mat = [[np.nan if x is None else float(x) for x in c["series"]["ni"][: last + 1]]
+           for c in d["companies"] if len((c.get("series") or {}).get("ni") or []) > last]
+    if not mat:
+        return None
+    ttm = pd.DataFrame(mat).T.rolling(4).sum().iloc[3:]  # rows = quarters, cols = companies
+    ttm = ttm.loc[:, ttm.notna().all()]
+    idx = [_q_end(x) + pd.Timedelta(days=45) for x in q[3: last + 1]]
+    return pd.Series(ttm.sum(axis=1).values, index=pd.DatetimeIndex(idx))
+
+
+def sp500_net_debt(d: dict) -> pd.Series | None:
+    v = (d.get("aggregate") or {}).get("net_debt_issuance_bn")
+    if not v:
+        return None
+    s = pd.Series(v, index=pd.DatetimeIndex([_q_end(x) for x in d["quarters"][: len(v)]]), dtype=float)
+    return s.rolling(4).sum().dropna()
+
+
+def spy_trailing_pe() -> float | None:
+    import yfinance as yf
+    for attempt in range(3):
+        try:
+            pe = yf.Ticker("SPY").info.get("trailingPE")
+            if pe and pe > 0:
+                return float(pe)
+        except Exception as e:  # noqa: BLE001
+            print(f"  SPY P/E: {e}", file=sys.stderr)
+        time.sleep(2 * (attempt + 1))
+    return None
+
+
 # ---------------------------------------------------------------- análise
 def native_days(s: pd.Series) -> float:
     return float(pd.Series(s.index[-60:]).diff().dt.days.median())
@@ -347,7 +444,10 @@ def change(last: float, past: float, mode: str) -> float | None:
     return last - past
 
 
-def chg_at(s: pd.Series, months: int, mode: str) -> float | None:
+def chg_at(s: pd.Series, months: int, mode: str, fc: str = "") -> float | None:
+    if fc == "Q":  # by position: from Jun 30, "3 months ago" is Mar 30, which asof maps to Dec 31
+        k = months // 3
+        return change(float(s.iloc[-1]), float(s.iloc[-1 - k]), mode) if len(s) > k else None
     t = s.index[-1]
     past = s.asof(t - pd.DateOffset(months=months))
     return change(float(s.iloc[-1]), past, mode)
@@ -400,6 +500,8 @@ def main(out_path: Path = DEFAULT_OUT) -> None:
     tsy: dict[str, pd.Series] = {}
     for q in TREASURY_QUERIES:  # one at a time: the API chokes on parallel calls
         tsy.update(fetch_treasury(q))
+    sp = load_sp500()
+    brd = fetch_breadth([c["ticker"] for c in sp["companies"]]) if sp else {}
 
     raw: dict[str, pd.Series] = {}
     # séries diretas
@@ -449,6 +551,39 @@ def main(out_path: Path = DEFAULT_OUT) -> None:
             raw["intrev"] = j.iloc[:, 0] / j.iloc[:, 1] * 100
     if "avgrate" in tsy:
         raw["avgrate"] = monthly(tsy["avgrate"])
+    # Druck's macro gaps
+    if {"M2SL", "INDPRO"} <= fred.keys():
+        m2 = monthly(fred["M2SL"]).pct_change(12) * 100
+        ip = monthly(fred["INDPRO"]).pct_change(12) * 100
+        raw["m2ip"] = (m2 - ip.reindex(m2.index)).dropna()
+    if {"GDP", "DFF"} <= fred.keys():
+        gy = (fred["GDP"].pct_change(4) * 100).dropna()
+        gy.index = gy.index + pd.DateOffset(months=3)  # a quarter is known about a month after it ends
+        dff = fred["DFF"]
+        ff = dff.groupby(dff.index.to_period("M")).mean().to_timestamp()
+        raw["ngdpff"] = (ffill_to(gy, ff.index) - ff).dropna()
+    if {"BAMLH0A3HYC", "BAMLH0A1HYBB"} <= fred.keys():
+        j = pd.concat([fred["BAMLH0A3HYC"], fred["BAMLH0A1HYBB"]], axis=1, join="inner").dropna()
+        raw["cccbb"] = j.iloc[:, 0] - j.iloc[:, 1]
+    if {"BCNSDODNS", "NFCPATAX"} <= fred.keys():  # US$ millions / (US$ billions, annualized)
+        j = pd.concat([fred["BCNSDODNS"], fred["NFCPATAX"] * 1e3], axis=1, join="inner").dropna()
+        dp = j.iloc[:, 0] / j.iloc[:, 1]
+        dp.index = dp.index + pd.offsets.QuarterEnd(0)  # Z.1 dates a quarter by its first day
+        raw["debtprof"] = dp
+    raw.update(brd)
+    if sp:
+        nd = sp500_net_debt(sp)
+        if nd is not None:
+            raw["spnetdebt"] = nd
+        earn = sp500_earnings(sp)
+        pe = spy_trailing_pe() if earn is not None else None
+        if pe and "^GSPC" in yfd and "DGS10" in fred:
+            # E/P path from SEC earnings and the index level, anchored on SPY's trailing P/E today
+            px = yfd["^GSPC"]
+            px = px[px.index >= earn.index[0]]
+            e = ffill_to(earn, px.index)
+            ey = 100 / pe * (e / e.iloc[-1]) / (px / px.iloc[-1])
+            raw["eygap"] = (ey - ffill_to(fred["DGS10"], px.index)).dropna()
 
     today = pd.Timestamp(dt.date.today())
     # Last good rows: if a source is down today, keep yesterday's row instead of dropping it.
@@ -474,7 +609,7 @@ def main(out_path: Path = DEFAULT_OUT) -> None:
             s = (s.pct_change(PPY[fc]) * 100).dropna()
         mode = CHG_MODE[ind["unit"]]
         hz = HORIZONS[fc]
-        chg = {h: chg_at(s, h, mode) for h in hz}
+        chg = {h: chg_at(s, h, mode, fc) for h in hz}
         sig_h = 3 if 3 in hz else 12
         sigmas = {h: chg_sigma(s, h, mode) for h in hz}
         d = direction(chg[sig_h], sigmas[sig_h])
@@ -489,7 +624,7 @@ def main(out_path: Path = DEFAULT_OUT) -> None:
         pctl = float((s10 < s.iloc[-1]).mean() * 100)
         hist_years = round((s10.index[-1] - s10.index[0]).days / 365.25, 1)
         ma = None
-        if ind["src"] in ("yf", "ratio") or ind["id"] == "cuau":
+        if ind["src"] in ("yf", "ratio") or ind["id"] == "cuau" or ind.get("ma"):
             ma = compact(s.rolling(200).mean().dropna(), True)
         last_date = s.index[-1]
         rows.append({
