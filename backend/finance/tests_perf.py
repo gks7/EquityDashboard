@@ -236,3 +236,46 @@ class MissedCloseTests(TestCase):
         self.assertAlmostEqual(uv.loc[dt.date(2026, 11, 20), 'SPY'], 724.33 / 1.05004277, places=6)
         uv, kinds, _ = snapshot_prices(self.items(monday_spy_chg=40.0))   # implausible vs the intraday mark
         self.assertAlmostEqual(uv.loc[dt.date(2026, 11, 20), 'SPY'], 702.718)
+
+
+class AutoRegisterPortfolioAssetsTests(TestCase):
+    """A Portfolio ticker with no AssetAlias used to be dropped from the cota silently."""
+
+    def setUp(self):
+        from finance.models import AssetAlias, PortfolioSnapshot, PortfolioItem
+        AssetAlias.objects.get_or_create(asset_id='SDHA', defaults=dict(
+            asset_class='Fixed Income', sub_class='HY ETF', isin='IE00BZ17CN18', tickers='SDHA LN EQUITY,SDHA LN'))
+        self.cutover = dt.date(2026, 3, 24)
+        old = PortfolioSnapshot.objects.create(date=dt.date(2026, 3, 1))
+        new = PortfolioSnapshot.objects.create(date=dt.date(2026, 11, 27))
+        rows = [
+            (new, 'SDHA LN EQUITY', 'Fixed Income', 'Fixed Income Index', '', 100),   # already known
+            (new, 'NEWCO', 'Equity', 'Equity', '', 505),                                # new stock
+            (new, 'XYZ LN EQUITY', 'Fixed Income', 'Fixed Income Index', '', 10),     # new credit ETF
+            (new, 'ACME 5.0 01/01/30', 'Fixed Income', 'Corporate Bonds', 'US0000000001', 1000),
+            (new, 'T 0 01/01/27', 'Fixed Income', 'Treasury', 'US0000000002', 1000),
+            (new, 'GONE', 'Equity', 'Equity', '', 0),                                 # zero quantity
+            (new, '#N/A', 'Equity', 'Equity', '', 5),                                 # Bloomberg error
+            (new, 'USD', 'Cash', 'Cash', '', 5),                                      # not a security type
+            (old, 'OLDCO', 'Equity', 'Equity', '', 5),                                # before the cutover
+        ]
+        for snap, t, at, st, isin, q in rows:
+            PortfolioItem.objects.create(snapshot=snap, ticker=t, asset_type=at, specific_type=st, isin=isin, quantity=q)
+
+    def test_registers_only_unmatched_holdings(self):
+        from finance.models import AssetAlias
+        from finance.perf.engine import register_unmatched_portfolio_assets, bucket_of
+        created = register_unmatched_portfolio_assets(self.cutover)
+        self.assertEqual(sorted(created), ['ACME 5.0 01/01/30', 'NEWCO', 'T 0 01/01/27', 'XYZ'])
+        got = {a.asset_id: a for a in AssetAlias.objects.filter(auto_created=True)}
+        self.assertEqual(bucket_of(got['NEWCO'].asset_class, got['NEWCO'].sub_class), 'Ações individuais')
+        self.assertEqual(bucket_of(got['XYZ'].asset_class, got['XYZ'].sub_class), 'ETFs de crédito')
+        self.assertEqual(bucket_of(got['ACME 5.0 01/01/30'].asset_class, got['ACME 5.0 01/01/30'].sub_class), 'Bonds (crédito)')
+        self.assertEqual(bucket_of(got['T 0 01/01/27'].asset_class, got['T 0 01/01/27'].sub_class), 'Treasuries')
+        self.assertEqual(got['XYZ'].tickers, 'XYZ LN EQUITY,XYZ LN')
+        self.assertEqual(got['ACME 5.0 01/01/30'].isin, 'US0000000001')
+        matcher = AliasMatcher(list(AssetAlias.objects.values()))
+        self.assertEqual(matcher.from_ticker('XYZ LN EQUITY'), 'XYZ')
+        self.assertEqual(matcher.from_ticker('NEWCO'), 'NEWCO')
+        # idempotent: a second run finds everything already registered
+        self.assertEqual(register_unmatched_portfolio_assets(self.cutover), [])

@@ -546,6 +546,10 @@ class AssetAlias(models.Model):
                                          help_text='Regex matched against the bank statement description (used when the ISIN is absent)')
     tickers = models.CharField(max_length=255, blank=True, default='',
                                help_text='Comma-separated aliases used by Bloomberg snapshots / position history, e.g. "SDHA LN EQUITY,SDHA LN"')
+    auto_created = models.BooleanField(
+        default=False,
+        help_text='Created by the performance engine from a Portfolio ticker that matched no asset. '
+                  'Check the class / sub-class, then untick to clear the Conciliação notice.')
 
     class Meta:
         ordering = ['asset_class', 'asset_id']

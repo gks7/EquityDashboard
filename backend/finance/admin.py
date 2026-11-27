@@ -13,9 +13,10 @@ admin.site.register(ManualFundFlow)
 
 @admin.register(AssetAlias)
 class AssetAliasAdmin(admin.ModelAdmin):
-    list_display = ('asset_id', 'name', 'asset_class', 'sub_class', 'sector', 'isin', 'tickers')
+    list_display = ('asset_id', 'name', 'asset_class', 'sub_class', 'sector', 'isin', 'tickers', 'auto_created')
     search_fields = ('asset_id', 'name', 'isin', 'tickers')
-    list_filter = ('asset_class', 'sub_class')
+    list_filter = ('auto_created', 'asset_class', 'sub_class')
+    list_editable = ('auto_created',)
 
 
 @admin.register(BankTransaction)

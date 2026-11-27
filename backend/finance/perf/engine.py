@@ -19,6 +19,7 @@ cached in PerformanceRun; frames feed the Excel export.
 """
 import datetime as dt
 import math
+import re
 
 import numpy as np
 import pandas as pd
@@ -64,6 +65,70 @@ def bucket_of(cls, sub):
     return 'Outros'
 
 
+# Bloomberg "Type" / "Specific type" of a Portfolio row → (asset_class, sub_class) of the asset master.
+_PORTFOLIO_CLASS = {
+    ('Equity', 'Equity'): ('Equity', 'Stock'),
+    ('Equity', 'Equity Index'): ('Equity', 'Index ETF'),
+    ('Fixed Income', 'Fixed Income Index'): ('Fixed Income', 'HY ETF'),
+    ('Fixed Income', 'Corporate Bonds'): ('Fixed Income', 'Corporate Bond'),
+    ('Fixed Income', 'Treasury'): ('Fixed Income', 'US Treasury'),
+    ('Treasury', None): ('Fixed Income', 'US Treasury'),
+    ('EM Sovereign', None): ('Fixed Income', 'Sovereign Bond'),
+}
+_PORTFOLIO_TYPES = ('Equity', 'Fixed Income', 'Treasury', 'EM Sovereign')
+
+
+def _portfolio_class(asset_type, specific_type):
+    return (_PORTFOLIO_CLASS.get((asset_type, specific_type))
+            or _PORTFOLIO_CLASS.get((asset_type, None))
+            or (('Equity', 'Stock') if asset_type == 'Equity' else ('Fixed Income', 'Corporate Bond')))
+
+
+def _portfolio_asset_id(ticker):
+    """'SDHA LN EQUITY' -> 'SDHA'; 'BLK' -> 'BLK'; bond names are kept as they are."""
+    t = re.sub(r'\s+(EQUITY|CORP|GOVT)$', '', ticker.strip(), flags=re.I)
+    m = re.fullmatch(r'(\S+)\s+[A-Z]{2}', t)
+    return m.group(1) if m else t
+
+
+def register_unmatched_portfolio_assets(cutover):
+    """Create an AssetAlias for every Portfolio holding (since the cutover) that matches no asset.
+
+    After the cutover, positions are read from the Bloomberg Portfolio uploads, and a ticker with
+    no AssetAlias is dropped from the cota without a trace: a new stock bought in the account
+    simply never earns anything. Registering it here, before the engine loads the aliases, lets
+    the purchase and its whole price history flow in on the same run. The class is a guess from
+    Bloomberg's Type / Specific type, so the row is flagged ``auto_created`` for review.
+    Returns the asset ids created.
+    """
+    from finance.models import AssetAlias, PortfolioItem
+
+    matcher = AliasMatcher(list(AssetAlias.objects.values()))
+    rows = (PortfolioItem.objects
+            .filter(snapshot__date__gte=cutover, quantity__gt=0, asset_type__in=_PORTFOLIO_TYPES)
+            .exclude(ticker__isnull=True).exclude(ticker='')
+            .values_list('ticker', 'isin', 'asset_type', 'specific_type')
+            .distinct())
+    created = []
+    for ticker, isin, asset_type, specific_type in rows:
+        if ticker.strip().startswith('#') or matcher.from_ticker(ticker) or matcher.from_isin(isin):
+            continue
+        asset_id = _portfolio_asset_id(ticker)[:64]
+        if not asset_id:
+            continue
+        cls, sub = _portfolio_class(asset_type, specific_type)
+        names = [ticker.strip()] + [re.sub(r'\s+(EQUITY|CORP|GOVT)$', '', ticker.strip(), flags=re.I)]
+        tickers = ','.join(dict.fromkeys(n for n in names if n and n.upper() != asset_id.upper()))
+        alias, new = AssetAlias.objects.get_or_create(asset_id=asset_id, defaults=dict(
+            name=asset_id, asset_class=cls, sub_class=sub, isin=(isin or '').strip()[:20],
+            tickers=tickers[:255], auto_created=True))
+        if new:
+            created.append(asset_id)
+        # Refresh the matcher so a second spelling of the same instrument is not registered twice.
+        matcher = AliasMatcher(list(AssetAlias.objects.values()))
+    return created
+
+
 # ───────────────────────────────────────────────────────────── loading
 def load_inputs(today=None):
     from finance.models import (AssetAlias, BankTransaction, ManualLedgerEntry, AdminNAVReport, FundConfig,
@@ -71,9 +136,10 @@ def load_inputs(today=None):
     from bloomberg.models import PositionSnapshot
 
     cfg = FundConfig.get_solo()
+    cutover = cfg.perf_cutover_date or dt.date(2026, 3, 24)
+    register_unmatched_portfolio_assets(cutover)
     aliases = list(AssetAlias.objects.values())
     matcher = AliasMatcher(aliases)
-    cutover = cfg.perf_cutover_date or dt.date(2026, 3, 24)
 
     ps = pd.DataFrame(list(PositionSnapshot.objects.filter(fund__icontains=FUND_POSITION_NAME, date__lte=cutover).values(
         'date', 'asset_group', 'asset_ticker', 'units_close', 'amount_open', 'amount_close', 'amount_transaction',
@@ -829,6 +895,14 @@ def reconcile(I, pab, f, anchors, adj, kinds, warnings, hwm):
     if len(um):
         add('error', 'Lançamentos sem ativo cadastrado', f"{len(um)} linha(s) do extrato não casaram com nenhum ativo — cadastre em Asset aliases (Django admin) e recalcule.",
             [dict(date=str(r.trade_date), desc=str(r.desc1)[:90], amount=r.amount) for r in um.itertuples()][:20])
+    auto = [a for a in I['aliases'] if a.get('auto_created')]
+    if auto:
+        add('warn', 'Ativos cadastrados automaticamente',
+            f"{len(auto)} ativo(s) do Portfolio sem cadastro foram criados com a classe deduzida do Bloomberg: "
+            + ', '.join(a['asset_id'] for a in auto)
+            + " — confira classe e subclasse em Asset aliases (Django admin) e desmarque 'auto created'.",
+            [dict(asset=a['asset_id'], classe=a['asset_class'], subclasse=a['sub_class'],
+                  grupo=bucket_of(a['asset_class'], a['sub_class'])) for a in auto])
     other = led[led.type == 'OTHER']
     if len(other):
         add('warn', 'Lançamentos não classificados', f"{len(other)} linha(s) com tipo OTHER — confira e defina o tipo no Django admin.",
