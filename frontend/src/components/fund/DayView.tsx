@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { Fragment, useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -8,10 +8,12 @@ import {
   RefreshCcw,
   ChevronUp,
   ChevronDown,
+  ChevronRight,
   ArrowUpDown,
 } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from "recharts";
+import { SP500_INDUSTRY_GROUPS, SP500_SECTORS, UNCLASSIFIED, industryGroupOf } from "./gicsIndustryGroups";
 
 const PIE_COLORS = [
   "#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6",
@@ -53,6 +55,7 @@ export interface PortfolioHolding {
     current_price: number;
     previous_close: number | null;
     sector: string;
+    industry?: string | null;
     forward_pe: number | null;
     consensus_target_pe: number;
     consensus_target_eps: number;
@@ -83,19 +86,8 @@ function calcIRR(item: PortfolioHolding): number {
 }
 
 // ─── S&P 500 benchmark weights ──────────────────────────────────────
-const SP500: Record<string, number> = {
-  Technology: 32.1,
-  "Financial Services": 12.6,
-  "Communication Services": 11.2,
-  "Consumer Cyclical": 10.5,
-  Healthcare: 9.4,
-  Industrials: 8.8,
-  "Consumer Defensive": 5.9,
-  Energy: 3.3,
-  Utilities: 2.4,
-  "Basic Materials": 2.0,
-  "Real Estate": 1.9,
-};
+// Sector weights are the sums of the GICS Industry Groups (see gicsIndustryGroups.ts).
+const SP500: Record<string, number> = SP500_SECTORS;
 
 // ─── ETF sector breakdown mappings ──────────────────────────────────
 // Maps ETF tickers to their approximate sector allocations (must sum to ~100)
@@ -221,6 +213,8 @@ export default function DayView({ nav }: {
   });
   const [hoveredDot, setHoveredDot] = useState<PortfolioHolding | null>(null);
   const [exposureTab, setExposureTab] = useState<"diff" | "pies" | "table">("diff");
+  /** Sectors opened down to their GICS industry groups in the Data Table. */
+  const [openSectors, setOpenSectors] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     (async () => {
@@ -436,6 +430,12 @@ export default function DayView({ nav }: {
   // ─── Sector exposure data ──────────────────────────────────────────
   const sectorData = useMemo(() => {
     const vals: Record<string, number> = {};
+    // Same money, one level down: sector → GICS Industry Group → value.
+    const groupVals: Record<string, Record<string, number>> = {};
+    const addGroup = (sec: string, group: string, v: number) => {
+      const g = (groupVals[sec] = groupVals[sec] || {});
+      g[group] = (g[group] || 0) + v;
+    };
     equities.forEach((h) => {
       const rawTicker = (h.ticker || "").toUpperCase();
       // Bloomberg exports often format equities as "SPY US Equity". We just want the base ticker.
@@ -446,20 +446,42 @@ export default function DayView({ nav }: {
       const etfWeights = ETF_SECTOR_WEIGHTS[ticker];
       if (etfWeights) {
         Object.entries(etfWeights).forEach(([sec, w]) => {
-          vals[sec] = (vals[sec] || 0) + val * (w / 100);
+          const v = val * (w / 100);
+          vals[sec] = (vals[sec] || 0) + v;
+          // ETFs only carry sector weights here, so each sector's slice is split across its
+          // industry groups in the S&P 500's proportions (exact for the S&P 500 trackers).
+          const bench = SP500_INDUSTRY_GROUPS[sec];
+          const benchTotal = bench ? Object.values(bench).reduce((s, x) => s + x, 0) : 0;
+          if (bench && benchTotal > 0) {
+            Object.entries(bench).forEach(([g, gw]) => addGroup(sec, g, v * (gw / benchTotal)));
+          } else {
+            addGroup(sec, UNCLASSIFIED, v);
+          }
         });
       } else {
         const sec = h.stock_details?.sector || "Unknown";
         vals[sec] = (vals[sec] || 0) + val;
+        addGroup(sec, industryGroupOf(sec, h.stock_details?.industry, ticker), val);
       }
     });
 
+    const pct = (v: number) => (eqValue > 0 ? (v / eqValue) * 100 : 0);
     const allSecs = new Set([...Object.keys(vals), ...Object.keys(SP500)]);
     return Array.from(allSecs)
       .map((s) => {
-        const pw = eqValue > 0 ? ((vals[s] || 0) / eqValue) * 100 : 0;
+        const pw = pct(vals[s] || 0);
         const bw = SP500[s] || 0;
-        return { sector: s, pw, bw, diff: pw - bw };
+        const benchGroups = SP500_INDUSTRY_GROUPS[s] || {};
+        const allGroups = new Set([...Object.keys(groupVals[s] || {}), ...Object.keys(benchGroups)]);
+        const groups = Array.from(allGroups)
+          .map((g) => {
+            const gpw = pct(groupVals[s]?.[g] || 0);
+            const gbw = benchGroups[g] || 0;
+            return { group: g, pw: gpw, bw: gbw, diff: gpw - gbw };
+          })
+          .filter((g) => g.pw > 0 || g.bw > 0)
+          .sort((a, b) => b.diff - a.diff);
+        return { sector: s, pw, bw, diff: pw - bw, groups };
       })
       .filter((d) => d.pw > 0 || d.bw > 1)
       .sort((a, b) => b.diff - a.diff);
@@ -1031,33 +1053,93 @@ export default function DayView({ nav }: {
               </div>
             )}
 
-            {exposureTab === "table" && (
-              <div className="rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden">
-                <table className="w-full text-sm text-left">
-                  <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
-                    <tr className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                      <th className="px-4 py-3">Sector</th>
-                      <th className="px-4 py-3 text-right">Portfolio weight</th>
-                      <th className="px-4 py-3 text-right">S&P 500 weight</th>
-                      <th className="px-4 py-3 text-right">Active weight</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {sectorData.map((d) => (
-                      <tr key={d.sector} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                        <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">{d.sector}</td>
-                        <td className="px-4 py-3 text-right text-slate-600 dark:text-slate-300">{d.pw.toFixed(2)}%</td>
-                        <td className="px-4 py-3 text-right text-slate-600 dark:text-slate-300">{d.bw.toFixed(2)}%</td>
-                        <td className={`px-4 py-3 text-right font-bold ${d.diff > 0 ? "text-emerald-600" : d.diff < 0 ? "text-rose-600" : "text-slate-500"
-                          }`}>
-                          {d.diff > 0 ? "+" : ""}{d.diff.toFixed(2)}%
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            {exposureTab === "table" && (() => {
+              const expandable = sectorData.filter((d) => d.groups.length > 1);
+              const allOpen = expandable.length > 0 && expandable.every((d) => openSectors.has(d.sector));
+              const toggleSector = (s: string) =>
+                setOpenSectors((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(s)) next.delete(s);
+                  else next.add(s);
+                  return next;
+                });
+              const activeCls = (v: number) => (v > 0 ? "text-emerald-600" : v < 0 ? "text-rose-600" : "text-slate-500");
+              return (
+                <>
+                  <div className="flex items-center justify-between mb-3 gap-3">
+                    <p className="text-[11px] text-slate-400">
+                      Click a sector to see its GICS industry groups (Level 2).
+                    </p>
+                    <button
+                      onClick={() => setOpenSectors(allOpen ? new Set() : new Set(expandable.map((d) => d.sector)))}
+                      className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline shrink-0"
+                    >
+                      {allOpen ? "Collapse all" : "Expand all"}
+                    </button>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 dark:border-slate-800 overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                      <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+                        <tr className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                          <th className="px-4 py-3">Sector</th>
+                          <th className="px-4 py-3 text-right">Portfolio weight</th>
+                          <th className="px-4 py-3 text-right">S&P 500 weight</th>
+                          <th className="px-4 py-3 text-right">Active weight</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {sectorData.map((d) => {
+                          const canOpen = d.groups.length > 1;
+                          const open = canOpen && openSectors.has(d.sector);
+                          return (
+                            <Fragment key={d.sector}>
+                              <tr
+                                onClick={canOpen ? () => toggleSector(d.sector) : undefined}
+                                aria-expanded={canOpen ? open : undefined}
+                                className={`transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50 ${canOpen ? "cursor-pointer select-none" : ""}`}
+                              >
+                                <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
+                                  <span className="inline-flex items-center gap-1.5">
+                                    {canOpen ? (
+                                      <ChevronRight
+                                        className={`w-3.5 h-3.5 text-slate-400 transition-transform ${open ? "rotate-90" : ""}`}
+                                      />
+                                    ) : (
+                                      <span className="w-3.5" />
+                                    )}
+                                    {d.sector}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-right text-slate-600 dark:text-slate-300">{d.pw.toFixed(2)}%</td>
+                                <td className="px-4 py-3 text-right text-slate-600 dark:text-slate-300">{d.bw.toFixed(2)}%</td>
+                                <td className={`px-4 py-3 text-right font-bold ${activeCls(d.diff)}`}>
+                                  {d.diff > 0 ? "+" : ""}{d.diff.toFixed(2)}%
+                                </td>
+                              </tr>
+                              {open &&
+                                d.groups.map((g) => (
+                                  <tr key={`${d.sector}|${g.group}`} className="bg-slate-50/60 dark:bg-slate-800/20">
+                                    <td className="pl-11 pr-4 py-2 text-xs text-slate-600 dark:text-slate-400">{g.group}</td>
+                                    <td className="px-4 py-2 text-right text-xs text-slate-500 dark:text-slate-400">{g.pw.toFixed(2)}%</td>
+                                    <td className="px-4 py-2 text-right text-xs text-slate-500 dark:text-slate-400">{g.bw.toFixed(2)}%</td>
+                                    <td className={`px-4 py-2 text-right text-xs font-semibold ${activeCls(g.diff)}`}>
+                                      {g.diff > 0 ? "+" : ""}{g.diff.toFixed(2)}%
+                                    </td>
+                                  </tr>
+                                ))}
+                            </Fragment>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="mt-2 text-[10px] text-slate-400">
+                    S&P 500 weights from SPY holdings as of 25-Nov-2026. Stocks are grouped by their industry;
+                    ETFs other than S&P 500 trackers are split within each sector in the S&P 500&apos;s proportions.
+                  </p>
+                </>
+              );
+            })()}
           </div>
         </div>
       )}
